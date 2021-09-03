@@ -14,7 +14,7 @@
 **Disk space**: 20 GB ↑  
 **Python**: 2.7 + 3.7 (a stable version for now Aug2021)  
 **Python package**: pygame, numpy (you can use **pip** to install)  
-**Virtual environment:**: Anaconda  
+**Virtual environment**: Anaconda  
 
 
 
@@ -40,8 +40,19 @@
     2. Navigate to your download file and run the following command using your exact filename to start install.
         >**bash Anaconda3-2021.05-Linux-x86_64.sh**
     3. After running "**conda init**", we can go to **carla root folder** to build a virtual environment with the command:
-        >
-        
+        >**conda create --name py37 python=3.7**
+    4. Activate the specified conda environment
+        >**conda activate py37**
+    5. You can use the conda install command to install the required packages:
+        >**conda install numpy**
+        or
+        >**conda install pygame**
+    6. Exit virtual conda environment
+        >**conda deactivate**
+    
     b. **Python version control**:
+    
+    
+    
     
 ### FAQ
