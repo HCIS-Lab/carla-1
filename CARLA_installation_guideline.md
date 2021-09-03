@@ -3,18 +3,18 @@
 
 
 ## Reference Link
-[Carla Documentation 0.9.12](https://carla.readthedocs.io/en/0.9.12/)
-[Carla Documentation 0.9.11](https://carla.readthedocs.io/en/0.9.11/)
-[Conda Docs](https://docs.conda.io/projects/conda/en/latest/index.html)
+[Carla Documentation 0.9.12](https://carla.readthedocs.io/en/0.9.12/)  
+[Carla Documentation 0.9.11](https://carla.readthedocs.io/en/0.9.11/)  
+[Conda Docs](https://docs.conda.io/projects/conda/en/latest/index.html)  
 
 
 ## Requirements
-**System**: Wiondows/Linux
-**GPU**: GPU RAM 6GB ↑
-**Disk space**: 20 GB ↑
-**Python**: 2.7 + 3.7 (a stable version for now Aug2021)
-**Python package**: pygame, numpy (you can use **pip** to install)
-**Virtual environment:**: Anaconda
+**System**: Wiondows/Linux  
+**GPU**: GPU RAM 6GB ↑  
+**Disk space**: 20 GB ↑  
+**Python**: 2.7 + 3.7 (a stable version for now Aug2021)  
+**Python package**: pygame, numpy (you can use **pip** to install)  
+**Virtual environment:**: Anaconda  
 
 
 
