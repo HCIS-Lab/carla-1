@@ -1138,7 +1138,7 @@ def game_loop(args):
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
         control_path = '_out/control/' + args.scenario_id + '/' + args.actor_id + '.npy'
-        init_transform, control_list = read_control('_out/control/5/1.npy')
+        init_transform, control_list = read_control(control_path)
 
         clock = pygame.time.Clock()
         world.player.set_transform(init_transform)
