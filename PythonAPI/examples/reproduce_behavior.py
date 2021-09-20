@@ -1105,6 +1105,9 @@ def get_transform(np_transform):
                                 Rotation(np_transform[3], np_transform[4], np_transform[5]))
     return transform
 def read_control(path='control.npy'):
+    """ param:
+
+    """
     control = np.load(path)
     control_list = []
     init_transform = control[0]
@@ -1134,6 +1137,7 @@ def game_loop(args):
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
+        control_path = '_out/control/' + args.scenario_id + '/' + args.actor_id + '.npy'
         init_transform, control_list = read_control('_out/control/5/1.npy')
 
         clock = pygame.time.Clock()
@@ -1193,6 +1197,14 @@ def main():
         default=2000,
         type=int,
         help='TCP port to listen to (default: 2000)')
+    argparser.add_argument(
+        '-scenario_id',
+        type=str,
+        help='name of the scenario')
+    argparser.add_argument(
+        '-actor_id',
+        type=str,
+        help='name of the actor')
     argparser.add_argument(
         '-a', '--autopilot',
         action='store_true',
