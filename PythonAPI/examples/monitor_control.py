@@ -1170,17 +1170,23 @@ def game_loop(args):
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
+
         control_list = []
         clock = pygame.time.Clock()
         while True:
             clock.tick_busy_loop(60)
             code = controller.parse_events(client, world, clock)
+
+            # exception
             if code == 1:
                 return
+            # k_r click
             elif code == 3:
+                # start recording
                 if  len(control_list) == 0:
                     record_transform(control_list, world)
                     record_control(controller._control, control_list)
+                # end recording
                 else:
                     control_list = np.array(control_list)
                     scenario_name = world.camera_manager.scenario_id
@@ -1191,16 +1197,14 @@ def game_loop(args):
                         os.mkdir('_out/control/%s/' % (scenario_name))
                     np.save('_out/control/%s/%s' % (scenario_name, control_agent), control_list)
                     control_list = [] 
-                    
+            
+            # recording control
             elif code == 2 and len(control_list) != 0:
                 record_control(controller._control, control_list)  
 
-            # get_mesurements(world.player)
             world.tick(clock)
             world.render(display)
-            #print("location: ",world.player.get_location())
             pygame.display.flip()
-            # print(world.player.attributes)
         
     finally:
 
