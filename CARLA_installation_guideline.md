@@ -50,8 +50,6 @@
     6. Exit virtual conda environment
         >**conda deactivate**
     
-    b. **Python version control**:
-    
     
     
     
