@@ -1249,7 +1249,8 @@ def game_loop(args):
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
-        world = World(client.load_world('Town05'), hud, args)
+        # world = World(client.load_world('Town05'), hud, args)
+        world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
         control_list = []
