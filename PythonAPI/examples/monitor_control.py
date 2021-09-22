@@ -351,18 +351,19 @@ class KeyboardControl(object):
         else:
             raise NotImplementedError("Actor type not supported")
         self._steer_cache = 0.0
+        self.r = 2
         world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
     def parse_events(self, client, world, clock):
-        r = 2
+        
         if isinstance(self._control, carla.VehicleControl):
             current_lights = self._lights
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return 1
+                self.r = 1
             elif event.type == pygame.KEYUP:
                 if self._is_quit_shortcut(event.key):
-                    return 1
+                    self.r = 1
                 elif event.key == K_BACKSPACE:
                     if self._autopilot_enabled:
                         world.player.set_autopilot(False)
@@ -416,7 +417,8 @@ class KeyboardControl(object):
                 elif event.key > K_0 and event.key <= K_9:
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
-                    world.camera_manager.toggle_recording()
+                    self.r = world.camera_manager.toggle_recording()
+                    return self.r
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
                     if (world.recording_enabled):
                         client.stop_recorder()
@@ -497,8 +499,7 @@ class KeyboardControl(object):
                         current_lights ^= carla.VehicleLightState.LeftBlinker
                     elif event.key == K_x:
                         current_lights ^= carla.VehicleLightState.RightBlinker
-                if event.key == K_r:
-                    r = 3
+
 
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
@@ -519,8 +520,7 @@ class KeyboardControl(object):
             elif isinstance(self._control, carla.WalkerControl):
                 self._parse_walker_keys(pygame.key.get_pressed(), clock.get_time(), world)
             world.player.apply_control(self._control)
-            return r
-
+            return self.r
 
 
     def _parse_vehicle_keys(self, keys, milliseconds):
@@ -1084,6 +1084,10 @@ class CameraManager(object):
             self.start_time=time.process_time()
             
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+        if self.recording: 
+            return 3
+        else:
+            return 4
 
     def render(self, display):
         if self.surface is not None:
@@ -1178,29 +1182,28 @@ def game_loop(args):
             code = controller.parse_events(client, world, clock)
 
             # exception
-            if code == 1:
+            if controller.r == 1:
                 return
             # k_r click
             elif code == 3:
-                # start recording
-                if  len(control_list) == 0:
+                if len(control_list) == 0:
                     record_transform(control_list, world)
                     record_control(controller._control, control_list)
-                # end recording
                 else:
-                    control_list = np.array(control_list)
-                    scenario_name = world.camera_manager.scenario_id
-                    control_agent = input("agent id: ")
-                    if not os.path.exists('_out/control/'):
-                        os.mkdir('_out/control/')
-                    if not os.path.exists('_out/control/%s/' % (scenario_name)):
-                        os.mkdir('_out/control/%s/' % (scenario_name))
-                    np.save('_out/control/%s/%s' % (scenario_name, control_agent), control_list)
-                    control_list = [] 
+                    record_control(controller._control, control_list)
+                # end recording
+            elif code == 4:
+                control_list = np.array(control_list)
+                scenario_name = world.camera_manager.scenario_id
+                control_agent = input("agent id: ")
+                if not os.path.exists('_out/control/'):
+                    os.mkdir('_out/control/')
+                if not os.path.exists('_out/control/%s/' % (scenario_name)):
+                    os.mkdir('_out/control/%s/' % (scenario_name))
+                np.save('_out/control/%s/%s' % (scenario_name, control_agent), control_list)
+                control_list = [] 
+                controller.r = 2
             
-            # recording control
-            elif code == 2 and len(control_list) != 0:
-                record_control(controller._control, control_list)  
 
             world.tick(clock)
             world.render(display)
