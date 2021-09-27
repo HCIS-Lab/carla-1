@@ -62,7 +62,7 @@ from __future__ import print_function
 import glob
 import os
 import sys
-
+import time
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
@@ -80,6 +80,7 @@ except IndexError:
 import carla
 
 from carla import ColorConverter as cc
+from carla import VehicleLightState as vls
 
 import argparse
 import collections
@@ -951,6 +952,7 @@ class CameraManager(object):
         self._parent = parent_actor
         self.hud = hud
         self.recording = False
+        self.scenario_id = 0
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         Attachment = carla.AttachmentType
         self._camera_transforms = [
@@ -1027,6 +1029,18 @@ class CameraManager(object):
 
     def toggle_recording(self):
         self.recording = not self.recording
+        if not self.recording:
+            end_time=time.process_time()
+            
+            for img in self.record_image:
+                if img.frame%2 == 0:
+                    img.save_to_disk('_out/%s/%s/%08d' % (self.sensors[self.index][2], self.scenario_id, img.frame))
+            self.scenario_id += 1
+            print('Recorded video time : %4.2f seconds' % (end_time-self.start_time))
+            self.record_image=[]
+        else:
+            self.start_time=time.process_time()
+            
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def render(self, display):
@@ -1075,7 +1089,6 @@ class CameraManager(object):
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
-
 def game_loop(args):
     pygame.init()
     pygame.font.init()
@@ -1094,12 +1107,13 @@ def game_loop(args):
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
-
+        # generate_traffic(client, args)
         clock = pygame.time.Clock()
         while True:
             clock.tick_busy_loop(60)
             if controller.parse_events(client, world, clock):
                 return
+            # print(client.get_world().wait_for_tick())
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
@@ -1163,6 +1177,7 @@ def main():
         default=2.2,
         type=float,
         help='Gamma correction of the camera (default: 2.2)')
+
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
