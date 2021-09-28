@@ -21,12 +21,16 @@ from __future__ import print_function
 import glob
 import os
 import sys
+import random
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+    sys.path.append('../carla/agents')
+    sys.path.append('../carla/')
+
 except IndexError:
     pass
 
@@ -41,6 +45,7 @@ from carla import VehicleLightState as vls
 
 from carla import ColorConverter as cc
 from carla import Transform, Location, Rotation
+from agents.navigation.controller import VehiclePIDController
 
 import argparse
 import collections
@@ -1084,10 +1089,6 @@ class CameraManager(object):
             self.record_image.append(image)
 
 
-# ==============================================================================
-# -- game_loop() ---------------------------------------------------------------
-# ==============================================================================
-
 
 def record_control(control, control_list):
     np_control = np.zeros(7)
@@ -1118,33 +1119,55 @@ def read_control(path='control.npy'):
         control_list.append(carla.VehicleControl(float(control[i][0]), float(control[i][1]), float(control[i][2]), bool(control[i][3]),
             bool(control[i][4]), bool(control[i][5]), int(control[i][6])))
 
-    return  init_transform, control_list
+    return init_transform, control_list
 
+def control_reg_with_waypoint(waypoints, client, location, controller, recorded_control, manual_ratio=0.0):
+    # waypoint = client.get_world().get_map().get_waypoint(location, lane_type=(carla.LaneType.Driving))
+    # control_signal = controller.run_step(10, waypoint)
+    min_d = 1000
+    index = 0
+    for i, waypoint in enumerate(waypoints):
+        d = location.distance(waypoint.transform.location)
+        if min_d > d:
+            min_d = d
+            index = i
+
+    control_signal = controller.run_step(3, waypoints[i])
+    # new_throttle = manual_ratio * recorded_control.throttle + (1 - manual_ratio) * control_signal.throttle
+    # new_steer = manual_ratio * recorded_control.steer + (1 - manual_ratio) * control_signal.steer
+    # new_brake = manual_ratio * recorded_control.brake + (1 - manual_ratio) * control_signal.brake
+    # recorded_control.throttle = new_throttle
+    # recorded_control.steer = new_steer
+    # recorded_control.brake = new_brake
+
+    # return recorded_control
+    return control_signal
+
+
+# ==============================================================================
+# -- game_loop() ---------------------------------------------------------------
+# ==============================================================================
 
 def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
 
-    # actors = [str(s) for s in input('Enter actors: x , y , z  : ').split()]
-    # num_actors = len(actors)
-
-    path = '_out/control/'+str(args.scenario_id)+'/'
+    path = '_out/'+str(args.scenario_id)+'/control/'
     file_list = []
     for root, _, files in os.walk(path):
         for name in files:
             file_list.append(name)
     num_files = len(file_list)
-    print(num_files)
+    print('number of actors: '+str(num_files))
     transform_list = []
     control_list = []
+    controller_list = []
     for i in range(num_files):
         transform, control = read_control(path + file_list[i])
         transform_list.append(transform)
         control_list.append(control)
 
-    # print(transform_list[0].location)
-    # print(transform_list[1].location)
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(2.0)
@@ -1159,32 +1182,41 @@ def game_loop(args):
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
-        # control_path = '_out/control/' + args.scenario_id + '/' + args.actor_id + '.npy'
-        # init_transform, control_list = read_control(control_path)
+
 
         clock = pygame.time.Clock()
 
-        # world.player.set_transform(init_transform)
         bp_list = []
         agents_list = []
         world.player.set_transform(transform_list[0])
         agents_list.append(world.player)
-        for i in range(1, num_files):
-            bp_list.append(blueprint_library.filter('model3')[0])
-            agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i]))
+        for i in range(num_files):
+            if i != 0:
+                bp_list.append(blueprint_library.filter('model3')[0])
+                agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i]))
         
         control_index = 1
+        waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
+        time.sleep(2)
         while (1):
-            clock.tick_busy_loop(60)
+
+            clock.tick_busy_loop(40)
 
             for i in range(num_files):
                 if control_index < len(control_list[i]):
-                    agents_list[i].apply_control(control_list[i][control_index])
+                    if args.waypoint_control:
+                        if random.random() > 0.8:
+                            agents_list[i].apply_control(control_reg_with_waypoint(waypoints, client, 
+                                agents_list[i].get_location(), 
+                                VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}),
+                                control_list[i][control_index]))
+                        else:
+                            agents_list[i].apply_control(control_list[i][control_index])
+                    else:
+                        agents_list[i].apply_control(control_list[i][control_index])
                 else:
                     agents_list[i].set_autopilot(True)
-            # if control_index == 1:
-                # generate_traffic(client, args)
-            print(world.wait_for_tick())
+
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
@@ -1258,6 +1290,9 @@ def main():
         metavar='S',
         type=int,
         help='Random device seed')
+    argparser.add_argument(
+        '-waypoint_control',
+        action='store_true')
     
     args = argparser.parse_args()
 
