@@ -1135,7 +1135,6 @@ class CameraManager(object):
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
-
 def record_control(control, control_list):
     np_control = np.zeros(7)
     np_control[0] = control.throttle
@@ -1176,9 +1175,10 @@ def game_loop(args):
         controller = KeyboardControl(world, args.autopilot)
 
         control_list = []
+        timestamp_list = []
         clock = pygame.time.Clock()
         while True:
-            clock.tick_busy_loop(60)
+            clock.tick_busy_loop(40)
             code = controller.parse_events(client, world, clock)
 
             # exception
@@ -1188,20 +1188,28 @@ def game_loop(args):
             elif code == 3:
                 if len(control_list) == 0:
                     record_transform(control_list, world)
-                    record_control(controller._control, control_list)
-                else:
-                    record_control(controller._control, control_list)
+
+                record_control(controller._control, control_list)
+                # print(type(client.get_world().wait_for_tick()))
+                timestamp_list.append(client.get_world().wait_for_tick().frame)
                 # end recording
             elif code == 4:
+                timestamp_list = np.array(timestamp_list)
                 control_list = np.array(control_list)
                 scenario_name = world.camera_manager.scenario_id
                 control_agent = input("agent id: ")
-                if not os.path.exists('_out/control/'):
-                    os.mkdir('_out/control/')
-                if not os.path.exists('_out/control/%s/' % (scenario_name)):
-                    os.mkdir('_out/control/%s/' % (scenario_name))
-                np.save('_out/control/%s/%s' % (scenario_name, control_agent), control_list)
-                control_list = [] 
+                print('start time: ' + str(timestamp_list[0]))
+                print('end time: ' + str(timestamp_list[-1]))
+                if not os.path.exists('_out/%s/' % (scenario_name)):
+                    os.mkdir('_out/%s/' % (scenario_name))
+                if not os.path.exists('_out/%s/control/'% (scenario_name)):
+                    os.mkdir('_out/%s/control/'% (scenario_name))
+                if not os.path.exists('_out/%s/timestamp/'% (scenario_name)):
+                    os.mkdir('_out/%s/timestamp/'% (scenario_name))
+                np.save('_out/%s/control/%s' % (scenario_name, control_agent), control_list)
+                np.save('_out/%s/timestamp/%s' % (scenario_name, control_agent), timestamp_list)
+                control_list = []
+                timestamp_list = []
                 controller.r = 2
             
 
