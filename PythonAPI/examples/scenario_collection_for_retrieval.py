@@ -1085,10 +1085,8 @@ class CameraManager(object):
             for root, dirs, files in os.walk('_out/%s/' % (self.sensors[self.index][1])):
                 for d in dirs:
                     i += 1
-            print(111111)
             if not os.path.exists('_out/%s/%s/' % (self.sensors[self.index][1], i+1)):
                     os.mkdir('_out/%s/%s/' % (self.sensors[self.index][1], i+1))
-            print('222222')
             for img in self.record_image:
                 if img.frame%6 == 0:
                     img.save_to_disk('_out/%s/%s/%08d' % (self.sensors[self.index][2], i+1, img.frame))
