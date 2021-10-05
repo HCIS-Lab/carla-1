@@ -11,9 +11,7 @@
 
 """
 Welcome to CARLA manual control.
-
 Use ARROWS or WASD keys for control.
-
     W            : throttle
     S            : brake
     A/D          : steer left/right
@@ -23,30 +21,24 @@ Use ARROWS or WASD keys for control.
     M            : toggle manual transmission
     ,/.          : gear up/down
     CTRL + W     : toggle constant velocity mode at 60 km/h
-
     L            : toggle next light type
     SHIFT + L    : toggle high beam
     Z/X          : toggle right/left blinker
     I            : toggle interior light
-
     TAB          : change sensor position
     ` or N       : next sensor
     [1-9]        : change to sensor [1-9]
     G            : toggle radar visualization
     C            : change weather (Shift+C reverse)
     Backspace    : change vehicle
-
     V            : Select next map layer (Shift+V reverse)
     B            : Load current selected map layer (Shift+B to unload)
-
     R            : toggle recording images to disk
     O            : set coordinate
-
     CTRL + R     : toggle recording of simulation (replacing any previous)
     CTRL + P     : start replaying last recorded simulation
     CTRL + +     : increments the start time of the replay by 1 second (+SHIFT = 10 seconds)
     CTRL + -     : decrements the start time of the replay by 1 second (+SHIFT = 10 seconds)
-
     F1           : toggle HUD
     H/?          : toggle help
     ESC          : quit
@@ -1155,6 +1147,13 @@ def record_transform(control_list, world):
     
     control_list.append(np_transform)
 
+def record_velocity(velocity_list, world):
+    velocity = world.player.get_velocity()
+    np_velocity = np.zeros(3)
+    np_velocity = [velocity.x, velocity.y, velocity.z]
+
+    velocity_list.append(np_velocity)
+
 def game_loop(args):
     pygame.init()
     pygame.font.init()
@@ -1174,11 +1173,12 @@ def game_loop(args):
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
-        control_list = []
         timestamp_list = []
+        transform_list = []
+        velocity_list = []
         clock = pygame.time.Clock()
         while True:
-            clock.tick_busy_loop(40)
+            clock.tick_busy_loop(20)
             code = controller.parse_events(client, world, clock)
 
             # exception
@@ -1186,30 +1186,39 @@ def game_loop(args):
                 return
             # k_r click
             elif code == 3:
-                if len(control_list) == 0:
-                    record_transform(control_list, world)
+                #if len(control_list) == 0:
+                #    record_transform(control_list, world)
 
-                record_control(controller._control, control_list)
+                #record_control(controller._control, control_list)
                 # print(type(client.get_world().wait_for_tick()))
                 timestamp_list.append(client.get_world().wait_for_tick().frame)
+
+                # transform 
+                record_transform(transform_list, world)
+                record_velocity(velocity_list, world)
                 # end recording
             elif code == 4:
                 timestamp_list = np.array(timestamp_list)
-                control_list = np.array(control_list)
+                transform_list = np.array(transform_list)
+                velocity_list = np.array(velocity_list) # velocity list as np array
                 scenario_name = world.camera_manager.scenario_id
                 control_agent = input("agent id: ")
                 print('start time: ' + str(timestamp_list[0]))
                 print('end time: ' + str(timestamp_list[-1]))
                 if not os.path.exists('_out/%s/' % (scenario_name)):
                     os.mkdir('_out/%s/' % (scenario_name))
-                if not os.path.exists('_out/%s/control/'% (scenario_name)):
-                    os.mkdir('_out/%s/control/'% (scenario_name))
+                if not os.path.exists('_out/%s/transform/'% (scenario_name)):
+                    os.mkdir('_out/%s/transform/'% (scenario_name))
+                if not os.path.exists('_out/%s/velocity/'% (scenario_name)):
+                    os.mkdir('_out/%s/velocity/'% (scenario_name))
                 if not os.path.exists('_out/%s/timestamp/'% (scenario_name)):
                     os.mkdir('_out/%s/timestamp/'% (scenario_name))
-                np.save('_out/%s/control/%s' % (scenario_name, control_agent), control_list)
+                np.save('_out/%s/transform/%s' % (scenario_name, control_agent), transform_list)
+                np.save('_out/%s/velocity/%s' % (scenario_name, control_agent), velocity_list)   # velocity list np array saved as a .npy file
                 np.save('_out/%s/timestamp/%s' % (scenario_name, control_agent), timestamp_list)
-                control_list = []
+                transform_list = []
                 timestamp_list = []
+                velocity_list = []
                 controller.r = 2
             
 
