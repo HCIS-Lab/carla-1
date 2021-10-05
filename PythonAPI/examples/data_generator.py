@@ -1127,9 +1127,13 @@ def read_transform(path='control.npy'):
     """
     transform_npy = np.load(path)
     transform_list = []
-    for transform in transform_npy:
-        transform_list.append(carla.Transform(Location(x=transform[0], y=transform[1], z=transform[2]),
-                                    Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
+    for i, transform in enumerate(transform_npy):
+        if i == 0:
+            transform_list.append(carla.Transform(Location(x=transform[0], y=transform[1], z=transform[2]+1),
+                                        Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
+        else:
+            transform_list.append(carla.Transform(Location(x=transform[0], y=transform[1], z=transform[2]),
+                                        Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
 
     return transform_list
 
@@ -1241,7 +1245,7 @@ def game_loop(args):
         for i in range(num_files):
             if i != 0:
                 bp_list.append(blueprint_library.filter('model3')[0])
-                agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i][0]))
+                agents_list.append(client.get_world().spawn_actor(bp_list[i-1], actor_transform[i][0]))
             controller_list.append(VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                 max_throttle=1.0, max_brake=1.0, max_steering=1.0))
 
