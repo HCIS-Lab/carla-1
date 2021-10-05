@@ -1137,8 +1137,9 @@ def read_velocity(path='velocity.npy'):
     velocity_npy = np.load(path)
     velocity_list = []
     for velocity in velocity_npy:
-
-        velocity_list.append(carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2]))
+        v = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2)**1/3
+        velocity_list.append(v)
+        # velocity_list.append(carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2]))
 
     return velocity_list
 
@@ -1269,10 +1270,10 @@ def game_loop(args):
                         #     agents_list[i].apply_control(control_list[i][control_index])
                     # else:
                     #     agents_list[i].apply_control(control_list[i][control_index])
-                    # agents_list[i].apply_control(controller_list[i].run_step(actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
-                    agents_list[i].apply_control(controller_list[i].run_step(10, actor_transform[i][actor_transform_index[i]]))
-                    # if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 0.5:
-                    #     actor_transform_index[i] +=1
+                    agents_list[i].apply_control(controller_list[i].run_step(actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
+                    # agents_list[i].apply_control(controller_list[i].run_step(20, actor_transform[i][actor_transform_index[i]]))
+                    if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2:
+                        actor_transform_index[i] +=1
                         
                 else:
                     if not auto:
