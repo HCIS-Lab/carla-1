@@ -1125,18 +1125,20 @@ def read_transform(path='control.npy'):
     """ param:
 
     """
-    transform_list = np.load(path)
-
-    for transform in transform_list:
-        transform = carla.Transform(Location(x=transform[0][0], y=transform[0][1], z=transform[0][2]),
-                                    Rotation(pitch=transform[0][3], yaw=transform[0][4], roll=transform[0][5]))
+    transform_npy = np.load(path)
+    transform_list = []
+    for transform in transform_npy:
+        transform_list.append(carla.Transform(Location(x=transform[0], y=transform[1], z=transform[2]),
+                                    Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
 
     return transform_list
 
-def read_velocity(path='velocity.npy')
-    velocity_list = np.load(path)
-    for velocity in velocity_list:
-        velocity = carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2])
+def read_velocity(path='velocity.npy'):
+    velocity_npy = np.load(path)
+    velocity_list = []
+    for velocity in velocity_npy:
+
+        velocity_list.append(carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2]))
 
     return velocity_list
 
@@ -1180,13 +1182,23 @@ def game_loop(args):
     try:
         for root, _, files in os.walk(path + '/transform/'):
             for name in files:
-                file_list.append(name)
+                file_list.append(path + '/transform/' + name)
     except:
         print("檔案夾不存在。")
 
     velocity_list = []
-    for name in file_list:
-        velocity_list.append(path + '/velocity/' + name)
+    # for name in file_list:
+    #     velocity_list.append(path + '/velocity/' + name)
+
+    try:
+        for root, _, files in os.walk(path + '/velocity/'):
+            for name in files:
+                velocity_list.append(path + '/velocity/' + name)
+    except:
+        print("檔案夾不存在。")
+
+    file_list.sort()
+    velocity_list.sort()
 
     num_files = len(file_list)
     print('number of actors: '+str(num_files))
@@ -1223,18 +1235,17 @@ def game_loop(args):
         bp_list = []
         agents_list = []
         controller_list = []
-        world.player.set_transform(transform_list[0][0])
+        world.player.set_transform(actor_transform[0][0])
         agents_list.append(world.player)
         for i in range(num_files):
             if i != 0:
                 bp_list.append(blueprint_library.filter('model3')[0])
                 agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i][0]))
-            controller.append(VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}))
+            controller_list.append(VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}))
 
 
         control_index = 1
         actor_transform_index = [1]*num_files
-
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
@@ -1247,7 +1258,7 @@ def game_loop(args):
 
             for i in range(num_files):
                 # if control_index < len(control_list[i]):
-                if actor_transform_index[i] < len(transform_list[i]):
+                if actor_transform_index[i] < len(actor_transform[i]):
                     # if args.waypoint_control:
                     #     if random.random() > 0.8:
                     #         agents_list[i].apply_control(control_reg_with_waypoint(waypoints, client, 
@@ -1258,11 +1269,11 @@ def game_loop(args):
                         #     agents_list[i].apply_control(control_list[i][control_index])
                     # else:
                     #     agents_list[i].apply_control(control_list[i][control_index])
-                    agents_list[i].apply_control(controller[i].run_step(velocity_list[i][transform_index], actor_transform[i][transform_index]))
-                    if agents_list.get_transform().location.distance(actor_transform[i][transform_index]) < 0.5:
-                        actor_transform_index[i] +=1
-                    else:
-                        continue
+                    # agents_list[i].apply_control(controller_list[i].run_step(actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
+                    agents_list[i].apply_control(controller_list[i].run_step(10, actor_transform[i][actor_transform_index[i]]))
+                    # if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 0.5:
+                    #     actor_transform_index[i] +=1
+                        
                 else:
                     if not auto:
                         auto = True
