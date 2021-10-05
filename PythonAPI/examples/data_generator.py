@@ -1137,7 +1137,7 @@ def read_velocity(path='velocity.npy'):
     velocity_npy = np.load(path)
     velocity_list = []
     for velocity in velocity_npy:
-        v = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2)**1/3
+        v = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2)**1/2
         velocity_list.append(v)
         # velocity_list.append(carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2]))
 
@@ -1242,7 +1242,8 @@ def game_loop(args):
             if i != 0:
                 bp_list.append(blueprint_library.filter('model3')[0])
                 agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i][0]))
-            controller_list.append(VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}))
+            controller_list.append(VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
+                max_throttle=1.0, max_brake=1.0, max_steering=1.0))
 
 
         control_index = 1
@@ -1253,6 +1254,12 @@ def game_loop(args):
         print('start:')
         print(client.get_world().wait_for_tick().frame)
         auto = False
+
+        for i in range(num_files):
+            for j in range(len(actor_transform[i])):
+                if j%10 == 0:
+                    world.world.debug.draw_point(actor_transform[i][j].location)
+
         while (1):
 
             clock.tick_busy_loop(20)
@@ -1272,8 +1279,11 @@ def game_loop(args):
                     #     agents_list[i].apply_control(control_list[i][control_index])
                     agents_list[i].apply_control(controller_list[i].run_step(actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
                     # agents_list[i].apply_control(controller_list[i].run_step(20, actor_transform[i][actor_transform_index[i]]))
-                    if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2:
-                        actor_transform_index[i] +=1
+                    v = agents_list[i].get_velocity()
+                    v = (v.x**2 + v.y**2 + v.z**2)**1/3
+                    print(v)
+                    if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2 + v/20.0 :
+                        actor_transform_index[i] += int(7 + v//10.0)
                         
                 else:
                     if not auto:
