@@ -45,8 +45,8 @@ from carla import VehicleLightState as vls
 
 from carla import ColorConverter as cc
 from carla import Transform, Location, Rotation
-from agents.navigation.controller import VehiclePIDController
-
+# from agents.navigation.controller import VehiclePIDController
+from controller import VehiclePIDController
 import argparse
 import collections
 import datetime
@@ -1121,6 +1121,29 @@ def read_control(path='control.npy'):
 
     return init_transform, control_list
 
+def read_transform(path='control.npy'):
+    """ param:
+
+    """
+    transform_list = np.load(path)
+
+    for transform in transform_list:
+        transform = carla.Transform(Location(x=transform[0][0], y=transform[0][1], z=transform[0][2]),
+                                    Rotation(pitch=transform[0][3], yaw=transform[0][4], roll=transform[0][5]))
+
+    return transform_list
+
+def read_velocity(path='velocity.npy')
+    velocity_list = np.load(path)
+    for velocity in velocity_list:
+        velocity = carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2])
+
+    return velocity_list
+
+def control_with_trasform_controller(controller, transform):
+    control_signal = controller.run_step(10, transform)
+    return control_signal
+
 def control_reg_with_waypoint(waypoints, client, location, controller, recorded_control, manual_ratio=0.0):
     # waypoint = client.get_world().get_map().get_waypoint(location, lane_type=(carla.LaneType.Driving))
     # control_signal = controller.run_step(10, waypoint)
@@ -1152,22 +1175,33 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-
-    path = '_out/'+str(args.scenario_id)+'/control/'
+    path = '_out/'+str(args.scenario_id)
     file_list = []
-    for root, _, files in os.walk(path):
-        for name in files:
-            file_list.append(name)
+    try:
+        for root, _, files in os.walk(path + '/transform/'):
+            for name in files:
+                file_list.append(name)
+    except:
+        print("檔案夾不存在。")
+
+    velocity_list = []
+    for name in file_list:
+        velocity_list.append(path + '/velocity/' + name)
+
     num_files = len(file_list)
     print('number of actors: '+str(num_files))
-    transform_list = []
+    actor_transform = []
+    actor_velocity = []
     control_list = []
-    controller_list = []
-    for i in range(num_files):
-        transform, control = read_control(path + file_list[i])
-        transform_list.append(transform)
-        control_list.append(control)
+    # for i in range(num_files):
+    #     transform, control = read_control(path + file_list[i])
+    #     transform_list.append(transform)
+    #     control_list.append(control)
 
+
+    for i in range(num_files):
+        actor_transform.append(read_transform(file_list[i]))
+        actor_velocity.append(read_velocity(velocity_list[i]))
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(2.0)
@@ -1188,33 +1222,52 @@ def game_loop(args):
 
         bp_list = []
         agents_list = []
-        world.player.set_transform(transform_list[0])
+        controller_list = []
+        world.player.set_transform(transform_list[0][0])
         agents_list.append(world.player)
         for i in range(num_files):
             if i != 0:
                 bp_list.append(blueprint_library.filter('model3')[0])
-                agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i]))
-        
+                agents_list.append(client.get_world().spawn_actor(bp_list[i-1], transform_list[i][0]))
+            controller.append(VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}))
+
+
         control_index = 1
+        actor_transform_index = [1]*num_files
+
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
+
         time.sleep(2)
+        print('start:')
+        print(client.get_world().wait_for_tick().frame)
+        auto = False
         while (1):
 
-            clock.tick_busy_loop(40)
+            clock.tick_busy_loop(20)
 
             for i in range(num_files):
-                if control_index < len(control_list[i]):
-                    if args.waypoint_control:
-                        if random.random() > 0.8:
-                            agents_list[i].apply_control(control_reg_with_waypoint(waypoints, client, 
-                                agents_list[i].get_location(), 
-                                VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}),
-                                control_list[i][control_index]))
-                        else:
-                            agents_list[i].apply_control(control_list[i][control_index])
+                # if control_index < len(control_list[i]):
+                if actor_transform_index[i] < len(transform_list[i]):
+                    # if args.waypoint_control:
+                    #     if random.random() > 0.8:
+                    #         agents_list[i].apply_control(control_reg_with_waypoint(waypoints, client, 
+                    #             agents_list[i].get_location(), 
+                    #             VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}),
+                    #             control_list[i][control_index]))
+                        # else:
+                        #     agents_list[i].apply_control(control_list[i][control_index])
+                    # else:
+                    #     agents_list[i].apply_control(control_list[i][control_index])
+                    agents_list[i].apply_control(controller[i].run_step(velocity_list[i][transform_index], actor_transform[i][transform_index]))
+                    if agents_list.get_transform().location.distance(actor_transform[i][transform_index]) < 0.5:
+                        actor_transform_index[i] +=1
                     else:
-                        agents_list[i].apply_control(control_list[i][control_index])
+                        continue
                 else:
+                    if not auto:
+                        auto = True
+                        print('end: ')
+                        print(client.get_world().wait_for_tick().frame)
                     agents_list[i].set_autopilot(True)
 
             world.tick(clock)
