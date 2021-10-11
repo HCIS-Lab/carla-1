@@ -1338,7 +1338,6 @@ def game_loop(args):
                         actor_transform[i][j].location)
 
         while (1):
-
             clock.tick_busy_loop(20)
 
             for i in range(num_files):
