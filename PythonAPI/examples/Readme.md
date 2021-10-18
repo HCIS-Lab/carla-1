@@ -17,3 +17,5 @@
  1. You can use this script to draw waypoints.  
  2. You can make your car follow the user-defined waypoints in sequence.  
  3. It can collect every actors in the map, and output their position and id and time as a csv file. All in all, the output is trajectories of each agents.
+ ## data_generator.py
+ --random_actors: After specifying this parameter, you can set the center of the scenario, the range of the scenario, and the quantity of vehicles and walkers. 

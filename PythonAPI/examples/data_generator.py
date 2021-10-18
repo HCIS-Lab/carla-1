@@ -24,10 +24,11 @@ import sys
 import random
 
 try:
-    sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-        sys.version_info.major,
-        sys.version_info.minor,
-        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+    #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+    #    sys.version_info.major,
+    #    sys.version_info.minor,
+    #    'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+    sys.path.append('../carla/agents/navigation')
     sys.path.append('../carla/agents')
     sys.path.append('../carla/')
 
@@ -45,7 +46,7 @@ from carla import VehicleLightState as vls
 
 from carla import ColorConverter as cc
 from carla import Transform, Location, Rotation
-# from agents.navigation.controller import VehiclePIDController
+#from agents.navigation.controller import VehiclePIDController
 from controller import VehiclePIDController
 import argparse
 import collections
@@ -56,6 +57,7 @@ import random
 import re
 import weakref
 import time
+from random_actors import spawn_actor_nearby
 
 try:
     import pygame
@@ -1300,6 +1302,16 @@ def game_loop(args):
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
+        if args.random_actors:
+            print("Now you need to determine the parameters of random actors")
+            x = float(input("center_x: "))
+            y = float(input("center_y: "))
+            z = float(input("center_z: "))
+            distance = float(input("distance: "))
+            vehicle = int(input("vehicle_quantity:"))
+            pedestrian = int(input("pedestrian_quantity:"))
+            
+            
         # world = World(client.get_world(), hud, args)
         world = World(client.load_world(args.map), hud, args)
         client.get_world().set_weather(args.weather)
@@ -1336,6 +1348,9 @@ def game_loop(args):
                 if j % 10 == 0:
                     world.world.debug.draw_point(
                         actor_transform[i][j].location)
+
+        if args.random_actors:
+            spawn_actor_nearby(carla.Location(x, y, z), distance, vehicle, pedestrian)
 
         while (1):
             clock.tick_busy_loop(20)
@@ -1455,6 +1470,10 @@ def main():
         default='Town03',
         type=str,
         help='map name')
+    argparser.add_argument(
+        '-random_actors',
+        action='store_true',
+        help='enable roaming actors')
 
     args = argparser.parse_args()
 
@@ -1499,3 +1518,4 @@ if __name__ == '__main__':
     HardRainSunset
     SoftRainSunset
 """
+
