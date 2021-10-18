@@ -9,6 +9,49 @@
 # Allows controlling a vehicle with a keyboard. For a simpler and more
 # documented example, please take a look at tutorial.py.
 
+"""
+Welcome to CARLA manual control.
+
+Use ARROWS or WASD keys for control.
+
+    W            : throttle
+    S            : brake
+    A/D          : steer left/right
+    Q            : toggle reverse
+    Space        : hand-brake
+    P            : toggle autopilot
+    M            : toggle manual transmission
+    ,/.          : gear up/down
+    CTRL + W     : toggle constant velocity mode at 60 km/h
+
+    L            : toggle next light type
+    SHIFT + L    : toggle high beam
+    Z/X          : toggle right/left blinker
+    I            : toggle interior light
+
+    TAB          : change sensor position
+    ` or N       : next sensor
+    [1-9]        : change to sensor [1-9]
+    G            : toggle radar visualization
+    C            : change weather (Shift+C reverse)
+    Backspace    : change vehicle
+
+    V            : Select next map layer (Shift+V reverse)
+    B            : Load current selected map layer (Shift+B to unload)
+
+    R            : toggle recording images to disk
+    O            : set coordinate
+
+    CTRL + R     : toggle recording of simulation (replacing any previous)
+    CTRL + P     : start replaying last recorded simulation
+    CTRL + +     : increments the start time of the replay by 1 second (+SHIFT = 10 seconds)
+    CTRL + -     : decrements the start time of the replay by 1 second (+SHIFT = 10 seconds)
+
+    F1           : toggle HUD
+    H/?          : toggle help
+    ESC          : quit
+"""
+
 
 from __future__ import print_function
 
@@ -24,13 +67,16 @@ import sys
 import random
 
 try:
-    #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+    ##
+    # sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
     #    sys.version_info.major,
     #    sys.version_info.minor,
     #    'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+    ##
     sys.path.append('../carla/agents/navigation')
     sys.path.append('../carla/agents')
     sys.path.append('../carla/')
+    sys.path.append('../../HDMaps')
 
 except IndexError:
     pass
@@ -57,6 +103,7 @@ import random
 import re
 import weakref
 import time
+import threading
 from random_actors import spawn_actor_nearby
 
 try:
@@ -154,6 +201,7 @@ class World(object):
         self.imu_sensor = None
         self.radar_sensor = None
         self.camera_manager = None
+        self.lidar_sensor = None 
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = args.filter
@@ -235,6 +283,11 @@ class World(object):
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
+        self.lidar_sensor = CameraManager(self.player, self.hud, self._gamma)
+        self.lidar_sensor.transform_index = cam_pos_index
+        self.lidar_sensor.set_sensor(6, notify=False)
+        self.lidar_sensor.background=True
+        
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
@@ -296,7 +349,8 @@ class World(object):
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
-            self.imu_sensor.sensor]
+            self.imu_sensor.sensor,
+            self.lidar_sensor.sensor]
         for sensor in sensors:
             if sensor is not None:
                 sensor.stop()
@@ -316,8 +370,8 @@ class KeyboardControl(object):
     def __init__(self, world, start_in_autopilot):
         self._autopilot_enabled = start_in_autopilot
         if isinstance(world.player, carla.Vehicle):
-            self._control = carla.VehicleControl()
-            self.control_list = []
+            self._control = None
+            self.control_list = None
             self._lights = carla.VehicleLightState.NONE
             world.player.set_autopilot(self._autopilot_enabled)
             world.player.set_light_state(self._lights)
@@ -397,7 +451,15 @@ class KeyboardControl(object):
                 elif event.key > K_0 and event.key <= K_9:
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
-                    world.camera_manager.toggle_recording()
+                    scenario_name=None
+                    world.camera_manager.recording= not  world.camera_manager.recording
+                    world.lidar_sensor.recording= not  world.lidar_sensor.recording
+                    if not  world.lidar_sensor.recording:
+                        scenario_name=input("scenario id: ")
+                    world.camera_manager.toggle_recording(scenario_name)
+                    world.lidar_sensor.toggle_recording(scenario_name)
+                
+
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
                     if (world.recording_enabled):
                         client.stop_recorder()
@@ -506,8 +568,8 @@ class KeyboardControl(object):
             elif isinstance(self._control, carla.WalkerControl):
                 self._parse_walker_keys(
                     pygame.key.get_pressed(), clock.get_time(), world)
-            world.player.apply_control(self._control)
-            return r
+            #world.player.apply_control(self._control)
+            return 0
 
     def _parse_vehicle_keys(self, keys, milliseconds):
         if keys[K_UP] or keys[K_w]:
@@ -994,7 +1056,6 @@ class CameraManager(object):
         self.hud = hud
         self.recording = False
         self.record_image = []
-        self.start_time = None
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1094,23 +1155,18 @@ class CameraManager(object):
     def next_sensor(self):
         self.set_sensor(self.index + 1)
 
-    def toggle_recording(self):
-        self.recording = not self.recording
+    def toggle_recording(self,scenario_name):
         if not self.recording:
-            end_time = time.process_time()
-            scenario_name = input("scenario id: ")
-            for img in self.record_image:
-                if img.frame % 2 == 0:
-                    img.save_to_disk(
-                        '_out/%s/%s/%08d' % (self.sensors[self.index][2], scenario_name, img.frame))
-            print('Recorded video time : %4.2f seconds' %
-                  (end_time-self.start_time))
-            self.record_image = []
-        else:
-            self.start_time = time.process_time()
-
-        self.hud.notification('Recording %s' %
-                              ('On' if self.recording else 'Off'))
+            t=threading.Thread(target = self.save_img,args=(self.record_image,scenario_name))
+            t.start()
+            self.record_image=[]
+        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+    def save_img(self,img_list,scenario_name):
+        print("saving..")
+        for img in img_list:
+            if img.frame%2 == 0:
+                img.save_to_disk('_out/%s/%s/%08d' % (scenario_name,self.sensors[self.index][2],img.frame))
+        print("%s saving agent finished." % self.sensors[self.index][2])
 
     def render(self, display):
         if self.surface is not None:
@@ -1246,7 +1302,33 @@ def control_reg_with_waypoint(waypoints, client, location, controller, recorded_
     # return recorded_control
     return control_signal
 
+def auto_spawn_object(world,second):
+    this_map=world.world.get_map()
+    new_obj=None
+    try:
+        bp_list=world.world.get_blueprint_library().filter('static')
+        while True:
+            time.sleep(second)
+            if new_obj is not None:
+                new_obj.destroy()
+                new_obj=None
+            if world.player.is_at_traffic_light():
+                continue
+            waypoint = this_map.get_waypoint(world.player.get_location(),lane_type=carla.LaneType.Shoulder)
+            if waypoint is None:
+                continue
+            waypoint_list=waypoint.next(15)
+            if waypoint_list:
+                waypoint = waypoint_list[0]
 
+            obj_bp=random.choice(bp_list)
+            new_obj=world.world.try_spawn_actor(obj_bp, waypoint.transform)#carla.Transform(new_obj_location, vehicle_rotation))
+            if new_obj!=None:
+                print("Spawn object.")
+    finally:
+        if new_obj is not None:
+            new_obj.destroy()
+    
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
@@ -1293,8 +1375,7 @@ def game_loop(args):
         actor_velocity.append(read_velocity(velocity_list[i]))
     try:
         client = carla.Client(args.host, args.port)
-        client.set_timeout(2.0)
-
+        client.set_timeout(5.0)
         display = pygame.display.set_mode(
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -1312,9 +1393,9 @@ def game_loop(args):
             pedestrian = int(input("pedestrian_quantity:"))
             
             
-        # world = World(client.get_world(), hud, args)
-        world = World(client.load_world(args.map), hud, args)
-        client.get_world().set_weather(args.weather)
+        #world = World(client.get_world(), hud, args)
+        world = World(client.load_world(args.map), hud, args)            
+        client.get_world().set_weather(args.weather)                     
 
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
@@ -1324,7 +1405,7 @@ def game_loop(args):
         bp_list = []
         agents_list = []
         controller_list = []
-        world.player.set_transform(actor_transform[0][0])
+        world.player.set_transform(actor_transform[0][0])  
         agents_list.append(world.player)
         for i in range(num_files):
             if i != 0:
@@ -1351,7 +1432,9 @@ def game_loop(args):
 
         if args.random_actors:
             spawn_actor_nearby(carla.Location(x, y, z), distance, vehicle, pedestrian)
-
+        if args.random_objects:
+            t = threading.Thread(target = auto_spawn_object,args=(world,5))
+            t.start()
         while (1):
             clock.tick_busy_loop(20)
 
@@ -1383,7 +1466,8 @@ def game_loop(args):
                         print('end: ')
                         print(client.get_world().wait_for_tick().frame)
                     agents_list[i].set_autopilot(True)
-
+            if controller.parse_events(client, world, clock):
+                return
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
@@ -1474,6 +1558,10 @@ def main():
         '-random_actors',
         action='store_true',
         help='enable roaming actors')
+    argparser.add_argument(
+        '-random_objects',
+        action='store_true',
+        help='enable random objects')
 
     args = argparser.parse_args()
 
@@ -1518,4 +1606,3 @@ if __name__ == '__main__':
     HardRainSunset
     SoftRainSunset
 """
-
