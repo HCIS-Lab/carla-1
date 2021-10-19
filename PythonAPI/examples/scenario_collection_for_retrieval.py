@@ -562,7 +562,7 @@ class KeyboardControl(object):
 
 
 class HUD(object):
-    def __init__(self, width, height):
+    def __init__(self, width, height, distance=25.0):
         self.dim = (width, height)
         font = pygame.font.Font(pygame.font.get_default_font(), 20)
         font_name = 'courier' if os.name == 'nt' else 'mono'
@@ -581,6 +581,17 @@ class HUD(object):
         self._server_clock = pygame.time.Clock()
         self.recording = False
         self.recording_time = 0
+
+        self.d_2_intersection = distance
+        self.d_last = distance
+        self.town5_intersection_coordinators = [(-189.3, -89.3, 0.0), (-190.5, 1.3, 0.0), (-189.7, 89.6, 0.0), 
+                                            (-125.6, 90.4, -0.0), (-126.2, 0.3, -0.0), (-126, -89.1, -0.0),
+                                            (-50.5, -89.4, -0.0), (-49.1, 0.8, 0.0), (-39.8, 89.6, 0.0),
+                                            (29.9, 90.0, 0.0), (29.9, 0.2, 0.0), (31.7, -89.2, 0.0),
+                                            (101.9, -0.1, 0.0)]
+
+        for i, intersection in enumerate(self.town5_intersection_coordinators):
+            self.town5_intersection_coordinators[i] = carla.Location(intersection[0], intersection[1], intersection[2])
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -649,27 +660,42 @@ class HUD(object):
             vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
             peds = [(distance(x.get_location()), x) for x in peds if x.id != world.player.id]
             for d, vehicle in sorted(vehicles, key=lambda vehicles: vehicles[0]):
-                if d > 30.0:
+                if d > 32.0:
                     break
                 vehicle_type = get_actor_display_name(vehicle, truncate=22)
                 self._info_text.append('% 4dm %s' % (d, vehicle_type))
                 num_actors += 1
 
             for d, ped in sorted(peds, key=lambda peds: peds[0]):
-                if d > 30.0:
+                if d > 35.0:
                     break
                 # vehicle_type = get_actor_display_name(ped, truncate=22)
-                # self._info_text.append('% 4dm %s' % (d, vehicle_type))
+                self._info_text.append('% 4dm pedestrian' % (d))
                 num_actors += 1
 
-            if num_actors > 3 and not self.recording:
+            d = self.d_2_intersection
+            in_intersection = False
+            for location in self.town5_intersection_coordinators:
+                if world.player.get_location().distance(location) < d:
+                    d = world.player.get_location().distance(location)
+                    in_intersection = True
+            self._info_text.append('intersection in % 4dm' % (d))
+            leave = False
+            if d > self.d_last:
+                leave = True
+            if num_actors > 1 and num_actors < 6 and not self.recording and in_intersection and not leave:
+            # if num_actors > 3 and not self.recording:
                 self.recording = True
                 self.recording_time = time.time()
                 camera.toggle_recording()
-            elif self.recording and time.time() - self.recording_time > 14.0:
+            elif self.recording and time.time() - self.recording_time > 10.0:
                 camera.toggle_recording()
                 self.recording = False
 
+            self.d_last = d
+
+        if self.recording:
+            self._info_text += ['recording vedio:']
 
     def toggle_info(self):
         self._show_info = not self._show_info
@@ -988,6 +1014,9 @@ class CameraManager(object):
         self.hud = hud
         self.recording = False
         self.record_image=[]
+        self.front_img = []
+        self.left_img = []
+        self.right_img = []
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -997,8 +1026,10 @@ class CameraManager(object):
             self._camera_transforms = [
                 # (carla.Transform(carla.Location(x=-2.0*bound_x, y=+0.0*bound_y, z=2.0*bound_z), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-50)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=50)), Attachment.Rigid),
                 # (carla.Transform(carla.Location(x=+1.9*bound_x, y=+1.0*bound_y, z=1.2*bound_z)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=25*bound_z), carla.Rotation(pitch=10.0)), Attachment.SpringArm)]
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)]
                 # (carla.Transform(carla.Location(x=-1.0, y=-1.0*bound_y, z=0.4*bound_z)), Attachment.Rigid)]
         else:
             self._camera_transforms = [
@@ -1043,6 +1074,7 @@ class CameraManager(object):
                     if attr_name == 'range':
                         self.lidar_range = float(attr_value)
 
+
             item.append(bp)
         self.index = None
 
@@ -1060,13 +1092,32 @@ class CameraManager(object):
                 self.surface = None
             self.sensor = self._parent.get_world().spawn_actor(
                 self.sensors[index][-1],
-                self._camera_transforms[self.transform_index][0],
+                self._camera_transforms[3][0],
                 attach_to=self._parent,
-                attachment_type=self._camera_transforms[self.transform_index][1])
+                attachment_type=self._camera_transforms[3][1])
+            self.sensor_front = self._parent.get_world().spawn_actor(
+                self.sensors[index][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.sensor_left = self._parent.get_world().spawn_actor(
+                self.sensors[index][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.sensor_right = self._parent.get_world().spawn_actor(
+                self.sensors[index][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
             self.sensor.listen(lambda image: CameraManager._parse_image(weak_self, image))
+            self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
+            self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
+            self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -1079,18 +1130,44 @@ class CameraManager(object):
         if not self.recording:
             if not os.path.exists('_out/'):
                     os.mkdir('_out/')
-            if not os.path.exists('_out/%s/' % (self.sensors[self.index][1])):
-                    os.mkdir('_out/%s/' % (self.sensors[self.index][1]))
-            i = 0
-            for root, dirs, files in os.walk('_out/%s/' % (self.sensors[self.index][1])):
-                for d in dirs:
-                    i += 1
-            if not os.path.exists('_out/%s/%s/' % (self.sensors[self.index][1], i+1)):
-                    os.mkdir('_out/%s/%s/' % (self.sensors[self.index][1], i+1))
+            if not os.path.exists('_out/%s/' % (self.sensors[self.index][2])):
+                    os.mkdir('_out/%s/' % (self.sensors[self.index][2]))
+            # i = len(next(os.walk('_out/%s/' % (self.sensors[self.index][2])))[1])
+            # i = 0
+            i = len(os.listdir('_out/%s/' % (self.sensors[self.index][2])))
+            # for root, dirs, files in os.walk('_out/%s/' % (self.sensors[self.index][1])):
+            #     for d in dirs:
+            #         i += 1
+            # if not os.path.exists('_out/%s/%s/' % (self.sensors[self.index][1], i+1)):
+            #         os.mkdir('_out/%s/%s/' % (self.sensors[self.index][1], i+1))
+
+            # if not os.path.exists('_out/%s/%s/top/' % (self.sensors[self.index][1], i+1)):
+            #         os.mkdir('_out/%s/%s/top/' % (self.sensors[self.index][1], i+1))
+            # if not os.path.exists('_out/%s/%s/front/' % (self.sensors[self.index][1], i+1)):
+            #         os.mkdir('_out/%s/%s/front/' % (self.sensors[self.index][1], i+1))
+            # if not os.path.exists('_out/%s/%s/left/' % (self.sensors[self.index][1], i+1)):
+            #         os.mkdir('_out/%s/%s/left/' % (self.sensors[self.index][1], i+1))
+            # if not os.path.exists('_out/%s/%s/right/' % (self.sensors[self.index][1], i+1)):
+            #         os.mkdir('_out/%s/%s/right/' % (self.sensors[self.index][1], i+1))
+
             for img in self.record_image:
-                if img.frame%6 == 0:
-                    img.save_to_disk('_out/%s/%s/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+                if img.frame%4 == 0:
+                    img.save_to_disk('_out/%s/%s/top/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            for img in self.front_img:
+                if img.frame%4 == 0:
+                    img.save_to_disk('_out/%s/%s/front/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            for img in self.left_img:
+                if img.frame%4 == 0:
+                    img.save_to_disk('_out/%s/%s/left/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            for img in self.right_img:
+                if img.frame%4 == 0:
+                    img.save_to_disk('_out/%s/%s/right/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+
             self.record_image=[]
+            self.front_img = []
+            self.left_img = []
+            self.right_img = []
+
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def render(self, display):
@@ -1098,7 +1175,7 @@ class CameraManager(object):
             display.blit(self.surface, (0, 0))
 
     @staticmethod
-    def _parse_image(weak_self, image):
+    def _parse_image(weak_self, image, view='top'):
         self = weak_self()
         if not self:
             return
@@ -1130,9 +1207,17 @@ class CameraManager(object):
             array = np.reshape(array, (image.height, image.width, 4))
             array = array[:, :, :3]
             array = array[:, :, ::-1]
-            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+            if view == 'top':
+                self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
-            self.record_image.append(image)
+            if view == 'top':
+                self.record_image.append(image)
+            elif view == 'front':
+                self.front_img.append(image)
+            elif view == 'left':
+                self.left_img.append(image)
+            elif view == 'right':
+                self.right_img.append(image)
 
 
 # ==============================================================================
@@ -1155,8 +1240,8 @@ def game_loop(args):
         display.fill((0,0,0))
         pygame.display.flip()
 
-        hud = HUD(args.width, args.height)
-        world = World(client.load_world('Town05'), hud, args)
+        hud = HUD(args.width, args.height, args.distance)
+        world = World(client.load_world(args.town), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
         clock = pygame.time.Clock()
@@ -1223,6 +1308,16 @@ def main():
         metavar='NAME',
         default='hero',
         help='actor role name (default: "hero")')
+    argparser.add_argument(
+        '--distance',
+        default=25.0,
+        type=float,
+        help='distance to intersection for toggling camera)')
+    argparser.add_argument(
+        '--town',
+        default='Town05',
+        type=str,
+        help='map)')
     argparser.add_argument(
         '--gamma',
         default=2.2,
