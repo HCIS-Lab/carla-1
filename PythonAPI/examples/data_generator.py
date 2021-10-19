@@ -283,10 +283,11 @@ class World(object):
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
-        self.lidar_sensor = CameraManager(self.player, self.hud, self._gamma)
-        self.lidar_sensor.transform_index = cam_pos_index
-        self.lidar_sensor.set_sensor(6, notify=False)
-        self.lidar_sensor.background=True
+        self.camera_manager.background = True
+        # self.lidar_sensor = CameraManager(self.player, self.hud, self._gamma)
+        # self.lidar_sensor.transform_index = cam_pos_index
+        # self.lidar_sensor.set_sensor(6, notify=False)
+        # self.lidar_sensor.background=True
         
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
@@ -453,11 +454,12 @@ class KeyboardControl(object):
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
                     scenario_name=None
                     world.camera_manager.recording= not  world.camera_manager.recording
-                    world.lidar_sensor.recording= not  world.lidar_sensor.recording
-                    if not  world.lidar_sensor.recording:
+                    # world.lidar_sensor.recording= not  world.lidar_sensor.recording
+                    # if not  world.lidar_sensor.recording:
+                    if not world.camera_manager.recording:
                         scenario_name=input("scenario id: ")
                     world.camera_manager.toggle_recording(scenario_name)
-                    world.lidar_sensor.toggle_recording(scenario_name)
+                    # world.lidar_sensor.toggle_recording(scenario_name)
                 
 
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
@@ -1059,6 +1061,7 @@ class CameraManager(object):
         self.front_img = []
         self.left_img = []
         self.right_img = []
+        self.lidar = []
 
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
@@ -1074,7 +1077,9 @@ class CameraManager(object):
                 # right view
                 (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=50)), Attachment.Rigid),
                 # top view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)]
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm),
+                # lidar
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid)]
         else:
             self._camera_transforms = [
                 (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
@@ -1159,6 +1164,12 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[2][1])
 
+            self.sensor_lidar = self._parent.get_world().spawn_actor(
+                self.sensors[6][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
@@ -1166,6 +1177,7 @@ class CameraManager(object):
             self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
             self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
             self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
+            self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -1179,11 +1191,17 @@ class CameraManager(object):
             t_front = threading.Thread(target = self.save_img,args=(self.front_img, scenario_name, 'front'))
             t_right = threading.Thread(target = self.save_img,args=(self.right_img, scenario_name, 'right'))
             t_left = threading.Thread(target = self.save_img,args=(self.left_img, scenario_name, 'left'))
+            t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, scenario_name, 'lidar'))
             t_top.start()
             t_front.start()
             t_left.start()
             t_right.start()
-            self.record_image=[]
+            t_lidar.start()
+            self.top_img = []
+            self.front_img = []
+            self.right_img = []
+            self.left_img = []
+            self.lidar = []
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def save_img(self,img_list, scenario_name, view='top'):
@@ -1226,7 +1244,7 @@ class CameraManager(object):
                     ['x'], dvs_events[:]['pol'] * 2] = 255
             self.surface = pygame.surfarray.make_surface(
                 dvs_img.swapaxes(0, 1))
-        else:
+        elif view == 'top':
             image.convert(self.sensors[self.index][1])
             array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
             array = np.reshape(array, (image.height, image.width, 4))
@@ -1234,8 +1252,7 @@ class CameraManager(object):
             array = array[:, :, ::-1]
 
             # render the view shown in monitor
-            if view == 'top':
-                self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
         if self.recording:
             if view == 'top':
@@ -1246,6 +1263,8 @@ class CameraManager(object):
                 self.left_img.append(image)
             elif view == 'right':
                 self.right_img.append(image)
+            elif view == 'lidar':
+                self.lidar.append(image)
 
 
 def record_control(control, control_list):
@@ -1559,6 +1578,13 @@ def main():
         '-weather',
         default='ClearNoon',
         type=str,
+        choices=['ClearNoon', 'CloudyNoon',
+                'WetNoon', 'WetCloudyNoon',
+                'MidRainyNoon', 'HardRainNoon'
+                'SoftRainNoon', 'ClearSunset',
+                'CloudySunset','WetSunset',
+                'WetCloudySunset', 'MidRainSunset',
+                'HardRainSunset', 'SoftRainSunset'],
         help='weather name')
     argparser.add_argument(
         '-map',
