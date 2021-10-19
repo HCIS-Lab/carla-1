@@ -67,12 +67,12 @@ import sys
 import random
 
 try:
-    ##
-    # sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-    #    sys.version_info.major,
-    #    sys.version_info.minor,
-    #    'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-    ##
+    #
+    sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+       sys.version_info.major,
+       sys.version_info.minor,
+       'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+    #
     sys.path.append('../carla/agents/navigation')
     sys.path.append('../carla/agents')
     sys.path.append('../carla/')
@@ -1050,12 +1050,16 @@ class RadarSensor(object):
 
 class CameraManager(object):
     def __init__(self, parent_actor, hud, gamma_correction):
-        self.sensor = None
+        self.sensor_top = None
         self.surface = None
         self._parent = parent_actor
         self.hud = hud
         self.recording = False
-        self.record_image = []
+        self.top_img = []
+        self.front_img = []
+        self.left_img = []
+        self.right_img = []
+
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1063,24 +1067,20 @@ class CameraManager(object):
 
         if not self._parent.type_id.startswith("walker.pedestrian"):
             self._camera_transforms = [
-                (carla.Transform(carla.Location(x=-2.0*bound_x, y=+0.0*bound_y,
-                 z=2.0*bound_z), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=+0.8*bound_x,
-                 y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
-                (carla.Transform(carla.Location(x=+1.9*bound_x, y=+
-                 1.0*bound_y, z=1.2*bound_z)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-2.8*bound_x, y=+0.0*bound_y,
-                 z=4.6*bound_z), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-1.0, y=-1.0*bound_y, z=0.4*bound_z)), Attachment.Rigid)]
+                # front view
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
+                # left view
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-50)), Attachment.Rigid),
+                # right view
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=50)), Attachment.Rigid),
+                # top view
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)]
         else:
             self._camera_transforms = [
-                (carla.Transform(carla.Location(x=-5.5, z=2.5),
-                 carla.Rotation(pitch=8.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=1.6, z=1.7)), Attachment.Rigid),
-                (carla.Transform(carla.Location(x=5.5, y=1.5, z=1.5)),
-                 Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-8.0, z=6.0),
-                 carla.Rotation(pitch=6.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=5.5, y=1.5, z=1.5)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-8.0, z=6.0), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=-1, y=-bound_y, z=0.5)), Attachment.Rigid)]
 
         self.transform_index = 1
@@ -1135,19 +1135,37 @@ class CameraManager(object):
             (force_respawn or (self.sensors[index]
              [2] != self.sensors[self.index][2]))
         if needs_respawn:
-            if self.sensor is not None:
-                self.sensor.destroy()
+            if self.sensor_top is not None:
+                self.sensor_top.destroy()
                 self.surface = None
-            self.sensor = self._parent.get_world().spawn_actor(
+            self.sensor_top = self._parent.get_world().spawn_actor(
                 self.sensors[index][-1],
-                self._camera_transforms[self.transform_index][0],
+                self._camera_transforms[3][0],
                 attach_to=self._parent,
-                attachment_type=self._camera_transforms[self.transform_index][1])
+                attachment_type=self._camera_transforms[3][1])
+            self.sensor_front = self._parent.get_world().spawn_actor(
+                self.sensors[index][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.sensor_left = self._parent.get_world().spawn_actor(
+                self.sensors[index][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.sensor_right = self._parent.get_world().spawn_actor(
+                self.sensors[index][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.sensor.listen(
-                lambda image: CameraManager._parse_image(weak_self, image))
+            self.sensor_top.listen(lambda image: CameraManager._parse_image(weak_self, image))
+            self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
+            self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
+            self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -1157,15 +1175,22 @@ class CameraManager(object):
 
     def toggle_recording(self,scenario_name):
         if not self.recording:
-            t=threading.Thread(target = self.save_img,args=(self.record_image,scenario_name))
-            t.start()
+            t_top = threading.Thread(target = self.save_img,args=(self.top_img, scenario_name, 'top'))
+            t_front = threading.Thread(target = self.save_img,args=(self.front_img, scenario_name, 'front'))
+            t_right = threading.Thread(target = self.save_img,args=(self.right_img, scenario_name, 'right'))
+            t_left = threading.Thread(target = self.save_img,args=(self.left_img, scenario_name, 'left'))
+            t_top.start()
+            t_front.start()
+            t_left.start()
+            t_right.start()
             self.record_image=[]
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
-    def save_img(self,img_list,scenario_name):
+
+    def save_img(self,img_list, scenario_name, view='top'):
         print("saving..")
         for img in img_list:
             if img.frame%2 == 0:
-                img.save_to_disk('_out/%s/%s/%08d' % (scenario_name,self.sensors[self.index][2],img.frame))
+                img.save_to_disk('_out/%s/%s/%s/%08d' % (scenario_name,self.sensors[self.index][2], view,img.frame))
         print("%s saving agent finished." % self.sensors[self.index][2])
 
     def render(self, display):
@@ -1173,7 +1198,7 @@ class CameraManager(object):
             display.blit(self.surface, (0, 0))
 
     @staticmethod
-    def _parse_image(weak_self, image):
+    def _parse_image(weak_self, image, view='top'):
         self = weak_self()
         if not self:
             return
@@ -1207,9 +1232,20 @@ class CameraManager(object):
             array = np.reshape(array, (image.height, image.width, 4))
             array = array[:, :, :3]
             array = array[:, :, ::-1]
-            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+
+            # render the view shown in monitor
+            if view == 'top':
+                self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+
         if self.recording:
-            self.record_image.append(image)
+            if view == 'top':
+                self.top_img.append(image)
+            elif view == 'front':
+                self.front_img.append(image)
+            elif view == 'left':
+                self.left_img.append(image)
+            elif view == 'right':
+                self.right_img.append(image)
 
 
 def record_control(control, control_list):
@@ -1281,8 +1317,6 @@ def control_with_trasform_controller(controller, transform):
 
 
 def control_reg_with_waypoint(waypoints, client, location, controller, recorded_control, manual_ratio=0.0):
-    # waypoint = client.get_world().get_map().get_waypoint(location, lane_type=(carla.LaneType.Driving))
-    # control_signal = controller.run_step(10, waypoint)
     min_d = 1000
     index = 0
     for i, waypoint in enumerate(waypoints):
@@ -1292,14 +1326,6 @@ def control_reg_with_waypoint(waypoints, client, location, controller, recorded_
             index = i
 
     control_signal = controller.run_step(3, waypoints[i])
-    # new_throttle = manual_ratio * recorded_control.throttle + (1 - manual_ratio) * control_signal.throttle
-    # new_steer = manual_ratio * recorded_control.steer + (1 - manual_ratio) * control_signal.steer
-    # new_brake = manual_ratio * recorded_control.brake + (1 - manual_ratio) * control_signal.brake
-    # recorded_control.throttle = new_throttle
-    # recorded_control.steer = new_steer
-    # recorded_control.brake = new_brake
-
-    # return recorded_control
     return control_signal
 
 def auto_spawn_object(world,second):
@@ -1365,10 +1391,6 @@ def game_loop(args):
     actor_transform = []
     actor_velocity = []
     control_list = []
-    # for i in range(num_files):
-    #     transform, control = read_control(path + file_list[i])
-    #     transform_list.append(transform)
-    #     control_list.append(control)
 
     for i in range(num_files):
         actor_transform.append(read_transform(file_list[i]))
@@ -1439,24 +1461,13 @@ def game_loop(args):
             clock.tick_busy_loop(20)
 
             for i in range(num_files):
-                # if control_index < len(control_list[i]):
                 if actor_transform_index[i] < len(actor_transform[i]):
-                    # if args.waypoint_control:
-                    #     if random.random() > 0.8:
-                    #         agents_list[i].apply_control(control_reg_with_waypoint(waypoints, client,
-                    #             agents_list[i].get_location(),
-                    #             VehiclePIDController(agents_list[i], args_lateral = {'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0}),
-                    #             control_list[i][control_index]))
-                    # else:
-                    #     agents_list[i].apply_control(control_list[i][control_index])
-                    # else:
-                    #     agents_list[i].apply_control(control_list[i][control_index])
                     agents_list[i].apply_control(controller_list[i].run_step(
                         actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
                     # agents_list[i].apply_control(controller_list[i].run_step(20, actor_transform[i][actor_transform_index[i]]))
                     v = agents_list[i].get_velocity()
                     v = (v.x**2 + v.y**2 + v.z**2)**1/3
-                    print(v)
+                    # print(v)
                     if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2 + v/20.0:
                         actor_transform_index[i] += int(7 + v//10.0)
 
