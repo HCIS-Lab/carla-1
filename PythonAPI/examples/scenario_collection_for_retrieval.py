@@ -91,6 +91,8 @@ import math
 import random
 import re
 import weakref
+import threading
+
 
 try:
     import pygame
@@ -691,6 +693,7 @@ class HUD(object):
             elif self.recording and time.time() - self.recording_time > 10.0:
                 camera.toggle_recording()
                 self.recording = False
+                world.next_weather()
 
             self.d_last = d
 
@@ -1012,11 +1015,18 @@ class CameraManager(object):
         self.surface = None
         self._parent = parent_actor
         self.hud = hud
+
         self.recording = False
+
         self.record_image=[]
         self.front_img = []
         self.left_img = []
         self.right_img = []
+        self.lidar = []
+        self.front_seg = []
+        self.left_seg = []
+        self.right_seg = []
+
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1024,13 +1034,10 @@ class CameraManager(object):
 
         if not self._parent.type_id.startswith("walker.pedestrian"):
             self._camera_transforms = [
-                # (carla.Transform(carla.Location(x=-2.0*bound_x, y=+0.0*bound_y, z=2.0*bound_z), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
                 (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-50)), Attachment.Rigid),
                 (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=50)), Attachment.Rigid),
-                # (carla.Transform(carla.Location(x=+1.9*bound_x, y=+1.0*bound_y, z=1.2*bound_z)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)]
-                # (carla.Transform(carla.Location(x=-1.0, y=-1.0*bound_y, z=0.4*bound_z)), Attachment.Rigid)]
         else:
             self._camera_transforms = [
                 (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
@@ -1091,22 +1098,44 @@ class CameraManager(object):
                 self.sensor.destroy()
                 self.surface = None
             self.sensor = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[3][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[3][1])
             self.sensor_front = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[0][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[0][1])
             self.sensor_left = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[1][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[1][1])
             self.sensor_right = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+
+            self.sensor_lidar = self._parent.get_world().spawn_actor(
+                self.sensors[6][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+
+            self.seg_front = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.seg_left = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.seg_right = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
                 self._camera_transforms[2][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[2][1])
@@ -1118,6 +1147,11 @@ class CameraManager(object):
             self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
             self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
             self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
+            self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+            self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
+            self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
+            self.seg_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_left'))
+
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -1132,43 +1166,61 @@ class CameraManager(object):
                     os.mkdir('_out/')
             if not os.path.exists('_out/%s/' % (self.sensors[self.index][2])):
                     os.mkdir('_out/%s/' % (self.sensors[self.index][2]))
-            # i = len(next(os.walk('_out/%s/' % (self.sensors[self.index][2])))[1])
-            # i = 0
-            i = len(os.listdir('_out/%s/' % (self.sensors[self.index][2])))
-            # for root, dirs, files in os.walk('_out/%s/' % (self.sensors[self.index][1])):
-            #     for d in dirs:
-            #         i += 1
-            # if not os.path.exists('_out/%s/%s/' % (self.sensors[self.index][1], i+1)):
-            #         os.mkdir('_out/%s/%s/' % (self.sensors[self.index][1], i+1))
 
-            # if not os.path.exists('_out/%s/%s/top/' % (self.sensors[self.index][1], i+1)):
-            #         os.mkdir('_out/%s/%s/top/' % (self.sensors[self.index][1], i+1))
-            # if not os.path.exists('_out/%s/%s/front/' % (self.sensors[self.index][1], i+1)):
-            #         os.mkdir('_out/%s/%s/front/' % (self.sensors[self.index][1], i+1))
-            # if not os.path.exists('_out/%s/%s/left/' % (self.sensors[self.index][1], i+1)):
-            #         os.mkdir('_out/%s/%s/left/' % (self.sensors[self.index][1], i+1))
-            # if not os.path.exists('_out/%s/%s/right/' % (self.sensors[self.index][1], i+1)):
-            #         os.mkdir('_out/%s/%s/right/' % (self.sensors[self.index][1], i+1))
+            dir_list = os.listdir('_out/%s/' % (self.sensors[self.index][2]))
 
-            for img in self.record_image:
-                if img.frame%4 == 0:
-                    img.save_to_disk('_out/%s/%s/top/%08d' % (self.sensors[self.index][2], i+1, img.frame))
-            for img in self.front_img:
-                if img.frame%4 == 0:
-                    img.save_to_disk('_out/%s/%s/front/%08d' % (self.sensors[self.index][2], i+1, img.frame))
-            for img in self.left_img:
-                if img.frame%4 == 0:
-                    img.save_to_disk('_out/%s/%s/left/%08d' % (self.sensors[self.index][2], i+1, img.frame))
-            for img in self.right_img:
-                if img.frame%4 == 0:
-                    img.save_to_disk('_out/%s/%s/right/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            i = 0
+            if len(dir_list) != 0:
+                for j, name in enumerate(dir_list):
+                    dir_list[j] = int(dir_list[j])
+                    if dir_list[j] > i:
+                        i = dir_list[j]
+
+            t_top = threading.Thread(target = self.save_img, args=(self.record_image, 0, i+1, 'top'))
+            t_front = threading.Thread(target = self.save_img, args=(self.front_img, 0, i+1, 'front'))
+            t_right = threading.Thread(target = self.save_img, args=(self.right_img, 0, i+1, 'right'))
+            t_left = threading.Thread(target = self.save_img, args=(self.left_img, 0, i+1, 'left'))
+            t_lidar = threading.Thread(target = self.save_img, args=(self.lidar, 6, i+1, 'lidar'))
+            t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 0, i+1, 'seg_front'))
+            t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 0, i+1, 'seg_right'))
+            t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 0, i+1, 'seg_left'))
+            t_top.start()
+            t_front.start()
+            t_left.start()
+            t_right.start()
+            t_lidar.start()
+            t_seg_front.start()
+            t_seg_right.start()
+            t_seg_left.start()
+
+            # for img in self.record_image:
+            #     if img.frame%4 == 0:
+            #         img.save_to_disk('_out/%s/%s/top/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            # for img in self.front_img:
+            #     if img.frame%4 == 0:
+            #         img.save_to_disk('_out/%s/%s/front/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            # for img in self.left_img:
+            #     if img.frame%4 == 0:
+            #         img.save_to_disk('_out/%s/%s/left/%08d' % (self.sensors[self.index][2], i+1, img.frame))
+            # for img in self.right_img:
+            #     if img.frame%4 == 0:
+            #         img.save_to_disk('_out/%s/%s/right/%08d' % (self.sensors[self.index][2], i+1, img.frame))
 
             self.record_image=[]
             self.front_img = []
             self.left_img = []
             self.right_img = []
+            self.lidar = []
+            self.front_seg = []
+            self.right_seg = []
+            self.left_seg = []
 
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+
+    def save_img(self, img_list, scenario_name, sensor, view='top'):
+        for img in img_list:
+                if img.frame%4 == 0:
+                    img.save_to_disk('_out/%s/%s/top/%08d' % (self.sensors[sensor][2], scenario_name, img.frame))
 
     def render(self, display):
         if self.surface is not None:
@@ -1218,7 +1270,14 @@ class CameraManager(object):
                 self.left_img.append(image)
             elif view == 'right':
                 self.right_img.append(image)
-
+            elif view == 'lidar':
+                self.lidar.append(image)
+            elif view == 'seg_front':
+                self.front_seg.append(image)
+            elif view == 'seg_right':
+                self.right_seg.append(image)
+            elif view == 'seg_left':
+                self.left_seg.append(image)
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
