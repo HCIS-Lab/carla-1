@@ -1098,6 +1098,7 @@ class CameraManager(object):
 
         self.lidar = []
 
+        self.top_seg = []
         self.front_seg = []
         self.left_seg = []
         self.right_seg = []
@@ -1197,6 +1198,8 @@ class CameraManager(object):
             if self.sensor_top is not None:
                 self.sensor_top.destroy()
                 self.surface = None
+
+                # rgb sensor
             self.sensor_top = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
                 self._camera_transforms[6][0],
@@ -1233,12 +1236,19 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[5][1])
 
+            # lidar sensor
             self.sensor_lidar = self._parent.get_world().spawn_actor(
                 self.sensors[6][-1],
                 self._camera_transforms[0][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[0][1])
 
+            # segmentation sensor
+            self.seg_top = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[6][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[6][1])
             self.seg_front = self._parent.get_world().spawn_actor(
                 self.sensors[5][-1],
                 self._camera_transforms[0][0],
@@ -1270,6 +1280,7 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[5][1])
 
+            # depth estimation sensor
             self.depth_front = self._parent.get_world().spawn_actor(
                 self.sensors[2][-1],
                 self._camera_transforms[0][0],
@@ -1304,7 +1315,7 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.sensor_top.listen(lambda image: CameraManager._parse_image(weak_self, image))
+            self.sensor_top.listen(lambda image: CameraManager._parse_image(weak_self, image), 'top')
             self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
             self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
             self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
@@ -1314,10 +1325,11 @@ class CameraManager(object):
 
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
 
+            self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
             self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
             self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
             self.seg_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_left'))
-            self.seg_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_front'))
+            self.seg_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back'))
             self.seg_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_right'))
             self.seg_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_left'))
 
@@ -1348,6 +1360,7 @@ class CameraManager(object):
 
             t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, scenario_name, 'lidar'))
 
+            t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, scenario_name, 'seg_top'))
             t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, scenario_name, 'seg_front'))
             t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, scenario_name, 'seg_right'))
             t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, scenario_name, 'seg_left'))
@@ -1372,6 +1385,7 @@ class CameraManager(object):
 
             t_lidar.start()
 
+            t_seg_top.start()
             t_seg_front.start()
             t_seg_right.start()
             t_seg_left.start()
@@ -1396,6 +1410,7 @@ class CameraManager(object):
 
             self.lidar = []
 
+            self.top_seg = []
             self.front_seg = []
             self.right_seg = []
             self.left_seg = []
@@ -1483,6 +1498,8 @@ class CameraManager(object):
             elif view == 'lidar':
                 self.lidar.append(image)
 
+            elif view == 'seg_top':
+                self.top_seg.append(image)
             elif view == 'seg_front':
                 self.front_seg.append(image)
             elif view == 'seg_right':
