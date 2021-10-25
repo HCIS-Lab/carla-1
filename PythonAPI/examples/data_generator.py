@@ -1315,7 +1315,7 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.sensor_top.listen(lambda image: CameraManager._parse_image(weak_self, image), 'top')
+            self.sensor_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'top'))
             self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
             self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
             self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
