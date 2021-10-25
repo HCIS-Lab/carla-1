@@ -365,6 +365,26 @@ class World(object):
             self.toggle_radar()
         sensors = [
             self.camera_manager.sensor_top,
+            self.camera_manager.sensor_front,
+            self.camera_manager.sensor_left,
+            self.camera_manager.sensor_right,
+            self.camera_manager.sensor_back,
+            self.camera_manager.sensor_back_left,
+            self.camera_manager.sensor_back_right,
+            self.camera_manager.lidar,
+            self.camera_manager.seg_top,
+            self.camera_manager.seg_front,
+            self.camera_manager.seg_back,
+            self.camera_manager.seg_right,
+            self.camera_manager.seg_left,
+            self.camera_manager.seg_back_right,
+            self.camera_manager.seg_back_left,
+            self.camera_manager.depth_front,
+            self.camera_manager.depth_right,
+            self.camera_manager.depth_left,
+            self.camera_manager.depth_back,
+            self.camera_manager.depth_back_right,
+            self.camera_manager.depth_back_left,
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
@@ -874,6 +894,7 @@ class CollisionSensor(object):
         weak_self = weakref.ref(self)
         self.sensor.listen(
             lambda event: CollisionSensor._on_collision(weak_self, event))
+        self.collision = False
 
     def get_collision_history(self):
         history = collections.defaultdict(int)
@@ -891,9 +912,16 @@ class CollisionSensor(object):
         impulse = event.normal_impulse
         intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
         self.history.append((event.frame, intensity))
-        if len(self.history) > 4000:
-            self.history.pop(0)
+        # if len(self.history) > 4000:
+        #     self.history.pop(0)
+        self.collision = True
 
+    def save_history(path):
+        if self.collision:
+            for i, collision in enumerate(self.history):
+                self.history[i] = list(history[i])
+            history = np.asarray(self.history)
+            np.save(path + 'collision_history')
 
 # ==============================================================================
 # -- LaneInvasionSensor --------------------------------------------------------
@@ -1157,11 +1185,9 @@ class CameraManager(object):
             ['sensor.lidar.ray_cast', None,
                 'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
-            ['sensor.camera.rgb', cc.Raw, 'Camera RGB Distorted',
-                {'lens_circle_multiplier': '3.0',
-                 'lens_circle_falloff': '3.0',
-                 'chromatic_aberration_intensity': '0.5',
-                 'chromatic_aberration_offset': '0'}]]
+            ['sensor.camera.optical_flow', None, 'Optical Flow'. {}],
+            ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}]
+            ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
         for item in self.sensors:
@@ -1720,8 +1746,6 @@ def game_loop(args):
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
-        # print('start:')
-        # print(client.get_world().wait_for_tick().frame)
         auto = [False] * num_files
 
         for i in range(num_files):
@@ -1737,24 +1761,36 @@ def game_loop(args):
             t.start()
 
         root = '_out'
-        scenario_name = 'testing'
+        scenario_name = args.map + '_' + args.weather + '_'
+        scenario_name = scenario_name + 'random_actor_' if args.random_actors
+        scenario_name = scenario_name + 'random_objects_' if args.random_objects 
+        scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory
+
         start_frame = client.get_world().wait_for_tick().frame
         world.camera_manager.toggle_recording(scenario_name) 
         world.imu_sensor.recording = True
         world.imu_sensor.toggle_recording_IMU(scenario_name)
+
         scenario_finished = False
         while (1):
             clock.tick_busy_loop(20)
 
+            # iterate actors
             for i in range(num_files):
+                # apply recorded location and velocity on the controller
                 if actor_transform_index[i] < len(actor_transform[i]):
                     agents_list[i].apply_control(controller_list[i].run_step(
                         actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
-                    # agents_list[i].apply_control(controller_list[i].run_step(20, actor_transform[i][actor_transform_index[i]]))
                     v = agents_list[i].get_velocity()
                     v = (v.x**2 + v.y**2 + v.z**2)**1/3
+
+                    # to avoid the actor slowing down for the dense location around
                     if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2 + v/20.0:
-                        actor_transform_index[i] += max(1, int(7 + v//10.0))
+                        if args.noise_trajectory:
+                            # sampling location with larger distance
+                            actor_transform_index[i] += max(1, int(7 + v//5.0))
+                        else:
+                            actor_transform_index[i] += max(1, int(7 + v//10.0))
                     else:
                         actor_transform_index[i] += 1
 
@@ -1763,13 +1799,12 @@ def game_loop(args):
                         world.record_speed_control(current_frame)
                 
                 else:
+                    # when the client has arrived the last recorded location
                     if i == 0:
                         scenario_finished = True
                         break
                     if not auto[i]:
                         auto[i] = True
-                        # print('end: ')
-                        # print(client.get_world().wait_for_tick().frame)
                     agents_list[i].set_autopilot(True)
             if controller.parse_events(client, world, clock) == 1:
                 return
@@ -1783,7 +1818,9 @@ def game_loop(args):
         world.save_speed_control(root, scenario_name)
         world.imu_sensor.toggle_recording_IMU(scenario_name)
         world.imu_sensor.save_IMU(scenario_name)
+        world.collision_sensor.save_history(scenario_name)
         world.camera_manager.toggle_recording(scenario_name) 
+        world.destroy()
     finally:
 
         if (world and world.recording_enabled):
@@ -1853,9 +1890,6 @@ def main():
         type=int,
         help='Random device seed')
     argparser.add_argument(
-        '-waypoint_control',
-        action='store_true')
-    argparser.add_argument(
         '-weather',
         default='ClearNoon',
         type=str,
@@ -1880,6 +1914,10 @@ def main():
         '-random_objects',
         action='store_true',
         help='enable random objects')
+    argparser.add_argument(
+        '-noise_trajectory',
+        action='store_true',
+        help='apply noise on trajectory')
 
     args = argparser.parse_args()
 
