@@ -201,7 +201,6 @@ class World(object):
         self.imu_sensor = None
         self.radar_sensor = None
         self.camera_manager = None
-        self.lidar_sensor = None 
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = args.filter
@@ -225,6 +224,9 @@ class World(object):
             carla.MapLayer.Walls,
             carla.MapLayer.All
         ]
+
+        self.speed_list = []
+        self.control_list = []
 
     def restart(self):
         self.player_max_speed = 1.589
@@ -284,10 +286,7 @@ class World(object):
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         self.camera_manager.background = True
-        # self.lidar_sensor = CameraManager(self.player, self.hud, self._gamma)
-        # self.lidar_sensor.transform_index = cam_pos_index
-        # self.lidar_sensor.set_sensor(6, notify=False)
-        # self.lidar_sensor.background=True
+
         
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
@@ -333,6 +332,25 @@ class World(object):
     def tick(self, clock):
         self.hud.tick(self, clock)
 
+    def record_speed_control(self, frame):
+        v = self.player.get_velocity()
+        c = self.player.get_control()
+        self.speed_list.append([frame, v.x, v.y, v.z])
+        self.control_list.append([frame, c.throttle, c.steer, c.brake, 
+                                c.hand_brake, c.manual_gear_shift, c.gear])
+
+    def save_speed_control(self, root, scenario_name):
+        speed = np.asarray(self.speed_list)
+        control = np.asarray(self.control_list)
+
+        if not os.path.exists(os.path.join(root, scenario_name)):
+            os.makedirs(os.path.join(root, scenario_name))
+
+        np.save('%s/%s/speed' % (root, scenario_name), speed)
+        np.save('%s/%s/control' % (root, scenario_name), control)
+        self.speed_list = []
+        self.control_list = []
+
     def render(self, display):
         self.camera_manager.render(display)
         self.hud.render(display)
@@ -346,12 +364,11 @@ class World(object):
         if self.radar_sensor is not None:
             self.toggle_radar()
         sensors = [
-            self.camera_manager.sensor,
+            self.camera_manager.sensor_top,
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
-            self.imu_sensor.sensor,
-            self.lidar_sensor.sensor]
+            self.imu_sensor.sensor]
         for sensor in sensors:
             if sensor is not None:
                 sensor.stop()
@@ -458,9 +475,7 @@ class KeyboardControl(object):
                     # if not  world.lidar_sensor.recording:
                     if not world.camera_manager.recording:
                         scenario_name=input("scenario id: ")
-                    world.camera_manager.toggle_recording(scenario_name)
-                    # world.lidar_sensor.toggle_recording(scenario_name)
-                
+                    world.camera_manager.toggle_recording(scenario_name)                
 
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
                     if (world.recording_enabled):
@@ -959,6 +974,8 @@ class IMUSensor(object):
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
+        self.recording = False
+        self.imu_save = []
         self.sensor.listen(
             lambda sensor_data: IMUSensor._IMU_callback(weak_self, sensor_data))
 
@@ -979,8 +996,21 @@ class IMUSensor(object):
                 sensor_data.gyroscope.y))),
             max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.z))))
         self.compass = math.degrees(sensor_data.compass)
+        if self.recording:
+            self.imu_save.append([sensor_data.frame, 
+                                self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
+                                self.gyroscope[0], self.gyroscope[1], self.gyroscope[2], 
+                                self.compass])
 
+    def toggle_recording_IMU(self, scenario_name):
+        self.recording = not self.recording
+        if not self.recording:
+            t_top = threading.Thread(target = self.save_IMU, args=(scenario_name))
 
+    def save_IMU(self, scenario_name):
+        np_imu = np.asarray(self.imu_save)
+        np.save('_out/%s/imu' % (scenario_name), np_imu)
+        self.imu_save = []
 # ==============================================================================
 # -- RadarSensor ---------------------------------------------------------------
 # ==============================================================================
@@ -1057,11 +1087,18 @@ class CameraManager(object):
         self._parent = parent_actor
         self.hud = hud
         self.recording = False
+
         self.top_img = []
         self.front_img = []
         self.left_img = []
         self.right_img = []
         self.lidar = []
+        self.front_seg = []
+        self.left_seg = []
+        self.right_seg = []
+        self.front_depth = []
+        self.left_depth = []
+        self.right_depth = []
 
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
@@ -1079,7 +1116,8 @@ class CameraManager(object):
                 # top view
                 (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm),
                 # lidar
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid)]
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
+                ]
         else:
             self._camera_transforms = [
                 (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
@@ -1144,22 +1182,22 @@ class CameraManager(object):
                 self.sensor_top.destroy()
                 self.surface = None
             self.sensor_top = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[3][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[3][1])
             self.sensor_front = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[0][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[0][1])
             self.sensor_left = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[1][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[1][1])
             self.sensor_right = self._parent.get_world().spawn_actor(
-                self.sensors[index][-1],
+                self.sensors[0][-1],
                 self._camera_transforms[2][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[2][1])
@@ -1170,6 +1208,38 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[0][1])
 
+            self.seg_front = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.seg_left = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.seg_right = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+
+            self.depth_front = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.depth_left = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.depth_right = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
@@ -1177,7 +1247,17 @@ class CameraManager(object):
             self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
             self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
             self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
+
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+
+            self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
+            self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
+            self.seg_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_left'))
+
+            self.depth_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_front'))
+            self.depth_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_right'))
+            self.depth_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
+
         if notify:
             self.hud.notification(self.sensors[index][2])
         self.index = index
@@ -1185,31 +1265,56 @@ class CameraManager(object):
     def next_sensor(self):
         self.set_sensor(self.index + 1)
 
-    def toggle_recording(self,scenario_name):
+    def toggle_recording(self, scenario_name):
+        self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(target = self.save_img,args=(self.top_img, scenario_name, 'top'))
-            t_front = threading.Thread(target = self.save_img,args=(self.front_img, scenario_name, 'front'))
-            t_right = threading.Thread(target = self.save_img,args=(self.right_img, scenario_name, 'right'))
-            t_left = threading.Thread(target = self.save_img,args=(self.left_img, scenario_name, 'left'))
-            t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, scenario_name, 'lidar'))
+            t_top = threading.Thread(target = self.save_img,args=(self.top_img, 0, scenario_name, 'top'))
+            t_front = threading.Thread(target = self.save_img,args=(self.front_img, 0, scenario_name, 'front'))
+            t_right = threading.Thread(target = self.save_img,args=(self.right_img, 0, scenario_name, 'right'))
+            t_left = threading.Thread(target = self.save_img,args=(self.left_img, 0, scenario_name, 'left'))
+            t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, scenario_name, 'lidar'))
+            t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, scenario_name, 'seg_front'))
+            t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, scenario_name, 'seg_right'))
+            t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, scenario_name, 'seg_left'))
+
+            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 2, scenario_name, 'depth_front'))
+            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 2, scenario_name, 'depth_right'))
+            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 2, scenario_name, 'depth_left'))
+            
             t_top.start()
             t_front.start()
             t_left.start()
             t_right.start()
             t_lidar.start()
+            t_seg_front.start()
+            t_seg_right.start()
+            t_seg_left.start()
+            t_depth_front.start()
+            t_depth_right.start()
+            t_depth_left.start()
+
             self.top_img = []
             self.front_img = []
             self.right_img = []
             self.left_img = []
             self.lidar = []
+            self.front_seg = []
+            self.right_seg = []
+            self.left_seg = []
+            self.front_depth = []
+            self.right_depth = []
+            self.left_depth = []
+
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
-    def save_img(self,img_list, scenario_name, view='top'):
-        print("saving..")
+    def save_img(self,img_list, sensor, scenario_name, view='top'):
         for img in img_list:
             if img.frame%2 == 0:
-                img.save_to_disk('_out/%s/%s/%s/%08d' % (scenario_name,self.sensors[self.index][2], view,img.frame))
-        print("%s saving agent finished." % self.sensors[self.index][2])
+                if 'seg' in view:
+                    img.save_to_disk('_out/%s/%s/%s/%08d' % (scenario_name, self.sensors[sensor][2], view,img.frame), cc.CityScapesPalette)
+                else:
+                    img.save_to_disk('_out/%s/%s/%s/%08d' % (scenario_name, self.sensors[sensor][2], view,img.frame))
+        print("%s %s save finished." % (self.sensors[sensor][2], view))
 
     def render(self, display):
         if self.surface is not None:
@@ -1263,8 +1368,23 @@ class CameraManager(object):
                 self.left_img.append(image)
             elif view == 'right':
                 self.right_img.append(image)
+
             elif view == 'lidar':
                 self.lidar.append(image)
+
+            elif view == 'seg_front':
+                self.front_seg.append(image)
+            elif view == 'seg_right':
+                self.right_seg.append(image)
+            elif view == 'seg_left':
+                self.left_seg.append(image)
+
+            elif view == 'depth_front':
+                self.front_seg.append(image)
+            elif view == 'depth_right':
+                self.right_depth.append(image)
+            elif view == 'depth_left':
+                self.left_depth.append(image)
 
 
 def record_control(control, control_list):
@@ -1456,14 +1576,13 @@ def game_loop(args):
             controller_list.append(VehiclePIDController(agents_list[i], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                         max_throttle=1.0, max_brake=1.0, max_steering=1.0))
 
-        control_index = 1
         actor_transform_index = [1]*num_files
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
-        print('start:')
-        print(client.get_world().wait_for_tick().frame)
-        auto = False
+        # print('start:')
+        # print(client.get_world().wait_for_tick().frame)
+        auto = [False] * num_files
 
         for i in range(num_files):
             for j in range(len(actor_transform[i])):
@@ -1474,8 +1593,16 @@ def game_loop(args):
         if args.random_actors:
             spawn_actor_nearby(carla.Location(x, y, z), distance, vehicle, pedestrian)
         if args.random_objects:
-            t = threading.Thread(target = auto_spawn_object,args=(world,5))
+            t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
+
+        root = '_out'
+        scenario_name = 'testing'
+        start_frame = client.get_world().wait_for_tick().frame
+        world.camera_manager.toggle_recording(scenario_name) 
+        world.imu_sensor.recording = True
+        world.imu_sensor.toggle_recording_IMU(scenario_name)
+        scenario_finished = False
         while (1):
             clock.tick_busy_loop(20)
 
@@ -1486,23 +1613,37 @@ def game_loop(args):
                     # agents_list[i].apply_control(controller_list[i].run_step(20, actor_transform[i][actor_transform_index[i]]))
                     v = agents_list[i].get_velocity()
                     v = (v.x**2 + v.y**2 + v.z**2)**1/3
-                    # print(v)
                     if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2 + v/20.0:
-                        actor_transform_index[i] += int(7 + v//10.0)
+                        actor_transform_index[i] += max(1, int(7 + v//10.0))
+                    else:
+                        actor_transform_index[i] += 1
 
+                    if i == 0:
+                        current_frame = client.get_world().wait_for_tick().frame
+                        world.record_speed_control(current_frame)
+                
                 else:
-                    if not auto:
-                        auto = True
-                        print('end: ')
-                        print(client.get_world().wait_for_tick().frame)
+                    if i == 0:
+                        scenario_finished = True
+                        break
+                    if not auto[i]:
+                        auto[i] = True
+                        # print('end: ')
+                        # print(client.get_world().wait_for_tick().frame)
                     agents_list[i].set_autopilot(True)
-            if controller.parse_events(client, world, clock):
+            if controller.parse_events(client, world, clock) == 1:
                 return
+
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
-            control_index += 1
-
+            if scenario_finished:
+                break
+        end_frame = client.get_world().wait_for_tick().frame
+        world.save_speed_control(root, scenario_name)
+        world.imu_sensor.toggle_recording_IMU(scenario_name)
+        world.imu_sensor.save_IMU(scenario_name)
+        world.camera_manager.toggle_recording(scenario_name) 
     finally:
 
         if (world and world.recording_enabled):
