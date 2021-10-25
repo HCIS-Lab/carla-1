@@ -1092,13 +1092,25 @@ class CameraManager(object):
         self.front_img = []
         self.left_img = []
         self.right_img = []
+        self.back_img = []
+        self.back_left_img = []
+        self.back_right_img = []
+
         self.lidar = []
+
         self.front_seg = []
         self.left_seg = []
         self.right_seg = []
+        self.back_seg = []
+        self.back_left_seg = []
+        self.back_right_seg = []
+
         self.front_depth = []
         self.left_depth = []
         self.right_depth = []
+        self.back_depth = []
+        self.back_left_depth = []
+        self.back_right_depth = []
 
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
@@ -1109,14 +1121,18 @@ class CameraManager(object):
             self._camera_transforms = [
                 # front view
                 (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
-                # left view
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-50)), Attachment.Rigid),
-                # right view
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=50)), Attachment.Rigid),
+                # front-left view
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-55)), Attachment.Rigid),
+                # front-right view
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=55)), Attachment.Rigid),
+                # back view
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=180)), Attachment.Rigid),
+               # back-left view
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=235)), Attachment.Rigid),
+                # back-right view
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-235)), Attachment.Rigid),
                 # top view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm),
-                # lidar
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)
                 ]
         else:
             self._camera_transforms = [
@@ -1183,9 +1199,9 @@ class CameraManager(object):
                 self.surface = None
             self.sensor_top = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
-                self._camera_transforms[3][0],
+                self._camera_transforms[6][0],
                 attach_to=self._parent,
-                attachment_type=self._camera_transforms[3][1])
+                attachment_type=self._camera_transforms[6][1])
             self.sensor_front = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
                 self._camera_transforms[0][0],
@@ -1201,6 +1217,21 @@ class CameraManager(object):
                 self._camera_transforms[2][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[2][1])
+            self.sensor_back = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[3][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[3][1])
+            self.sensor_back_left = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[4][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[4][1])
+            self.sensor_back_right = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[5][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[5][1])
 
             self.sensor_lidar = self._parent.get_world().spawn_actor(
                 self.sensors[6][-1],
@@ -1223,6 +1254,21 @@ class CameraManager(object):
                 self._camera_transforms[2][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[2][1])
+            self.seg_back = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[3][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[3][1])
+            self.seg_back_left = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[4][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[4][1])
+            self.seg_back_right = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[5][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[5][1])
 
             self.depth_front = self._parent.get_world().spawn_actor(
                 self.sensors[2][-1],
@@ -1239,6 +1285,21 @@ class CameraManager(object):
                 self._camera_transforms[2][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[2][1])
+            self.depth_back = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[3][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[3][1])
+            self.depth_back_left = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[4][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[4][1])
+            self.depth_back_right = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[5][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[5][1])
 
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
@@ -1247,16 +1308,25 @@ class CameraManager(object):
             self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
             self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
             self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
+            self.sensor_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back'))
+            self.sensor_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back_right'))
+            self.sensor_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
 
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
 
             self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
             self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
             self.seg_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_left'))
+            self.seg_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_front'))
+            self.seg_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_right'))
+            self.seg_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_left'))
 
             self.depth_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_front'))
             self.depth_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_right'))
             self.depth_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
+            self.depth_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_back'))
+            self.depth_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_back_right'))
+            self.depth_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_back_left'))
 
         if notify:
             self.hud.notification(self.sensors[index][2])
@@ -1272,38 +1342,73 @@ class CameraManager(object):
             t_front = threading.Thread(target = self.save_img,args=(self.front_img, 0, scenario_name, 'front'))
             t_right = threading.Thread(target = self.save_img,args=(self.right_img, 0, scenario_name, 'right'))
             t_left = threading.Thread(target = self.save_img,args=(self.left_img, 0, scenario_name, 'left'))
+            t_back = threading.Thread(target = self.save_img,args=(self.back_img, 0, scenario_name, 'back'))
+            t_back_right = threading.Thread(target = self.save_img,args=(self.back_right_img, 0, scenario_name, 'back_right'))
+            t_back_left = threading.Thread(target = self.save_img,args=(self.back_left_img, 0, scenario_name, 'back_left'))
+
             t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, scenario_name, 'lidar'))
+
             t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, scenario_name, 'seg_front'))
             t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, scenario_name, 'seg_right'))
             t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, scenario_name, 'seg_left'))
+            t_seg_back = threading.Thread(target = self.save_img, args=(self.back_seg, 5, scenario_name, 'seg_back'))
+            t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, scenario_name, 'seg_back_right'))
+            t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, scenario_name, 'seg_back_left'))
 
             t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 2, scenario_name, 'depth_front'))
             t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 2, scenario_name, 'depth_right'))
             t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 2, scenario_name, 'depth_left'))
-            
+            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 2, scenario_name, 'depth_back'))
+            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 2, scenario_name, 'depth_back_right'))
+            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 2, scenario_name, 'depth_back_left'))
+
             t_top.start()
             t_front.start()
             t_left.start()
             t_right.start()
+            t_back.start()
+            t_back_left.start()
+            t_back_right.start()
+
             t_lidar.start()
+
             t_seg_front.start()
             t_seg_right.start()
             t_seg_left.start()
+            t_seg_back.start()
+            t_seg_back_right.start()
+            t_seg_back_left.start()
+
             t_depth_front.start()
             t_depth_right.start()
             t_depth_left.start()
+            t_depth_back.start()
+            t_depth_back_right.start()
+            t_depth_back_left.start()
 
             self.top_img = []
             self.front_img = []
             self.right_img = []
             self.left_img = []
+            self.back_img = []
+            self.back_right_img = []
+            self.back_left_img = []
+
             self.lidar = []
+
             self.front_seg = []
             self.right_seg = []
             self.left_seg = []
+            self.back_seg = []
+            self.back_right_seg = []
+            self.back_left_seg = []
+
             self.front_depth = []
             self.right_depth = []
             self.left_depth = []
+            self.back_depth = []
+            self.back_right_depth = []
+            self.back_left_depth = []
 
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
@@ -1368,6 +1473,12 @@ class CameraManager(object):
                 self.left_img.append(image)
             elif view == 'right':
                 self.right_img.append(image)
+            elif view == 'back':
+                self.back_img.append(image)
+            elif view == 'back_left':
+                self.back_left_img.append(image)
+            elif view == 'back_right':
+                self.back_right_img.append(image)
 
             elif view == 'lidar':
                 self.lidar.append(image)
@@ -1378,13 +1489,25 @@ class CameraManager(object):
                 self.right_seg.append(image)
             elif view == 'seg_left':
                 self.left_seg.append(image)
+            elif view == 'seg_back':
+                self.back_seg.append(image)
+            elif view == 'seg_back_right':
+                self.back_right_seg.append(image)
+            elif view == 'seg_back_left':
+                self.back_left_seg.append(image)
 
             elif view == 'depth_front':
-                self.front_seg.append(image)
+                self.front_depth.append(image)
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
                 self.left_depth.append(image)
+            elif view == 'depth_back':
+                self.back_depth.append(image)
+            elif view == 'depth_back_right':
+                self.back_right_depth.append(image)
+            elif view == 'depth_back_left':
+                self.back_left_depth.append(image)
 
 
 def record_control(control, control_list):
