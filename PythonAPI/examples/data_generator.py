@@ -339,15 +339,12 @@ class World(object):
         self.control_list.append([frame, c.throttle, c.steer, c.brake, 
                                 c.hand_brake, c.manual_gear_shift, c.gear])
 
-    def save_speed_control(self, root, scenario_name):
+    def save_speed_control(self, path):
         speed = np.asarray(self.speed_list)
         control = np.asarray(self.control_list)
 
-        if not os.path.exists(os.path.join(root, scenario_name)):
-            os.makedirs(os.path.join(root, scenario_name))
-
-        np.save('%s/%s/speed' % (root, scenario_name), speed)
-        np.save('%s/%s/control' % (root, scenario_name), control)
+        np.save('%s/speed' % (path), speed)
+        np.save('%s/control' % (path), control)
         self.speed_list = []
         self.control_list = []
 
@@ -371,7 +368,7 @@ class World(object):
             self.camera_manager.sensor_back,
             self.camera_manager.sensor_back_left,
             self.camera_manager.sensor_back_right,
-            self.camera_manager.lidar,
+            self.camera_manager.sensor_lidar,
             self.camera_manager.seg_top,
             self.camera_manager.seg_front,
             self.camera_manager.seg_back,
@@ -916,12 +913,12 @@ class CollisionSensor(object):
         #     self.history.pop(0)
         self.collision = True
 
-    def save_history(path):
+    def save_history(self, path):
         if self.collision:
             for i, collision in enumerate(self.history):
                 self.history[i] = list(history[i])
             history = np.asarray(self.history)
-            np.save(path + 'collision_history')
+            np.save('%s/collision_history' % (path), history)
 
 # ==============================================================================
 # -- LaneInvasionSensor --------------------------------------------------------
@@ -1030,14 +1027,14 @@ class IMUSensor(object):
                                 self.gyroscope[0], self.gyroscope[1], self.gyroscope[2], 
                                 self.compass])
 
-    def toggle_recording_IMU(self, scenario_name):
+    def toggle_recording_IMU(self, path):
         self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(target = self.save_IMU, args=(scenario_name))
+            t_top = threading.Thread(target = self.save_IMU, args=(path))
 
-    def save_IMU(self, scenario_name):
+    def save_IMU(self, path):
         np_imu = np.asarray(self.imu_save)
-        np.save('_out/%s/imu' % (scenario_name), np_imu)
+        np.save('%s/imu' % (path), np_imu)
         self.imu_save = []
 # ==============================================================================
 # -- RadarSensor ---------------------------------------------------------------
@@ -1125,6 +1122,7 @@ class CameraManager(object):
         self.back_right_img = []
 
         self.lidar = []
+        self.flow = []
 
         self.top_seg = []
         self.front_seg = []
@@ -1269,6 +1267,13 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[0][1])
 
+            # optical flow
+            # self.sensor_flow = self._parent.get_world().spawn_actor(
+            #     self.sensors[8][-1],
+            #     self._camera_transforms[0][0],
+            #     attach_to=self._parent,
+            #     attachment_type=self._camera_transforms[0][1])
+
             # segmentation sensor
             self.seg_top = self._parent.get_world().spawn_actor(
                 self.sensors[5][-1],
@@ -1350,6 +1355,7 @@ class CameraManager(object):
             self.sensor_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
 
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+            # self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
             self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
             self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
@@ -1373,33 +1379,35 @@ class CameraManager(object):
     def next_sensor(self):
         self.set_sensor(self.index + 1)
 
-    def toggle_recording(self, scenario_name):
+    def toggle_recording(self, path):
         self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(target = self.save_img,args=(self.top_img, 0, scenario_name, 'top'))
-            t_front = threading.Thread(target = self.save_img,args=(self.front_img, 0, scenario_name, 'front'))
-            t_right = threading.Thread(target = self.save_img,args=(self.right_img, 0, scenario_name, 'right'))
-            t_left = threading.Thread(target = self.save_img,args=(self.left_img, 0, scenario_name, 'left'))
-            t_back = threading.Thread(target = self.save_img,args=(self.back_img, 0, scenario_name, 'back'))
-            t_back_right = threading.Thread(target = self.save_img,args=(self.back_right_img, 0, scenario_name, 'back_right'))
-            t_back_left = threading.Thread(target = self.save_img,args=(self.back_left_img, 0, scenario_name, 'back_left'))
+            t_top = threading.Thread(target = self.save_img,args=(self.top_img, 0, path, 'top'))
+            t_front = threading.Thread(target = self.save_img,args=(self.front_img, 0, path, 'front'))
+            t_right = threading.Thread(target = self.save_img,args=(self.right_img, 0, path, 'right'))
+            t_left = threading.Thread(target = self.save_img,args=(self.left_img, 0, path, 'left'))
+            t_back = threading.Thread(target = self.save_img,args=(self.back_img, 0, path, 'back'))
+            t_back_right = threading.Thread(target = self.save_img,args=(self.back_right_img, 0, path, 'back_right'))
+            t_back_left = threading.Thread(target = self.save_img,args=(self.back_left_img, 0, path, 'back_left'))
 
-            t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, scenario_name, 'lidar'))
+            t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, path, 'lidar'))
 
-            t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, scenario_name, 'seg_top'))
-            t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, scenario_name, 'seg_front'))
-            t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, scenario_name, 'seg_right'))
-            t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, scenario_name, 'seg_left'))
-            t_seg_back = threading.Thread(target = self.save_img, args=(self.back_seg, 5, scenario_name, 'seg_back'))
-            t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, scenario_name, 'seg_back_right'))
-            t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, scenario_name, 'seg_back_left'))
+            # t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
-            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 2, scenario_name, 'depth_front'))
-            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 2, scenario_name, 'depth_right'))
-            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 2, scenario_name, 'depth_left'))
-            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 2, scenario_name, 'depth_back'))
-            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 2, scenario_name, 'depth_back_right'))
-            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 2, scenario_name, 'depth_back_left'))
+            t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
+            t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, path, 'seg_front'))
+            t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, path, 'seg_right'))
+            t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
+            t_seg_back = threading.Thread(target = self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
+            t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, path, 'seg_back_right'))
+            t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, path, 'seg_back_left'))
+
+            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 2, path, 'depth_front'))
+            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 2, path, 'depth_right'))
+            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 2, path, 'depth_left'))
+            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 2, path, 'depth_back'))
+            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 2, path, 'depth_back_right'))
+            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 2, path, 'depth_back_left'))
 
             t_top.start()
             t_front.start()
@@ -1410,6 +1418,8 @@ class CameraManager(object):
             t_back_right.start()
 
             t_lidar.start()
+
+            # t_flow.start()
 
             t_seg_top.start()
             t_seg_front.start()
@@ -1436,6 +1446,8 @@ class CameraManager(object):
 
             self.lidar = []
 
+            # self.flow = []
+
             self.top_seg = []
             self.front_seg = []
             self.right_seg = []
@@ -1453,13 +1465,16 @@ class CameraManager(object):
 
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
-    def save_img(self,img_list, sensor, scenario_name, view='top'):
+    def save_img(self,img_list, sensor, path, view='top'):
         for img in img_list:
-            if img.frame%2 == 0:
+            if img.frame%15 == 0:
                 if 'seg' in view:
-                    img.save_to_disk('_out/%s/%s/%s/%08d' % (scenario_name, self.sensors[sensor][2], view,img.frame), cc.CityScapesPalette)
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
+                elif 'flow' in view:
+                    img = img.get_color_coded_flow()
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
                 else:
-                    img.save_to_disk('_out/%s/%s/%s/%08d' % (scenario_name, self.sensors[sensor][2], view,img.frame))
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
     def render(self, display):
@@ -1523,6 +1538,9 @@ class CameraManager(object):
 
             elif view == 'lidar':
                 self.lidar.append(image)
+
+            elif view == 'flow':
+                self.flow.append(image)
 
             elif view == 'seg_top':
                 self.top_seg.append(image)
@@ -1720,7 +1738,8 @@ def game_loop(args):
             pedestrian = int(input("pedestrian_quantity:"))
             
             
-        #world = World(client.get_world(), hud, args)
+        weather = args.weather
+        exec("args.weather = carla.WeatherParameters.%s" % args.weather)
         world = World(client.load_world(args.map), hud, args)            
         client.get_world().set_weather(args.weather)                     
 
@@ -1760,11 +1779,14 @@ def game_loop(args):
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
 
-        root = '_out'
-        scenario_name = str(args.map) + '_' + str(args.weather) + '_'
+        root = os.path.join('_out', args.scenario_id) 
+        scenario_name = str(args.map) + '_' + str(weather) + '_'
         scenario_name = scenario_name + 'random_actor_' if args.random_actors else scenario_name
         scenario_name = scenario_name + 'random_objects_' if args.random_objects else scenario_name
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
+        stored_path = os.path.join(root, scenario_name)
+        if not os.path.exists(stored_path):
+            os.makedirs(stored_path)
 
         start_frame = client.get_world().wait_for_tick().frame
         world.camera_manager.toggle_recording(scenario_name) 
@@ -1815,12 +1837,12 @@ def game_loop(args):
             if scenario_finished:
                 break
         end_frame = client.get_world().wait_for_tick().frame
-        world.save_speed_control(root, scenario_name)
-        world.imu_sensor.toggle_recording_IMU(scenario_name)
-        world.imu_sensor.save_IMU(scenario_name)
-        world.collision_sensor.save_history(scenario_name)
-        world.camera_manager.toggle_recording(scenario_name) 
-        world.destroy()
+        world.save_speed_control(stored_path)
+        world.imu_sensor.toggle_recording_IMU(stored_path)
+        world.imu_sensor.save_IMU(stored_path)
+        world.collision_sensor.save_history(stored_path)
+        world.camera_manager.toggle_recording(stored_path) 
+        # world.destroy()
     finally:
 
         if (world and world.recording_enabled):
@@ -1923,7 +1945,7 @@ def main():
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
 
-    exec("args.weather = carla.WeatherParameters.%s" % args.weather)
+    # exec("args.weather = carla.WeatherParameters.%s" % args.weather)
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
