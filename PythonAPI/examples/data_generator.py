@@ -1185,7 +1185,7 @@ class CameraManager(object):
             ['sensor.lidar.ray_cast', None,
                 'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
-            ['sensor.camera.optical_flow', None, 'Optical Flow'. {}],
+            ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
             ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}]
             ]
         world = self._parent.get_world()
@@ -1761,10 +1761,10 @@ def game_loop(args):
             t.start()
 
         root = '_out'
-        scenario_name = args.map + '_' + args.weather + '_'
-        scenario_name = scenario_name + 'random_actor_' if args.random_actors
-        scenario_name = scenario_name + 'random_objects_' if args.random_objects 
-        scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory
+        scenario_name = str(args.map) + '_' + str(args.weather) + '_'
+        scenario_name = scenario_name + 'random_actor_' if args.random_actors else scenario_name
+        scenario_name = scenario_name + 'random_objects_' if args.random_objects else scenario_name
+        scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
 
         start_frame = client.get_world().wait_for_tick().frame
         world.camera_manager.toggle_recording(scenario_name) 
