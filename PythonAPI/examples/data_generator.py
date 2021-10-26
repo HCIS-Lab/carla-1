@@ -369,6 +369,7 @@ class World(object):
             self.camera_manager.sensor_back_left,
             self.camera_manager.sensor_back_right,
             self.camera_manager.sensor_lidar,
+            self.camera_manager.sensor_dvs,
             self.camera_manager.seg_top,
             self.camera_manager.seg_front,
             self.camera_manager.seg_back,
@@ -916,9 +917,10 @@ class CollisionSensor(object):
     def save_history(self, path):
         if self.collision:
             for i, collision in enumerate(self.history):
-                self.history[i] = list(history[i])
+                self.history[i] = list(self.history[i])
             history = np.asarray(self.history)
-            np.save('%s/collision_history' % (path), history)
+            if len(history) != 0:
+                np.save('%s/collision_history' % (path), history)
 
 # ==============================================================================
 # -- LaneInvasionSensor --------------------------------------------------------
@@ -1123,6 +1125,7 @@ class CameraManager(object):
 
         self.lidar = []
         self.flow = []
+        self.dvs = []
 
         self.top_seg = []
         self.front_seg = []
@@ -1267,6 +1270,12 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[0][1])
 
+            self.sensor_dvs = self._parent.get_world().spawn_actor(
+                self.sensors[7][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+
             # optical flow
             # self.sensor_flow = self._parent.get_world().spawn_actor(
             #     self.sensors[8][-1],
@@ -1355,6 +1364,7 @@ class CameraManager(object):
             self.sensor_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
 
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+            self.sensor_dvs.listen(lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
             # self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
             self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
@@ -1391,7 +1401,7 @@ class CameraManager(object):
             t_back_left = threading.Thread(target = self.save_img,args=(self.back_left_img, 0, path, 'back_left'))
 
             t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, path, 'lidar'))
-
+            t_dvs = threading.Thread(target = self.save_img,args=(self.dvs, 7, path, 'dvs'))
             # t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
             t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
@@ -1418,7 +1428,7 @@ class CameraManager(object):
             t_back_right.start()
 
             t_lidar.start()
-
+            t_dvs.start()
             # t_flow.start()
 
             t_seg_top.start()
@@ -1445,7 +1455,7 @@ class CameraManager(object):
             self.back_left_img = []
 
             self.lidar = []
-
+            self.dvs = []
             # self.flow = []
 
             self.top_seg = []
@@ -1465,11 +1475,24 @@ class CameraManager(object):
 
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
-    def save_img(self,img_list, sensor, path, view='top'):
+    def save_img(self, img_list, sensor, path, view='top'):
         for img in img_list:
             if img.frame%15 == 0:
                 if 'seg' in view:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
+                elif 'dvs' in view:
+                    dvs_events = np.frombuffer(img.raw_data, dtype=np.dtype([
+                        ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
+                    dvs_img = np.zeros((img.height, img.width, 3), dtype=np.uint8)
+                    # Blue is positive, red is negative
+                    dvs_img[dvs_events[:]['y'], dvs_events[:]
+                    ['x'], dvs_events[:]['pol'] * 2] = 255
+                    # img = img.to_image()
+                    stored_path = os.path.join(path, self.sensors[sensor][2], view)
+                    if not os.path.exists(stored_path):
+                        os.makedirs(stored_path)
+                    np.save('%s/%08d' % (stored_path, img.frame), dvs_img)
+                    # img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
                 elif 'flow' in view:
                     img = img.get_color_coded_flow()
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
@@ -1520,7 +1543,7 @@ class CameraManager(object):
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        if self.recording:
+        if self.recording and image.frame%15 == 0:
             if view == 'top':
                 self.top_img.append(image)
             elif view == 'front':
@@ -1538,7 +1561,8 @@ class CameraManager(object):
 
             elif view == 'lidar':
                 self.lidar.append(image)
-
+            elif view == 'dvs':
+                self.dvs.append(image)
             elif view == 'flow':
                 self.flow.append(image)
 
