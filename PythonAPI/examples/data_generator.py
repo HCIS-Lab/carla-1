@@ -1812,7 +1812,7 @@ def game_loop(args):
         world.imu_sensor.toggle_recording_IMU(scenario_name)
 
         if args.random_actors:
-            spawn_actor_nearby(actor_transform_list=actor_transform_list)
+            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform_list=actor_transform_list)
 
         scenario_finished = False
         while (1):
