@@ -1752,15 +1752,6 @@ def game_loop(args):
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
-        if args.random_actors:
-            print("Now you need to determine the parameters of random actors")
-            x = float(input("center_x: "))
-            y = float(input("center_y: "))
-            z = float(input("center_z: "))
-            distance = float(input("distance: "))
-            vehicle = int(input("vehicle_quantity:"))
-            pedestrian = int(input("pedestrian_quantity:"))
-            
             
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
@@ -1791,14 +1782,17 @@ def game_loop(args):
         time.sleep(2)
         auto = [False] * num_files
 
+        actor_transform_list = []
+
         for i in range(num_files):
             for j in range(len(actor_transform[i])):
                 if j % 10 == 0:
                     world.world.debug.draw_point(
                         actor_transform[i][j].location)
+            actor_dict = {'id': agents_list[i].id, 'transform': actor_transform[i]}
+            actor_transform_list.append(actor_dict)
 
-        if args.random_actors:
-            spawn_actor_nearby(carla.Location(x, y, z), distance, vehicle, pedestrian)
+        
         if args.random_objects:
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
@@ -1816,6 +1810,9 @@ def game_loop(args):
         world.camera_manager.toggle_recording(scenario_name) 
         world.imu_sensor.recording = True
         world.imu_sensor.toggle_recording_IMU(scenario_name)
+
+        if args.random_actors:
+            spawn_actor_nearby(actor_transform_list=actor_transform_list)
 
         scenario_finished = False
         while (1):
@@ -2008,3 +2005,4 @@ if __name__ == '__main__':
     HardRainSunset
     SoftRainSunset
 """
+

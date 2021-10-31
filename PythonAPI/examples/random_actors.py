@@ -10,6 +10,7 @@ import time
 import csv
 import os
 import logging
+import math
 import argparse
 from numpy import random
 from carla import VehicleLightState as vls
@@ -18,7 +19,7 @@ from agents.navigation.behavior_agent import BehaviorAgent
 
 client = carla.Client('localhost', 2000)
 client.set_timeout(5.0)
-def spawn_actor_nearby(center=carla.Location(0, 0, 0), distance=100, vehicle=0, pedestrian=0): 
+def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform_list=[]): 
     # get world and spawn points
     world = client.get_world()
     map = world.get_map()
@@ -38,21 +39,62 @@ def spawn_actor_nearby(center=carla.Location(0, 0, 0), distance=100, vehicle=0, 
 
     #get_spawn_points() get transform
     waypoint_list = []
+    
     for waypoint in spawn_points:
-        pt = map.get_waypoint(waypoint.location)
-        d = waypoint.location.distance(center)
+        point = map.get_waypoint(waypoint.location)
+        """
+        d = waypoint.location.distance(actor_transform_list[0]['transform'][0].location)
         closer_node = 0
         next_nodes = pt.next(10)
         #distinguish whether the next waypoint is closer
         num_of_edges = len(next_nodes)
         for node in next_nodes:
-            if node.transform.location.distance(center) < d:
+            if node.transform.location.distance(actor_transform_list[0]['transform'][0].location) < d:
                 closer_node += 1
+        """
+        flag = True
+        
+        mid = len(actor_transform_list[0]['transform']) // 2
 
+        if (waypoint.location.distance(actor_transform_list[0]['transform'][mid].location)) < distance:
+            flag = False
+            
+            for traj in actor_transform_list:
+                for pt in traj['transform']:
+                    if waypoint.location.distance(pt.location) < 1:
+                        flag = True
+                        break
+                if flag:
+                    break
+        
+        if not flag:
+            
+            for i in range(50):
+                next_pt = point.next(5)
+                point = next_pt[0]
+                for traj in actor_transform_list:
+                    interval = len(traj['transform']) // 50
+                    lower = (i-1) * interval if i != 0 else i*interval
+                    upper = (i+2) * interval if i != 49 else i+1*interval
+                    for pt in traj['transform'][lower:upper]:
+                        if point.transform.location.distance(pt.location) < 0.1:
+                            flag = True
+                            break
+                    if flag:
+                        break
+                if flag:
+                    break
+            if flag:
+                break
+        
+        """
         if (waypoint.location.distance(center) < distance and 
-            closer_node > num_of_edges//2):
+            closer_node > num_of_edges//2) and (not flag):
             waypoint_list.append(waypoint)
-    
+        """
+
+        if not flag:
+            waypoint_list.append(waypoint)
     random.shuffle(waypoint_list)
     print(len(waypoint_list))
 
@@ -76,6 +118,9 @@ def spawn_actor_nearby(center=carla.Location(0, 0, 0), distance=100, vehicle=0, 
     all_id = []
 
     batch = []
+
+    vehicle = min(math.ceil(len(waypoint_list) * 0.8), vehicles) if len(waypoint_list) >= 20 else len(waypoint_list)
+    
     for n, transform in enumerate(waypoint_list):
         if n >= vehicle:
             break
@@ -178,7 +223,7 @@ def spawn_actor_nearby(center=carla.Location(0, 0, 0), distance=100, vehicle=0, 
         #for j in range(50):
             loc = world.get_random_location_from_navigation()
             temp = carla.Location(int(loc.x), int(loc.y), int(loc.z))
-            if (loc.distance(center) < distance) and (loc_dict.get(temp) == None):
+            if (loc.distance(actor_transform_list[0]['transform'][mid].location) < distance) and (loc_dict.get(temp) == None):
                 loc_dict[temp] = True
                 spawn_point.location = loc
                 spawn_points.append(spawn_point)
@@ -258,5 +303,6 @@ def spawn_actor_nearby(center=carla.Location(0, 0, 0), distance=100, vehicle=0, 
     print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(vehicles_list), len(walkers_list)))
 
     # example of how to use parameters
-    traffic_manager.global_percentage_speed_difference(30.0)
+    traffic_manager.global_percentage_speed_difference(10.0)
+
 
