@@ -1710,7 +1710,7 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    path = '_out/'+str(args.scenario_id)
+    path = 'data_collection/'+str(args.scenario_id)
     file_list = []
     try:
         for root, _, files in os.walk(path + '/transform/'):
@@ -1797,7 +1797,7 @@ def game_loop(args):
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
 
-        root = os.path.join('_out', args.scenario_id) 
+        root = os.path.join('data_collection', args.scenario_id) 
         scenario_name = str(args.map) + '_' + str(weather) + '_'
         scenario_name = scenario_name + 'random_actor_' if args.random_actors else scenario_name
         scenario_name = scenario_name + 'random_objects_' if args.random_objects else scenario_name
