@@ -1773,6 +1773,16 @@ def game_loop(args):
         time.sleep(2)
         auto = [False] * num_files
         
+        actor_transform_list = []
+
+        for i in range(num_files):
+            for j in range(len(actor_transform[i])):
+                if j % 10 == 0:
+                    world.world.debug.draw_point(
+                        actor_transform[i][j].location)
+            actor_dict = {'id': agents_list[i].id, 'transform': actor_transform[i]}
+            actor_transform_list.append(actor_dict)
+        
         if args.random_objects:
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
