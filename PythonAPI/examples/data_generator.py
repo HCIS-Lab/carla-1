@@ -104,6 +104,8 @@ import re
 import weakref
 import time
 import threading
+import xml.etree.ElementTree as ET
+
 from random_actors import spawn_actor_nearby
 
 try:
@@ -1773,16 +1775,6 @@ def game_loop(args):
         time.sleep(2)
         auto = [False] * num_files
         
-        actor_transform_list = []
-
-        for i in range(num_files):
-            for j in range(len(actor_transform[i])):
-                if j % 10 == 0:
-                    world.world.debug.draw_point(
-                        actor_transform[i][j].location)
-            actor_dict = {'id': agents_list[i].id, 'transform': actor_transform[i]}
-            actor_transform_list.append(actor_dict)
-        
         if args.random_objects:
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
@@ -1802,7 +1794,7 @@ def game_loop(args):
         world.imu_sensor.toggle_recording_IMU(scenario_name)
 
         if args.random_actors:
-            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform_list=actor_transform_list)
+            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
 
         scenario_finished = False
         while (1):

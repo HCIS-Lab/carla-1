@@ -19,7 +19,7 @@ from agents.navigation.behavior_agent import BehaviorAgent
 
 client = carla.Client('localhost', 2000)
 client.set_timeout(5.0)
-def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform_list=[]): 
+def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict={}): 
     # get world and spawn points
     world = client.get_world()
     map = world.get_map()
@@ -54,13 +54,13 @@ def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform
         """
         flag = True
         
-        mid = len(actor_transform_list[0]['transform']) // 2
+        mid = len(transform_dict['player']) // 2
 
-        if (waypoint.location.distance(actor_transform_list[0]['transform'][mid].location)) < distance:
+        if (waypoint.location.distance(transform_dict['player'][mid].location)) < distance:
             flag = False
             
-            for traj in actor_transform_list:
-                for pt in traj['transform']:
+            for actor_id, traj in transform_dict.items():
+                for pt in traj:
                     if waypoint.location.distance(pt.location) < 1:
                         flag = True
                         break
@@ -72,11 +72,11 @@ def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform
             for i in range(50):
                 next_pt = point.next(5)
                 point = next_pt[0]
-                for traj in actor_transform_list:
-                    interval = len(traj['transform']) // 50
+                for actor_id, traj in transform_dict.items():
+                    interval = len(traj) // 50
                     lower = (i-1) * interval if i != 0 else i*interval
                     upper = (i+2) * interval if i != 49 else i+1*interval
-                    for pt in traj['transform'][lower:upper]:
+                    for pt in traj[lower:upper]:
                         if point.transform.location.distance(pt.location) < 0.1:
                             flag = True
                             break
@@ -223,7 +223,7 @@ def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, actor_transform
         #for j in range(50):
             loc = world.get_random_location_from_navigation()
             temp = carla.Location(int(loc.x), int(loc.y), int(loc.z))
-            if (loc.distance(actor_transform_list[0]['transform'][mid].location) < distance) and (loc_dict.get(temp) == None):
+            if (loc.distance(transform_dict['player'][mid].location) < distance) and (loc_dict.get(temp) == None):
                 loc_dict[temp] = True
                 spawn_point.location = loc
                 spawn_points.append(spawn_point)
