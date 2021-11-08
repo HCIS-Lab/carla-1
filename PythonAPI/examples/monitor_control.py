@@ -1122,37 +1122,81 @@ class CameraManager(object):
         if self.recording:
             self.record_image.append(image)
 
+def record_transform(actor_dict, world):
+    actor_list = world.world.get_actors()
+    for actor in actor_list:
+        transform = world.player.get_transform()
+        np_transform = np.zeros(7)
+        np_transform[0:3] = [transform.location.x, transform.location.y, transform.location.z]
+        np_transform[3:6] = [transform.rotation.pitch, transform.rotation.yaw, transform.rotation.roll]
+        if actor.id == world.player.id:
+            actor_dict['player']['transform'].append(np_transform)
+        elif 'vehicle' in str(actor.type_id) or 'walker' in str(actor.type_id):
+            actor_dict[str(actor.id)]['transform'].append(np_transform)
+    return actor_dict
+    
+def record_velocity(actor_dict, world):
+    actor_list = world.world.get_actors()
+    for actor in actor_list:
+        velocity = world.player.get_velocity()
+        np_velocity = np.zeros(3)
+        np_velocity = [velocity.x, velocity.y, velocity.z]
+        if actor.id == world.player.id:
+            actor_dict['player']['velocity'].append(np_velocity)
+        elif 'vehicle' in str(actor.type_id) or 'walker' in str(actor.type_id):
+            actor_dict[str(actor.id)]['velocity'].append(np_velocity)
+    return actor_dict
+
+def extract_actor(actor_dict, world):
+    actor_list = world.world.get_actors()
+    # print(actor_dict)
+    for actor in actor_list:
+        # if actor.id not in actor_dict:
+        if actor.id == world.player.id:
+            actor_dict['player'] = {'filter': str(world.player.type_id), 
+                                    'transform': [],
+                                    'velocity': []}
+        elif 'vehicle' in str(actor.type_id) or 'walker' in str(actor.type_id):
+            actor_dict[str(actor.id)] = {'filter': actor.type_id, 
+                                    'transform': [],
+                                    'velocity': []}
+    return actor_dict
+
+def save_actor(actor_dict, scenario_name, timestamp_list):
+    if not os.path.exists('data_collection/'):
+        os.mkdir('data_collection/')
+    if not os.path.exists('data_collection/%s/' % (scenario_name)):
+        os.mkdir('data_collection/%s/' % (scenario_name))
+    if not os.path.exists('data_collection/%s/transform/'% (scenario_name)):
+        os.mkdir('data_collection/%s/transform/'% (scenario_name))
+    if not os.path.exists('data_collection/%s/velocity/'% (scenario_name)):
+        os.mkdir('data_collection/%s/velocity/'% (scenario_name))
+    if not os.path.exists('data_collection/%s/filter/'% (scenario_name)):
+        os.mkdir('data_collection/%s/filter/'% (scenario_name))
+    if not os.path.exists('data_collection/%s/timestamp/'% (scenario_name)):
+        os.mkdir('data_collection/%s/timestamp/'% (scenario_name))
+
+    for actor_id, data in actor_dict.items():
+
+        np.save('data_collection/%s/transform/%s' % (scenario_name, actor_id), np.array(data['transform']))
+        # np.save('data_collection/%s/filter/%s' % (scenario_name, actor_id), np.array(data['filter']))
+        np.save('data_collection/%s/velocity/%s' % (scenario_name, actor_id), np.array(data['velocity']))   # velocity list np array saved as a .npy file
+        np.save('data_collection/%s/timestamp/%s' % (scenario_name, actor_id), np.array(timestamp_list))
+        with open("data_collection/%s/filter/%s.txt" % (scenario_name, actor_id), "w") as text_file:
+            text_file.write(str(data['filter']))
+
+        data['transform'] = []
+        data['velocity'] = []
+        data['filter'] = []
+        
+    timestamp_list = []
+    return actor_dict, timestamp_list
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
-def record_control(control, control_list):
-    np_control = np.zeros(7)
-    np_control[0] = control.throttle
-    np_control[1] = control.steer
-    np_control[2] = control.brake
-    np_control[3] = control.hand_brake
-    np_control[4] = control.reverse
-    np_control[5] = control.manual_gear_shift
-    np_control[6] = control.gear
 
-    control_list.append(np_control)
-
-def record_transform(control_list, world):
-    transform = world.player.get_transform()
-    np_transform = np.zeros(7)
-    np_transform[0:3] = [transform.location.x, transform.location.y, transform.location.z]
-    np_transform[3:6] = [transform.rotation.pitch, transform.rotation.yaw, transform.rotation.roll]
-    
-    control_list.append(np_transform)
-
-def record_velocity(velocity_list, world):
-    velocity = world.player.get_velocity()
-    np_velocity = np.zeros(3)
-    np_velocity = [velocity.x, velocity.y, velocity.z]
-
-    velocity_list.append(np_velocity)
 
 def game_loop(args):
     pygame.init()
@@ -1170,13 +1214,15 @@ def game_loop(args):
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args)
+        world = World(client.load_world(args.map), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
+        actor_dict = {}
         timestamp_list = []
         transform_list = []
         velocity_list = []
         clock = pygame.time.Clock()
+
         while True:
             clock.tick_busy_loop(20)
             code = controller.parse_events(client, world, clock)
@@ -1186,42 +1232,21 @@ def game_loop(args):
                 return
             # k_r click
             elif code == 3:
-                #if len(control_list) == 0:
-                #    record_transform(control_list, world)
-
-                #record_control(controller._control, control_list)
-                # print(type(client.get_world().wait_for_tick()))
                 timestamp_list.append(client.get_world().wait_for_tick().frame)
-
-                # transform 
-                record_transform(transform_list, world)
-                record_velocity(velocity_list, world)
-                # end recording
+                actor_dict = record_transform(actor_dict, world)
+                actor_dict = record_velocity(actor_dict, world)
+            # stop recording
             elif code == 4:
-                timestamp_list = np.array(timestamp_list)
-                transform_list = np.array(transform_list)
-                velocity_list = np.array(velocity_list) # velocity list as np array
                 scenario_name = world.camera_manager.scenario_id
-                control_agent = input("agent id: ")
+                # client_filter = client.actor.attributes[]
                 print('start time: ' + str(timestamp_list[0]))
                 print('end time: ' + str(timestamp_list[-1]))
-                if not os.path.exists('_out/%s/' % (scenario_name)):
-                    os.mkdir('_out/%s/' % (scenario_name))
-                if not os.path.exists('_out/%s/transform/'% (scenario_name)):
-                    os.mkdir('_out/%s/transform/'% (scenario_name))
-                if not os.path.exists('_out/%s/velocity/'% (scenario_name)):
-                    os.mkdir('_out/%s/velocity/'% (scenario_name))
-                if not os.path.exists('_out/%s/timestamp/'% (scenario_name)):
-                    os.mkdir('_out/%s/timestamp/'% (scenario_name))
-                np.save('_out/%s/transform/%s' % (scenario_name, control_agent), transform_list)
-                np.save('_out/%s/velocity/%s' % (scenario_name, control_agent), velocity_list)   # velocity list np array saved as a .npy file
-                np.save('_out/%s/timestamp/%s' % (scenario_name, control_agent), timestamp_list)
-                transform_list = []
-                timestamp_list = []
-                velocity_list = []
-                controller.r = 2
-            
 
+                actor_dict, timestamp_list = save_actor(actor_dict, scenario_name, timestamp_list)
+                controller.r = 2
+            # not recording
+            else:
+                actor_dict = extract_actor(actor_dict, world)
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
@@ -1285,6 +1310,11 @@ def main():
         default=2.2,
         type=float,
         help='Gamma correction of the camera (default: 2.2)')
+    argparser.add_argument(
+        '-map',
+        default='Town03',
+        type=str,
+        help='map name')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

@@ -182,7 +182,7 @@ def get_actor_display_name(actor, truncate=250):
 
 
 class World(object):
-    def __init__(self, carla_world, hud, args):
+    def __init__(self, carla_world, client_bp, hud, args):
         self.world = carla_world
         self.actor_role_name = args.rolename
         try:
@@ -203,7 +203,7 @@ class World(object):
         self.camera_manager = None
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
-        self._actor_filter = args.filter
+        self._actor_filter = client_bp
         self._gamma = args.gamma
         self.restart()
         self.world.on_tick(hud.on_world_tick)
@@ -1592,7 +1592,7 @@ class CameraManager(object):
             elif view == 'depth_back_right':
                 self.back_right_depth.append(image)
             elif view == 'depth_back_left':
-                self.back_left_depth.append(image)
+                self.back_left_depth.append(image)    
 
 
 def record_control(control, control_list):
@@ -1711,37 +1711,28 @@ def game_loop(args):
     pygame.font.init()
     world = None
     path = 'data_collection/'+str(args.scenario_id)
-    file_list = []
+
+    filter_dict = {}
     try:
-        for root, _, files in os.walk(path + '/transform/'):
+        for root, _, files in os.walk(path + '/filter/'):
             for name in files:
-                file_list.append(path + '/transform/' + name)
+                f = open(path + '/filter/' + name, 'r')
+                bp = f.readlines()[0]
+                name = name.strip('.txt')
+                f.close()
+                filter_dict[name] = bp
     except:
         print("檔案夾不存在。")
 
-    velocity_list = []
-    # for name in file_list:
-    #     velocity_list.append(path + '/velocity/' + name)
+    # file_list = []
+    transform_dict = {}
+    velocity_dict = {}
+    for actor_id, _ in filter_dict.items():
+        transform_dict[actor_id] = read_transform(os.path.join(path, 'transform', actor_id + '.npy'))
+        velocity_dict[actor_id] = read_velocity(os.path.join(path, 'velocity', actor_id + '.npy'))
 
-    try:
-        for root, _, files in os.walk(path + '/velocity/'):
-            for name in files:
-                velocity_list.append(path + '/velocity/' + name)
-    except:
-        print("檔案夾不存在。")
+    num_files = len(filter_dict)
 
-    file_list.sort()
-    velocity_list.sort()
-
-    num_files = len(file_list)
-    print('number of actors: '+str(num_files))
-    actor_transform = []
-    actor_velocity = []
-    control_list = []
-
-    for i in range(num_files):
-        actor_transform.append(read_transform(file_list[i]))
-        actor_velocity.append(read_velocity(velocity_list[i]))
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(5.0)
@@ -1755,7 +1746,7 @@ def game_loop(args):
             
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
-        world = World(client.load_world(args.map), hud, args)            
+        world = World(client.load_world(args.map), filter_dict['player'], hud, args)            
         client.get_world().set_weather(args.weather)                     
 
         controller = KeyboardControl(world, args.autopilot)
@@ -1763,35 +1754,24 @@ def game_loop(args):
 
         clock = pygame.time.Clock()
 
-        bp_list = []
-        agents_list = []
-        controller_list = []
-        world.player.set_transform(actor_transform[0][0])  
-        agents_list.append(world.player)
-        for i in range(num_files):
-            if i != 0:
-                bp_list.append(blueprint_library.filter('model3')[0])
-                agents_list.append(client.get_world().spawn_actor(
-                    bp_list[i-1], actor_transform[i][0]))
-            controller_list.append(VehiclePIDController(agents_list[i], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                        max_throttle=1.0, max_brake=1.0, max_steering=1.0))
+        agents_dict = {}
+        controller_dict = {}
+        actor_transform_index = {}
+        world.player.set_transform(transform_dict['player'][0])  
+        agents_dict['player'] = world.player
 
-        actor_transform_index = [1]*num_files
+        for actor_id, bp in filter_dict.items():
+            if actor_id != 'player':
+                agents_dict[actor_id] = client.get_world().spawn_actor(
+                    filter_dict[actor_id], transform_dict[actor_id][0])
+            controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
+                                                        max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+            actor_transform_index[actor_id] = 1
+        
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
         auto = [False] * num_files
-
-        actor_transform_list = []
-
-        for i in range(num_files):
-            for j in range(len(actor_transform[i])):
-                if j % 10 == 0:
-                    world.world.debug.draw_point(
-                        actor_transform[i][j].location)
-            actor_dict = {'id': agents_list[i].id, 'transform': actor_transform[i]}
-            actor_transform_list.append(actor_dict)
-
         
         if args.random_objects:
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
@@ -1819,31 +1799,34 @@ def game_loop(args):
             clock.tick_busy_loop(20)
 
             # iterate actors
-            for i in range(num_files):
+            for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
-                if actor_transform_index[i] < len(actor_transform[i]):
-                    agents_list[i].apply_control(controller_list[i].run_step(
-                        actor_velocity[i][actor_transform_index[i]], actor_transform[i][actor_transform_index[i]]))
-                    v = agents_list[i].get_velocity()
+
+                if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
+                    agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                        velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
+
+                    v = agents_dict[actor_id].get_velocity()
                     v = (v.x**2 + v.y**2 + v.z**2)**1/3
 
                     # to avoid the actor slowing down for the dense location around
-                    if agents_list[i].get_transform().location.distance(actor_transform[i][actor_transform_index[i]].location) < 2 + v/20.0:
+                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
+    
                         if args.noise_trajectory:
                             # sampling location with larger distance
-                            actor_transform_index[i] += max(1, int(7 + v//5.0))
+                            actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
                         else:
-                            actor_transform_index[i] += max(1, int(7 + v//10.0))
+                            actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
                     else:
-                        actor_transform_index[i] += 1
+                        actor_transform_index[actor_id] += 1
 
-                    if i == 0:
+                    if actor_id == 'player':
                         current_frame = client.get_world().wait_for_tick().frame
                         world.record_speed_control(current_frame)
                 
                 else:
                     # when the client has arrived the last recorded location
-                    if i == 0:
+                    if actor_id == 'player':
                         scenario_finished = True
                         break
                     if not auto[i]:
