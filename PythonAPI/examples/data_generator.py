@@ -1479,7 +1479,7 @@ class CameraManager(object):
 
     def save_img(self, img_list, sensor, path, view='top'):
         for img in img_list:
-            if img.frame%15 == 0:
+            if img.frame%2 == 0:
                 if 'seg' in view:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
                 elif 'dvs' in view:
@@ -1545,7 +1545,7 @@ class CameraManager(object):
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        if self.recording and image.frame%15 == 0:
+        if self.recording and image.frame%2 == 0:
             if view == 'top':
                 self.top_img.append(image)
             elif view == 'front':
@@ -1704,6 +1704,28 @@ def auto_spawn_object(world,second):
         if new_obj is not None:
             new_obj.destroy()
     
+def set_bp(blueprint, actor_id):
+    blueprint = random.choice(blueprint)
+    blueprint.set_attribute('role_name', actor_id)
+    if blueprint.has_attribute('color'):
+        color = random.choice(
+            blueprint.get_attribute('color').recommended_values)
+        blueprint.set_attribute('color', color)
+    if blueprint.has_attribute('driver_id'):
+        driver_id = random.choice(
+            blueprint.get_attribute('driver_id').recommended_values)
+        blueprint.set_attribute('driver_id', driver_id)
+    if blueprint.has_attribute('is_invincible'):
+        blueprint.set_attribute('is_invincible', 'true')
+    # set the max speed
+    # if blueprint.has_attribute('speed'):
+    #     self.player_max_speed = float(
+    #         blueprint.get_attribute('speed').recommended_values[1])
+    #     self.player_max_speed_fast = float(
+    #         blueprint.get_attribute('speed').recommended_values[2])
+    # else:
+    #     print("No recommended values for 'speed' attribute")
+    return blueprint
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
@@ -1765,7 +1787,8 @@ def game_loop(args):
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
                 agents_dict[actor_id] = client.get_world().spawn_actor(
-                    filter_dict[actor_id], transform_dict[actor_id][0])
+                    set_bp(blueprint_library.filter(filter_dict[actor_id]), actor_id), 
+                    transform_dict[actor_id][0])
             controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                         max_throttle=1.0, max_brake=1.0, max_steering=1.0)
             actor_transform_index[actor_id] = 1
@@ -1774,15 +1797,18 @@ def game_loop(args):
 
         time.sleep(2)
         auto = [False] * num_files
-        
+        root = os.path.join('data_collection', args.scenario_id) 
+        scenario_name = str(args.map) + '_' + str(weather) + '_'
         if args.random_objects:
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
+            scenario_name = scenario_name + 'random_objects_'
 
-        root = os.path.join('data_collection', args.scenario_id) 
-        scenario_name = str(args.map) + '_' + str(weather) + '_'
-        scenario_name = scenario_name + 'random_actor_' if args.random_actors else scenario_name
-        scenario_name = scenario_name + 'random_objects_' if args.random_objects else scenario_name
+        if args.random_actors:
+            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
+            scenario_name = scenario_name + 'random_actor_'
+
+
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
         stored_path = os.path.join(root, scenario_name)
         if not os.path.exists(stored_path):
@@ -1792,9 +1818,6 @@ def game_loop(args):
         world.camera_manager.toggle_recording(scenario_name) 
         world.imu_sensor.recording = True
         world.imu_sensor.toggle_recording_IMU(scenario_name)
-
-        if args.random_actors:
-            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
 
         scenario_finished = False
         while (1):
@@ -1848,7 +1871,6 @@ def game_loop(args):
         world.imu_sensor.save_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
         world.camera_manager.toggle_recording(stored_path) 
-        # world.destroy()
     finally:
 
         if (world and world.recording_enabled):
