@@ -105,6 +105,8 @@ import weakref
 import time
 import threading
 import xml.etree.ElementTree as ET
+import carla_vehicle_annotator as cva
+
 
 from random_actors import spawn_actor_nearby
 
@@ -389,10 +391,12 @@ class World(object):
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
             self.imu_sensor.sensor]
+        self.camera_manager.sensor_front = None
         for sensor in sensors:
             if sensor is not None:
                 sensor.stop()
                 sensor.destroy()
+
         if self.player is not None:
             self.player.destroy()
 
@@ -1144,6 +1148,9 @@ class CameraManager(object):
         self.back_left_depth = []
         self.back_right_depth = []
 
+        self.bbox = []
+        self.last_img = None
+
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1188,7 +1195,7 @@ class CameraManager(object):
             ['sensor.lidar.ray_cast', None,
                 'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
-            ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
+            #['sensor.camera.optical_flow', None, 'Optical Flow', {}],
             ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}]
             ]
         world = self._parent.get_world()
@@ -1421,6 +1428,8 @@ class CameraManager(object):
             t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 2, path, 'depth_back_right'))
             t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 2, path, 'depth_back_left'))
 
+            t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox,path))
+
             t_top.start()
             t_front.start()
             t_left.start()
@@ -1447,6 +1456,8 @@ class CameraManager(object):
             t_depth_back.start()
             t_depth_back_right.start()
             t_depth_back_left.start()
+
+            t_bbox.start()
 
             self.top_img = []
             self.front_img = []
@@ -1475,6 +1486,9 @@ class CameraManager(object):
             self.back_right_depth = []
             self.back_left_depth = []
 
+            self.bbox = []
+            self.last_img = None
+
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def save_img(self, img_list, sensor, path, view='top'):
@@ -1501,6 +1515,17 @@ class CameraManager(object):
                 else:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
+
+    def save_bbox(self,bbox,path):
+        VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
+        VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
+        VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
+        for index,item in enumerate(bbox):
+            vehicles,depth_img,rgb_img,cam = item
+            depth_meter = cva.extract_depth(depth_img)
+            filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
+            cva.save_output(rgb_img, filtered['bbox'], path,filtered['class'], removed['bbox'], removed['class'], save_patched=True, out_format='json')
+    
 
     def render(self, display):
         if self.surface is not None:
@@ -1550,6 +1575,7 @@ class CameraManager(object):
                 self.top_img.append(image)
             elif view == 'front':
                 self.front_img.append(image)
+                self.last_img = image
             elif view == 'left':
                 self.left_img.append(image)
             elif view == 'right':
@@ -1585,6 +1611,12 @@ class CameraManager(object):
 
             elif view == 'depth_front':
                 self.front_depth.append(image)
+                if self.last_img is not None and self.sensor_front is not None:
+                    world = self._parent.get_world()
+                    snapshot = world.get_snapshot()
+                    vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
+                    vehicles+=cva.snap_processing(world.get_actors().filter('Walker.*'), snapshot)
+                    self.bbox.append([vehicles,image,self.last_img,self.sensor_front.get_transform()])
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
@@ -1594,7 +1626,7 @@ class CameraManager(object):
             elif view == 'depth_back_right':
                 self.back_right_depth.append(image)
             elif view == 'depth_back_left':
-                self.back_left_depth.append(image)    
+                self.back_left_depth.append(image)   
 
 
 def record_control(control, control_list):
@@ -1782,25 +1814,31 @@ def game_loop(args):
         controller_dict = {}
         actor_transform_index = {}
         auto = {}
+
         world.player.set_transform(transform_dict['player'][0])  
         agents_dict['player'] = world.player
 
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
+                transform_spawn = transform_dict[actor_id][0]
+                transform_spawn.location.z += 2
                 agents_dict[actor_id] = client.get_world().spawn_actor(
                     set_bp(blueprint_library.filter(filter_dict[actor_id]), actor_id), 
-                    transform_dict[actor_id][0])
+                    transform_spawn)
+            # controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
+            #                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
             # elif 'walker' in bp:
-
+            
             actor_transform_index[actor_id] = 1
             auto[actor_id] = False
+        
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
-        
+        #auto = [False] * num_files
         root = os.path.join('data_collection', args.scenario_id) 
         scenario_name = str(args.map) + '_' + str(weather) + '_'
         if args.random_objects:
@@ -2016,4 +2054,3 @@ if __name__ == '__main__':
     HardRainSunset
     SoftRainSunset
 """
-
