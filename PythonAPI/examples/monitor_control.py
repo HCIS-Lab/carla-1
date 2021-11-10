@@ -1125,7 +1125,7 @@ class CameraManager(object):
 def record_transform(actor_dict, world):
     actor_list = world.world.get_actors()
     for actor in actor_list:
-        transform = world.player.get_transform()
+        transform = actor.get_transform()
         np_transform = np.zeros(7)
         np_transform[0:3] = [transform.location.x, transform.location.y, transform.location.z]
         np_transform[3:6] = [transform.rotation.pitch, transform.rotation.yaw, transform.rotation.roll]
@@ -1138,7 +1138,7 @@ def record_transform(actor_dict, world):
 def record_velocity(actor_dict, world):
     actor_list = world.world.get_actors()
     for actor in actor_list:
-        velocity = world.player.get_velocity()
+        velocity = actor.get_velocity()
         np_velocity = np.zeros(3)
         np_velocity = [velocity.x, velocity.y, velocity.z]
         if actor.id == world.player.id:
@@ -1205,7 +1205,7 @@ def game_loop(args):
 
     try:
         client = carla.Client(args.host, args.port)
-        client.set_timeout(2.0)
+        client.set_timeout(3.0)
 
         display = pygame.display.set_mode(
             (args.width, args.height),
