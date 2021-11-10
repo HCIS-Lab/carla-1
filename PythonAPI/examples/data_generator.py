@@ -1781,6 +1781,7 @@ def game_loop(args):
         agents_dict = {}
         controller_dict = {}
         actor_transform_index = {}
+        auto = {}
         world.player.set_transform(transform_dict['player'][0])  
         agents_dict['player'] = world.player
 
@@ -1789,14 +1790,17 @@ def game_loop(args):
                 agents_dict[actor_id] = client.get_world().spawn_actor(
                     set_bp(blueprint_library.filter(filter_dict[actor_id]), actor_id), 
                     transform_dict[actor_id][0])
-            controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                        max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+            if 'vehicle' in bp:
+                controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
+                                                            max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+            # elif 'walker' in bp:
+
             actor_transform_index[actor_id] = 1
-        
+            auto[actor_id] = False
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
-        auto = [False] * num_files
+        
         root = os.path.join('data_collection', args.scenario_id) 
         scenario_name = str(args.map) + '_' + str(weather) + '_'
         if args.random_objects:
@@ -1854,9 +1858,9 @@ def game_loop(args):
                     if actor_id == 'player':
                         scenario_finished = True
                         break
-                    if not auto[i]:
-                        auto[i] = True
-                    agents_list[i].set_autopilot(True)
+                    if not auto[actor_id]:
+                        auto[actor_id] = True
+                    agents_dict[actor_id].set_autopilot(True)
             if controller.parse_events(client, world, clock) == 1:
                 return
 
