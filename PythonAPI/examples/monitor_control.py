@@ -1295,15 +1295,44 @@ def generate_obstacle(world, n):
                 break
 
         wp = world.get_map().get_waypoint(trans.location)
-        wp_list = wp.next_until_lane_end(10)
-        if len(wp_list) > 1 and wp_list[-1].transform.location.distance(wp_list[-2].transform.location) < 10:
-            wp_list.pop(-1)
 
-        for waypoint in wp_list:
-            i = _ % 2 + 2*(len(wp_list) == 2)
-            next_trans = carla.Transform(waypoint.transform.location, carla.Rotation(
+        wp_list = (wp.previous_until_lane_start(4))[::-1]
+        wp_list.append(wp)
+        if _ % 2:
+            wp_list.extend(wp.next_until_lane_end(4))
+        if len(wp_list) < 2 : continue
+        if wp_list[-1].transform.location.distance(wp_list[-2].transform.location) < 4:
+            wp_list.pop(-1)
+            wp_list.pop(0)
+ 
+        print('###', _, '###',len(wp_list))
+
+        vector = (wp_list[0].transform.location.x - wp_list[1].transform.location.x, wp_list[0].transform.location.y - wp_list[1].transform.location.y)
+
+        for (k, waypoint) in enumerate(wp_list, start=1):
+
+            if waypoint.lane_type != carla.LaneType.Driving or waypoint.is_junction: 
+                break
+            
+            if len(wp_list) == 2:
+                    i = 3
+                    next_location = waypoint.transform.location
+            else:
+                if k == len(wp_list):
+                    i = 2
+                    next_location = waypoint.transform.location
+                else:
+                    i = 0
+                    r = (1.0/k-0.55)
+
+                    right_wpt = waypoint.get_right_lane()
+                    if right_wpt and right_wpt.lane_type == carla.LaneType.Driving:
+                        next_location = carla.Location(x=waypoint.transform.location.x-vector[1]*r, y=waypoint.transform.location.y+vector[0]*r, z=waypoint.transform.location.z)
+                    else:
+                        next_location = carla.Location(x=waypoint.transform.location.x+vector[1]*r, y=waypoint.transform.location.y-vector[0]*r, z=waypoint.transform.location.z)
+
+            next_trans = carla.Transform(next_location, carla.Rotation(
                 pitch=0, yaw=waypoint.transform.rotation.yaw-90, roll=0))
-            #print('###', _, '###')
             world.spawn_actor(
                 blueprint_library.filter(stat_prop[i])[0], next_trans)
 
