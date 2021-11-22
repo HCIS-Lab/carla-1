@@ -1860,7 +1860,8 @@ def game_loop(args):
                                 print('sth wrong w/ walker_start')
 
                         controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
-                        controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
+                        # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
+                        controller_dict[actor_id].set_max_speed(1.4)
                         # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1 + v/2.0:
         
                         #     if args.noise_trajectory:
@@ -1869,7 +1870,7 @@ def game_loop(args):
                         #     else:
                         #         actor_transform_index[actor_id] += max(1, int(1 + v//4.0))
                         # else:
-                        actor_transform_index[actor_id] += 5
+                        actor_transform_index[actor_id] += 7
                 else:
                     # when the client has arrived the last recorded location
                     if actor_id == 'player':
