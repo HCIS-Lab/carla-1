@@ -1385,7 +1385,7 @@ class CameraManager(object):
             t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 2, path, 'depth_back_right'))
             t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 2, path, 'depth_back_left'))
 
-            t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox,path))
+            t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
 
             t_top.start()
             t_front.start()
@@ -1473,7 +1473,7 @@ class CameraManager(object):
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
-    def save_bbox(self,bbox,path):
+    def save_bbox(self, bbox, path):
         VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
         VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
         VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
@@ -1481,7 +1481,7 @@ class CameraManager(object):
             vehicles,depth_img,rgb_img,cam = item
             depth_meter = cva.extract_depth(depth_img)
             filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
-            cva.save_output(rgb_img, filtered['bbox'], path,filtered['class'], removed['bbox'], removed['class'], save_patched=True, out_format='json')
+            cva.save_output(rgb_img, filtered['bbox'], path, filtered['class'], removed['bbox'], removed['class'], save_patched=True, out_format='json')
     
 
     def render(self, display):
@@ -1801,7 +1801,7 @@ def game_loop(args):
         #auto = [False] * num_files
 
         root = os.path.join('data_collection', args.scenario_id) 
-        scenario_name = str(args.map) + '_' + str(weather) + '_'
+        scenario_name = str(weather) + '_'
         if args.random_objects:
             t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
@@ -1836,7 +1836,7 @@ def game_loop(args):
                             velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
 
                         v = agents_dict[actor_id].get_velocity()
-                        v = (v.x**2 + v.y**2 + v.z**2)**1/2
+                        v = (v.x**2 + v.y**2 + v.z**2)**(1/3)
 
                         # to avoid the actor slowing down for the dense location around
                         if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
@@ -1860,16 +1860,16 @@ def game_loop(args):
                                 print('sth wrong w/ walker_start')
 
                         controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
-
-                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1 + v/2.0:
+                        controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
+                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1 + v/2.0:
         
-                            if args.noise_trajectory:
-                                # sampling location with larger distance
-                                actor_transform_index[actor_id] += max(1, int(1 + v//2.0))
-                            else:
-                                actor_transform_index[actor_id] += max(1, int(1 + v//4.0))
-                        else:
-                            actor_transform_index[actor_id] += 1
+                        #     if args.noise_trajectory:
+                        #         # sampling location with larger distance
+                        #         actor_transform_index[actor_id] += max(1, int(1 + v//2.0))
+                        #     else:
+                        #         actor_transform_index[actor_id] += max(1, int(1 + v//4.0))
+                        # else:
+                        actor_transform_index[actor_id] += 5
                 else:
                     # when the client has arrived the last recorded location
                     if actor_id == 'player':
