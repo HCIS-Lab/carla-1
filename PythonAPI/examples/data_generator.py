@@ -9,49 +9,6 @@
 # Allows controlling a vehicle with a keyboard. For a simpler and more
 # documented example, please take a look at tutorial.py.
 
-"""
-Welcome to CARLA manual control.
-
-Use ARROWS or WASD keys for control.
-
-    W            : throttle
-    S            : brake
-    A/D          : steer left/right
-    Q            : toggle reverse
-    Space        : hand-brake
-    P            : toggle autopilot
-    M            : toggle manual transmission
-    ,/.          : gear up/down
-    CTRL + W     : toggle constant velocity mode at 60 km/h
-
-    L            : toggle next light type
-    SHIFT + L    : toggle high beam
-    Z/X          : toggle right/left blinker
-    I            : toggle interior light
-
-    TAB          : change sensor position
-    ` or N       : next sensor
-    [1-9]        : change to sensor [1-9]
-    G            : toggle radar visualization
-    C            : change weather (Shift+C reverse)
-    Backspace    : change vehicle
-
-    V            : Select next map layer (Shift+V reverse)
-    B            : Load current selected map layer (Shift+B to unload)
-
-    R            : toggle recording images to disk
-    O            : set coordinate
-
-    CTRL + R     : toggle recording of simulation (replacing any previous)
-    CTRL + P     : start replaying last recorded simulation
-    CTRL + +     : increments the start time of the replay by 1 second (+SHIFT = 10 seconds)
-    CTRL + -     : decrements the start time of the replay by 1 second (+SHIFT = 10 seconds)
-
-    F1           : toggle HUD
-    H/?          : toggle help
-    ESC          : quit
-"""
-
 
 from __future__ import print_function
 
@@ -1780,7 +1737,6 @@ def game_loop(args):
     except:
         print("檔案夾不存在。")
 
-    # file_list = []
     transform_dict = {}
     velocity_dict = {}
     for actor_id, _ in filter_dict.items():
@@ -1813,6 +1769,7 @@ def game_loop(args):
         agents_dict = {}
         controller_dict = {}
         actor_transform_index = {}
+
         auto = {}
 
         world.player.set_transform(transform_dict['player'][0])  
@@ -1825,20 +1782,24 @@ def game_loop(args):
                 agents_dict[actor_id] = client.get_world().spawn_actor(
                     set_bp(blueprint_library.filter(filter_dict[actor_id]), actor_id), 
                     transform_spawn)
-            # controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-            #                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-            # elif 'walker' in bp:
+            elif 'walker' in bp:
+                controller_dict[actor_id] = client.get_world().spawn_actor(
+                                        blueprint_library.find('controller.ai.walker'),
+                                        carla.Transform(), 
+                                        attach_to=agents_dict[actor_id])
             
             actor_transform_index[actor_id] = 1
             auto[actor_id] = False
-        
+
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
         #auto = [False] * num_files
+
         root = os.path.join('data_collection', args.scenario_id) 
         scenario_name = str(args.map) + '_' + str(weather) + '_'
         if args.random_objects:
@@ -1870,35 +1831,53 @@ def game_loop(args):
                 # apply recorded location and velocity on the controller
 
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
-                    agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                        velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
+                    if 'vehicle' in filter_dict[actor_id]:
+                        agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                            velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
 
-                    v = agents_dict[actor_id].get_velocity()
-                    v = (v.x**2 + v.y**2 + v.z**2)**1/3
+                        v = agents_dict[actor_id].get_velocity()
+                        v = (v.x**2 + v.y**2 + v.z**2)**1/2
 
-                    # to avoid the actor slowing down for the dense location around
-                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
-    
-                        if args.noise_trajectory:
-                            # sampling location with larger distance
-                            actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
+                        # to avoid the actor slowing down for the dense location around
+                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
+        
+                            if args.noise_trajectory:
+                                # sampling location with larger distance
+                                actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
+                            else:
+                                actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
                         else:
-                            actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
-                    else:
-                        actor_transform_index[actor_id] += 1
+                            actor_transform_index[actor_id] += 1
 
-                    if actor_id == 'player':
-                        current_frame = client.get_world().wait_for_tick().frame
-                        world.record_speed_control(current_frame)
-                
+                        if actor_id == 'player':
+                            current_frame = client.get_world().wait_for_tick().frame
+                            world.record_speed_control(current_frame)
+                    elif 'walker' in filter_dict[actor_id]:
+                        if actor_transform_index[actor_id] == 1:
+                            try:
+                                controller_dict[actor_id].start()
+                            except:
+                                print('sth wrong w/ walker_start')
+
+                        controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
+
+                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1 + v/2.0:
+        
+                            if args.noise_trajectory:
+                                # sampling location with larger distance
+                                actor_transform_index[actor_id] += max(1, int(1 + v//2.0))
+                            else:
+                                actor_transform_index[actor_id] += max(1, int(1 + v//4.0))
+                        else:
+                            actor_transform_index[actor_id] += 1
                 else:
                     # when the client has arrived the last recorded location
                     if actor_id == 'player':
                         scenario_finished = True
                         break
-                    if not auto[actor_id]:
-                        auto[actor_id] = True
-                    agents_dict[actor_id].set_autopilot(True)
+                    # if not auto[actor_id]:
+                    #     auto[actor_id] = True
+                    # agents_dict[actor_id].set_autopilot(True)
             if controller.parse_events(client, world, clock) == 1:
                 return
 
@@ -1922,7 +1901,7 @@ def game_loop(args):
             world.destroy()
 
         pygame.quit()
-
+    return
 
 # ==============================================================================
 # -- main() --------------------------------------------------------------------
@@ -2000,7 +1979,8 @@ def main():
         help='map name')
     argparser.add_argument(
         '-random_actors',
-        action='store_true',
+        type=bool,
+        default=False,
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',
@@ -2008,7 +1988,8 @@ def main():
         help='enable random objects')
     argparser.add_argument(
         '-noise_trajectory',
-        action='store_true',
+        type=bool,
+        default=False,
         help='apply noise on trajectory')
 
     args = argparser.parse_args()
@@ -2035,22 +2016,3 @@ def main():
 if __name__ == '__main__':
 
     main()
-
-
-"""
-    Weather argument:
-    ClearNoon
-    CloudyNoon
-    WetNoon
-    WetCloudyNoon
-    MidRainyNoon
-    HardRainNoon
-    SoftRainNoon
-    ClearSunset
-    CloudySunset
-    WetSunset
-    WetCloudySunset
-    MidRainSunset
-    HardRainSunset
-    SoftRainSunset
-"""
