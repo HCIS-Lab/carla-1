@@ -1572,7 +1572,7 @@ class CameraManager(object):
                     world = self._parent.get_world()
                     snapshot = world.get_snapshot()
                     vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
-                    vehicles+=cva.snap_processing(world.get_actors().filter('Walker.*'), snapshot)
+                    vehicles+=cva.snap_processing(world.get_actors().filter('pedestrian.*'), snapshot)
                     self.bbox.append([vehicles,image,self.last_img,self.sensor_front.get_transform()])
             elif view == 'depth_right':
                 self.right_depth.append(image)
@@ -1786,7 +1786,7 @@ def game_loop(args):
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-            elif 'walker' in bp:
+            elif 'pedestrian' in bp:
                 controller_dict[actor_id] = client.get_world().spawn_actor(
                                         blueprint_library.find('controller.ai.walker'),
                                         carla.Transform(), 
@@ -1852,7 +1852,7 @@ def game_loop(args):
                         if actor_id == 'player':
                             current_frame = client.get_world().wait_for_tick().frame
                             world.record_speed_control(current_frame)
-                    elif 'walker' in filter_dict[actor_id]:
+                    elif 'pedestrian' in filter_dict[actor_id]:
                         if actor_transform_index[actor_id] == 1:
                             try:
                                 controller_dict[actor_id].start()
@@ -1862,14 +1862,7 @@ def game_loop(args):
                         controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
                         # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
                         controller_dict[actor_id].set_max_speed(1.4)
-                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1 + v/2.0:
-        
-                        #     if args.noise_trajectory:
-                        #         # sampling location with larger distance
-                        #         actor_transform_index[actor_id] += max(1, int(1 + v//2.0))
-                        #     else:
-                        #         actor_transform_index[actor_id] += max(1, int(1 + v//4.0))
-                        # else:
+
                         actor_transform_index[actor_id] += 7
                 else:
                     # when the client has arrived the last recorded location
