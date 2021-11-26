@@ -1143,14 +1143,10 @@ class CameraManager(object):
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
-            ['sensor.camera.depth', cc.LogarithmicDepth,
-                'Camera Depth (Logarithmic Gray Scale)', {}],
-            ['sensor.camera.semantic_segmentation', cc.Raw,
-                'Camera Semantic Segmentation (Raw)', {}],
-            ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
-                'Camera Semantic Segmentation (CityScapes Palette)', {}],
-            ['sensor.lidar.ray_cast', None,
-                'Lidar (Ray-Cast)', {'range': '50'}],
+            ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)', {}],
+            ['sensor.camera.semantic_segmentation', cc.Raw, 'Camera Semantic Segmentation (Raw)', {}],
+            ['sensor.camera.semantic_segmentation', cc.CityScapesPalette, 'Camera Semantic Segmentation (CityScapes Palette)', {}],
+            ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
             #['sensor.camera.optical_flow', None, 'Optical Flow', {}],
             ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}]
@@ -1378,12 +1374,12 @@ class CameraManager(object):
             t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, path, 'seg_back_right'))
             t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, path, 'seg_back_left'))
 
-            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 2, path, 'depth_front'))
-            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 2, path, 'depth_right'))
-            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 2, path, 'depth_left'))
-            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 2, path, 'depth_back'))
-            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 2, path, 'depth_back_right'))
-            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 2, path, 'depth_back_left'))
+            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 1, path, 'depth_front'))
+            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 1, path, 'depth_right'))
+            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 1, path, 'depth_left'))
+            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 1, path, 'depth_back'))
+            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 1, path, 'depth_back_right'))
+            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 1, path, 'depth_back_left'))
 
             t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
 
@@ -1477,8 +1473,8 @@ class CameraManager(object):
         VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
         VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
         VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
-        for index,item in enumerate(bbox):
-            vehicles,depth_img,rgb_img,cam = item
+        for index, item in enumerate(bbox):
+            vehicles, depth_img, rgb_img, cam = item
             depth_meter = cva.extract_depth(depth_img)
             filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
             cva.save_output(rgb_img, filtered['bbox'], path, filtered['class'], removed['bbox'], removed['class'], save_patched=True, out_format='json')
@@ -1573,7 +1569,8 @@ class CameraManager(object):
                     snapshot = world.get_snapshot()
                     vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
                     vehicles+=cva.snap_processing(world.get_actors().filter('pedestrian.*'), snapshot)
-                    self.bbox.append([vehicles,image,self.last_img,self.sensor_front.get_transform()])
+                    self.bbox.append([vehicles,image, self.last_img, self.sensor_front.get_transform()])
+
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
@@ -1785,7 +1782,7 @@ def game_loop(args):
 
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                            max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+                                                            max_throttle=2.0, max_brake=1.0, max_steering=1.0)
             elif 'pedestrian' in bp:
                 controller_dict[actor_id] = client.get_world().spawn_actor(
                                         blueprint_library.find('controller.ai.walker'),
@@ -1836,7 +1833,7 @@ def game_loop(args):
                             velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
 
                         v = agents_dict[actor_id].get_velocity()
-                        v = (v.x**2 + v.y**2 + v.z**2)**(1/3)
+                        v = (v.x**2 + v.y**2 + v.z**2)**(1/2)
 
                         # to avoid the actor slowing down for the dense location around
                         if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
