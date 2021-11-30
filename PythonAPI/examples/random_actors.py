@@ -18,7 +18,7 @@ from agents.navigation.basic_agent import BasicAgent
 from agents.navigation.behavior_agent import BehaviorAgent
 
 client = carla.Client('localhost', 2000)
-client.set_timeout(5.0)
+# client.set_timeout(5.0)
 def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict={}): 
     # get world and spawn points
     world = client.get_world()
@@ -281,10 +281,10 @@ def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=
     all_actors = world.get_actors(all_id)
 
     # wait for a tick to ensure client receives the last transform of the walkers we have just created
-    if not True or not synchronous_master:
-        world.wait_for_tick()
-    else:
-        world.tick()
+    # if not True or not synchronous_master:
+    #     world.wait_for_tick()
+    # else:
+    #     world.tick()
 
     # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
     # set how many pedestrians can cross the road

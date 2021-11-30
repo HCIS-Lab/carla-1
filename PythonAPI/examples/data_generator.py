@@ -1570,7 +1570,6 @@ class CameraManager(object):
                     vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
                     vehicles+=cva.snap_processing(world.get_actors().filter('Walker.*'), snapshot)
                     self.bbox.append([vehicles,image, self.last_img, self.sensor_front.get_transform()])
-
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
@@ -1757,6 +1756,10 @@ def game_loop(args):
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
         world = World(client.load_world(args.map), filter_dict['player'], hud, args)            
         client.get_world().set_weather(args.weather)                     
+        settings = world.world.get_settings()
+        settings.fixed_delta_seconds = 0.05
+        settings.synchronous_mode = True # Enables synchronous mode
+        world.world.apply_settings(settings)
 
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
@@ -1814,7 +1817,7 @@ def game_loop(args):
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
 
-        start_frame = client.get_world().wait_for_tick().frame
+        # start_frame = client.get_world().wait_for_tick().frame
         world.camera_manager.toggle_recording(scenario_name) 
         world.imu_sensor.recording = True
         world.imu_sensor.toggle_recording_IMU(scenario_name)
@@ -1822,7 +1825,7 @@ def game_loop(args):
         scenario_finished = False
         while (1):
             clock.tick_busy_loop(20)
-
+            world.world.tick()
             # iterate actors
             for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
@@ -1836,19 +1839,21 @@ def game_loop(args):
                         v = (v.x**2 + v.y**2 + v.z**2)**(1/2)
 
                         # to avoid the actor slowing down for the dense location around
-                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
-        
+                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
+                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 4.0:
                             if args.noise_trajectory:
                                 # sampling location with larger distance
-                                actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
+                                # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
+                                actor_transform_index[actor_id] += 2
                             else:
-                                actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
+                                # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
+                                actor_transform_index[actor_id] += 3
                         else:
                             actor_transform_index[actor_id] += 1
 
-                        if actor_id == 'player':
-                            current_frame = client.get_world().wait_for_tick().frame
-                            world.record_speed_control(current_frame)
+                        # if actor_id == 'player':
+                        #     current_frame = client.get_world().wait_for_tick().frame
+                        #     world.record_speed_control(current_frame)
                     elif 'pedestrian' in filter_dict[actor_id]:
                         if actor_transform_index[actor_id] == 1:
                             try:
@@ -1877,7 +1882,7 @@ def game_loop(args):
             pygame.display.flip()
             if scenario_finished:
                 break
-        end_frame = client.get_world().wait_for_tick().frame
+        # end_frame = client.get_world().wait_for_tick().frame
         world.save_speed_control(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)
         world.imu_sensor.save_IMU(stored_path)
