@@ -1568,7 +1568,7 @@ class CameraManager(object):
                     world = self._parent.get_world()
                     snapshot = world.get_snapshot()
                     vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
-                    vehicles+=cva.snap_processing(world.get_actors().filter('Walker.*'), snapshot)
+                    vehicles+=cva.snap_processing(world.get_actors().filter('walker.*'), snapshot)
                     self.bbox.append([vehicles,image, self.last_img, self.sensor_front.get_transform()])
             elif view == 'depth_right':
                 self.right_depth.append(image)
