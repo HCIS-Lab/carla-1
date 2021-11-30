@@ -1844,7 +1844,7 @@ def game_loop(args):
                             if args.noise_trajectory:
                                 # sampling location with larger distance
                                 # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
-                                actor_transform_index[actor_id] += 2
+                                actor_transform_index[actor_id] += 6
                             else:
                                 # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
                                 actor_transform_index[actor_id] += 3
