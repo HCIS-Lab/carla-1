@@ -1868,7 +1868,7 @@ def game_loop(args):
                         actor_transform_index[actor_id] += 7
                 else:
                     # when the client has arrived the last recorded location
-                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3:
+                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
                         if 'vehicle' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
                                 velocity_dict[actor_id][-10], transform_dict[actor_id][-1]))
@@ -1879,9 +1879,7 @@ def game_loop(args):
                     elif actor_id == 'player':
                         scenario_finished = True
                         break
-                    # if not auto[actor_id]:
-                    #     auto[actor_id] = True
-                    # agents_dict[actor_id].set_autopilot(True)
+
             if controller.parse_events(client, world, clock) == 1:
                 return
 
