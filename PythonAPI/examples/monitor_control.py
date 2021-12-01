@@ -1179,16 +1179,17 @@ def save_actor(actor_dict, scenario_name, timestamp_list):
     for actor_id, data in actor_dict.items():
 
         np.save('data_collection/%s/transform/%s' % (scenario_name, actor_id), np.array(data['transform']))
-        # np.save('data_collection/%s/filter/%s' % (scenario_name, actor_id), np.array(data['filter']))
         np.save('data_collection/%s/velocity/%s' % (scenario_name, actor_id), np.array(data['velocity']))   # velocity list np array saved as a .npy file
-        np.save('data_collection/%s/timestamp/%s' % (scenario_name, actor_id), np.array(timestamp_list))
         with open("data_collection/%s/filter/%s.txt" % (scenario_name, actor_id), "w") as text_file:
             text_file.write(str(data['filter']))
-
         data['transform'] = []
         data['velocity'] = []
         data['filter'] = []
-        
+
+    time_file = open("data_collection/%s/timestamp.txt"%(scenario_name), "w")
+    for time in timestamp_list:
+        time_file.write(str(time[0]) + ',' + str(time[1]) + "\n")
+    time_file.close()
     timestamp_list = []
     return actor_dict, timestamp_list
 
@@ -1226,24 +1227,26 @@ def game_loop(args):
         while True:
             clock.tick_busy_loop(20)
             code = controller.parse_events(client, world, clock)
-
             # exception
             if controller.r == 1:
                 return
             # k_r click
             elif code == 3:
-                timestamp_list.append(client.get_world().wait_for_tick().frame)
+                timestamp_list.append([client.get_world().wait_for_tick().frame, time.time()])
                 actor_dict = record_transform(actor_dict, world)
                 actor_dict = record_velocity(actor_dict, world)
             # stop recording
             elif code == 4:
                 scenario_name = world.camera_manager.scenario_id
-                # client_filter = client.actor.attributes[]
-                print('start time: ' + str(timestamp_list[0]))
-                print('end time: ' + str(timestamp_list[-1]))
-
+                
+                start_time = timestamp_list[0]
+                end_time = timestamp_list[-1]
+                print('start time: ' + str(start_time))
+                print('end time: ' + str(end_time))
                 actor_dict, timestamp_list = save_actor(actor_dict, scenario_name, timestamp_list)
                 controller.r = 2
+
+                print('has finished saving')
             # not recording
             else:
                 actor_dict = extract_actor(actor_dict, world)
