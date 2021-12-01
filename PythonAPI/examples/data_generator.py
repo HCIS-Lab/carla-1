@@ -1863,12 +1863,20 @@ def game_loop(args):
 
                         controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
                         # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
-                        controller_dict[actor_id].set_max_speed(1.4)
+                        controller_dict[actor_id].set_max_speed(1.2)
 
                         actor_transform_index[actor_id] += 7
                 else:
                     # when the client has arrived the last recorded location
-                    if actor_id == 'player':
+                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3:
+                        if 'vehicle' in filter_dict[actor_id]:
+                            agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                                velocity_dict[actor_id][-10], transform_dict[actor_id][-1]))
+                        elif 'pedestrian' in filter_dict[actor_id]:
+                            controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
+                            controller_dict[actor_id].set_max_speed(1.2)
+
+                    elif actor_id == 'player':
                         scenario_finished = True
                         break
                     # if not auto[actor_id]:
