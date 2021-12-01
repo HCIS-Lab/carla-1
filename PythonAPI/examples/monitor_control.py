@@ -1063,7 +1063,7 @@ class CameraManager(object):
     def toggle_recording(self):
         self.recording = not self.recording
         if not self.recording:
-            end_time=time.process_time()
+            end_time=time.time()
             scenario_name=input("scenario id: ")
             self.scenario_id = scenario_name
             for img in self.record_image:
@@ -1073,7 +1073,7 @@ class CameraManager(object):
 
             self.record_image=[]
         else:
-            self.start_time=time.process_time()
+            self.start_time=time.time()
             
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
         if self.recording: 
