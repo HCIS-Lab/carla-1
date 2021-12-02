@@ -1477,7 +1477,7 @@ class CameraManager(object):
             vehicles, depth_img, rgb_img, cam = item
             depth_meter = cva.extract_depth(depth_img)
             filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
-            cva.save_output(rgb_img, filtered['bbox'], path, filtered['class'], removed['bbox'], removed['class'], save_patched=True, out_format='json')
+            cva.save_output(rgb_img, filtered['bbox'], path, filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
     
 
     def render(self, display):
