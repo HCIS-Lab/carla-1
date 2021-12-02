@@ -455,13 +455,15 @@ def save_output(carla_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, 
     out_dict = {}
     bboxes_list = [bbox.tolist() for bbox in bboxes]
     out_dict['bboxes'] = bboxes_list
+    filtered_actor_list = [actor.type_id for actor in vehicle_class]
+    removed_actor_list = [actor.type_id for actor in old_vehicle_class]
     if vehicle_class is not None:
-        out_dict['vehicle_class'] = vehicle_class
+        out_dict['vehicle_class'] = filtered_actor_list
     if old_bboxes is not None:
         old_bboxes_list = [bbox.tolist() for bbox in old_bboxes]
         out_dict['removed_bboxes'] = old_bboxes_list
     if old_vehicle_class is not None:
-        out_dict['removed_vehicle_class'] = old_vehicle_class
+        out_dict['removed_vehicle_class'] = removed_actor_list
     if add_data is not None:
         out_dict['others'] = add_data
     if out_format=='json':
