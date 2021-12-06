@@ -49,7 +49,6 @@ from carla import VehicleLightState as vls
 
 from carla import ColorConverter as cc
 from carla import Transform, Location, Rotation
-#from agents.navigation.controller import VehiclePIDController
 from controller import VehiclePIDController
 import argparse
 import collections
