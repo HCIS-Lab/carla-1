@@ -22,6 +22,7 @@ import glob
 import os
 import sys
 import random
+import csv
 
 try:
     #
@@ -1687,6 +1688,52 @@ def auto_spawn_object(world,second):
     finally:
         if new_obj is not None:
             new_obj.destroy()
+def collect_trajectory(get_world, agent, scenario_id, period_end):
+    filepath = "data_collection/"
+    filepath = filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv'
+    is_exist = os.path.isfile(filepath)
+    f = open(filepath, 'a+')
+    w = csv.writer(f)
+
+    actors = get_world.world.get_actors()
+    town_map = get_world.world.get_map()
+    
+    if not is_exist:
+        w.writerow(['TIMESTAMP', 'TRACK_ID', 'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
+    agent_id = agent.id
+
+    period_start = 0
+    
+    time_start = time.time()
+    try:
+        while True:
+            time_end = time.time()
+            if period_start < period_end:
+                if (time_end - time_start) > 0.1:
+                    period_start += 0.1
+                    #print(period_start, period_end)
+                    time_start = time.time()
+                    for actor in actors:
+                        if agent_id == actor.id:
+                            agent = actor
+                        if agent.get_location().x == 0 and agent.get_location().y == 0:
+                            return true
+                        if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
+                            x = actor.get_location().x 
+                            y = actor.get_location().y
+                            id = actor.id
+                            if x == agent.get_location().x and y == agent.get_location().y:
+                                w.writerow([time_start-10**9, id, 'AGENT', str(x), str(y), town_map.name])
+                            else:
+                                if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
+                                    if actor.type_id[0:7] == 'vehicle':
+                                        w.writerow([time_start-10**9, id, 'vehicle', str(x), str(y), town_map.name])
+                                    elif actor.type_id[0:6] == 'walker':
+                                        w.writerow([time_start-10**9, id, 'walker', str(x), str(y), town_map.name])
+            else:
+                return True
+    except:
+        print("trajectory_collection finished")
     
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
@@ -1809,6 +1856,17 @@ def game_loop(args):
         if args.random_actors:
             spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
             scenario_name = scenario_name + 'random_actor_'
+        
+        id = []
+        moment = []
+        with open("data_collection/" + args.scenario_id + "/timestamp.txt") as f:
+            for line in f.readlines():
+                s = line.split(',')
+                id.append(int(s[0]))
+                moment.append(s[1])
+        period = float(moment[-1]) - float(moment[0])
+        traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
+        traj_col.start()
 
 
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
