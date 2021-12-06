@@ -1731,7 +1731,7 @@ def collect_trajectory(get_world, agent, scenario_id, period_end):
                                     elif actor.type_id[0:6] == 'walker':
                                         w.writerow([time_start-10**9, id, 'walker', str(x), str(y), town_map.name])
             else:
-                return True
+                return False
     except:
         print("trajectory_collection finished")
     
