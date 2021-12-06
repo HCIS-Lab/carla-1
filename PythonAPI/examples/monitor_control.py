@@ -84,6 +84,8 @@ import random
 import re
 import weakref
 import time
+import json
+
 
 try:
     import pygame
@@ -1193,6 +1195,37 @@ def save_actor(actor_dict, scenario_name, timestamp_list):
     timestamp_list = []
     return actor_dict, timestamp_list
 
+def save_description(scenario_name):
+    description = scenario_name.split('_')
+    # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
+    actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
+    action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
+     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward'}
+    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker'}
+
+    d = dict()
+    topo = description[0].split('-')[0]
+    if 'i' in topo:
+        d['topology'] = {'left': 1, 'right': 1, 'straight': 1}
+    elif 't' in topo:
+        if topo[1] == '1':
+            d['topology'] = {'left': 1, 'right': 1, 'straight': 0}
+        elif topo[1] == '2':
+            d['topology'] = {'left': 0, 'right': 1, 'straight': 1}
+        elif topo[1] == '3':
+            d['topology'] = {'left': 1, 'right': 0, 'straight': 1}
+    elif 'r' in topo:
+        d['topology'] = {'left': 0, 'right': 1, 'straight': 0}
+
+    d['traffic_light'] = 1 if description[1] == '1' else 0
+    d['interaction_actor_type'] = actor[description[2]]
+    d['interaction_action_type'] = action[description[3]]
+    d['my_action'] = action[description[4]]
+    d['violation'] = violation[description[5]]
+
+    with open('data_collection/%s/scenario_description.json' % (scenario_name), 'w') as f:
+        json.dump(d, f)
+
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
@@ -1244,6 +1277,7 @@ def game_loop(args):
                 print('start time: ' + str(start_time))
                 print('end time: ' + str(end_time))
                 actor_dict, timestamp_list = save_actor(actor_dict, scenario_name, timestamp_list)
+                save_description(scenario_name)
                 controller.r = 2
 
                 print('has finished saving')
