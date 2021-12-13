@@ -23,6 +23,7 @@ import os
 import sys
 import random
 import csv
+import json
 
 try:
     #
@@ -1446,9 +1447,11 @@ class CameraManager(object):
 
     def save_img(self, img_list, sensor, path, view='top'):
         for img in img_list:
-            if img.frame%2 == 0:
+            if img.frame%1 == 0:
                 if 'seg' in view:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
+                elif 'depth' in view:
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.LogarithmicDepth)
                 elif 'dvs' in view:
                     dvs_events = np.frombuffer(img.raw_data, dtype=np.dtype([
                         ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
@@ -1523,7 +1526,7 @@ class CameraManager(object):
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        if self.recording and image.frame%2 == 0:
+        if self.recording and image.frame%1 == 0:
             if view == 'top':
                 self.top_img.append(image)
             elif view == 'front':
@@ -1644,22 +1647,8 @@ def read_velocity(path='velocity.npy'):
 
     return velocity_list
 
-
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
-    return control_signal
-
-
-def control_reg_with_waypoint(waypoints, client, location, controller, recorded_control, manual_ratio=0.0):
-    min_d = 1000
-    index = 0
-    for i, waypoint in enumerate(waypoints):
-        d = location.distance(waypoint.transform.location)
-        if min_d > d:
-            min_d = d
-            index = i
-
-    control_signal = controller.run_step(3, waypoints[i])
     return control_signal
 
 def auto_spawn_object(world,second):
@@ -1688,6 +1677,7 @@ def auto_spawn_object(world,second):
     finally:
         if new_obj is not None:
             new_obj.destroy()
+
 def collect_trajectory(get_world, agent, scenario_id, period_end):
     filepath = "data_collection/"
     filepath = filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv'
@@ -1757,6 +1747,21 @@ def set_bp(blueprint, actor_id):
     # else:
     #     print("No recommended values for 'speed' attribute")
     return blueprint
+
+def save_description(world, args, stored_path):
+    vehicles = world.world.get_actors().filter('vehicle.*')
+    peds = world.world.get_actors().filter('walker.*')
+    d = dict()
+    d['num_actor'] = len(vehicles) + len(peds)
+    d['num_vehicle'] = len(vehicles)
+    d['weather'] = str(args.weather)
+    d['noise_trajectory'] = args.noise_trajectory
+    d['random_objects'] = args.random_objects
+    d['random_actors'] = args.random_actors
+
+    with open('%s/scenario_description.json' % (stored_path), 'w') as f:
+        json.dump(d, f)
+
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
@@ -1901,10 +1906,10 @@ def game_loop(args):
                             if args.noise_trajectory:
                                 # sampling location with larger distance
                                 # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
-                                actor_transform_index[actor_id] += 6
+                                actor_transform_index[actor_id] += 4
                             else:
                                 # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
-                                actor_transform_index[actor_id] += 3
+                                actor_transform_index[actor_id] += 2
                         else:
                             actor_transform_index[actor_id] += 1
 
@@ -1928,7 +1933,7 @@ def game_loop(args):
                     if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
                         if 'vehicle' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                                velocity_dict[actor_id][-10], transform_dict[actor_id][-1]))
+                                velocity_dict[actor_id][-30], transform_dict[actor_id][-1]))
                         elif 'pedestrian' in filter_dict[actor_id]:
                             controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
                             controller_dict[actor_id].set_max_speed(1.2)
@@ -1950,7 +1955,8 @@ def game_loop(args):
         world.imu_sensor.toggle_recording_IMU(stored_path)
         world.imu_sensor.save_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
-        world.camera_manager.toggle_recording(stored_path) 
+        world.camera_manager.toggle_recording(stored_path)
+        save_description(world, args, stored_path)
     finally:
 
         if (world and world.recording_enabled):
