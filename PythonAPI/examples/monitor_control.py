@@ -1195,7 +1195,7 @@ def save_actor(actor_dict, scenario_name, timestamp_list):
     timestamp_list = []
     return actor_dict, timestamp_list
 
-def save_description(scenario_name):
+def save_description(scenario_name, carla_map):
     description = scenario_name.split('_')
     # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
     actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
@@ -1222,9 +1222,23 @@ def save_description(scenario_name):
     d['interaction_action_type'] = action[description[3]]
     d['my_action'] = action[description[4]]
     d['violation'] = violation[description[5]]
-
+    d['map'] = carla_map
     with open('data_collection/%s/scenario_description.json' % (scenario_name), 'w') as f:
         json.dump(d, f)
+
+def record_traffic_lights(lights_dict, lights):
+    for l in lights:
+        if not l.id in lights_dict:
+            lights_dict[l.id] = []
+        lights_dict[l.id].append([l.color.r, l.color.g, l.color.b, l.color.a])
+    return lights_dict
+
+def save_traffic_lights(lights_dict, scenario_name):
+    if not os.path.exists('data_collection/%s/traffic_light/'% (scenario_name)):
+        os.mkdir('data_collection/%s/traffic_light/'% (scenario_name))
+
+    for l_id, state in lights_dict.items():
+        np.save('data_collection/%s/traffic_light/%s' % (scenario_name, str(l_id)), np.array(lights_dict[l_id]))
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -1251,10 +1265,12 @@ def game_loop(args):
         world = World(client.load_world(args.map), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
+        tm = world.world.get_lightmanager()
+        lights = tm.get_all_lights()
+
         actor_dict = {}
         timestamp_list = []
-        transform_list = []
-        velocity_list = []
+        traffic_light = dict()
         clock = pygame.time.Clock()
 
         while True:
@@ -1268,16 +1284,17 @@ def game_loop(args):
                 timestamp_list.append([client.get_world().wait_for_tick().frame, time.time()])
                 actor_dict = record_transform(actor_dict, world)
                 actor_dict = record_velocity(actor_dict, world)
+                traffic_light = record_traffic_lights(traffic_light, lights)
             # stop recording
             elif code == 4:
                 scenario_name = world.camera_manager.scenario_id
-                
                 start_time = timestamp_list[0]
                 end_time = timestamp_list[-1]
                 print('start time: ' + str(start_time))
                 print('end time: ' + str(end_time))
                 actor_dict, timestamp_list = save_actor(actor_dict, scenario_name, timestamp_list)
-                save_description(scenario_name)
+                save_traffic_lights(traffic_light, scenario_name)
+                save_description(scenario_name, args.map)
                 controller.r = 2
 
                 print('has finished saving')
