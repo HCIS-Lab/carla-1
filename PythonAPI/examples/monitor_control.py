@@ -1265,8 +1265,8 @@ def game_loop(args):
         world = World(client.load_world(args.map), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
-        tm = world.world.get_lightmanager()
-        lights = tm.get_all_lights()
+        lm = world.world.get_lightmanager()
+        lights = lm.get_all_lights()
 
         actor_dict = {}
         timestamp_list = []

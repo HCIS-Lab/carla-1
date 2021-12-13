@@ -1647,6 +1647,22 @@ def read_velocity(path='velocity.npy'):
 
     return velocity_list
 
+def read_traffic_lights(path):
+    path = os.path.join(path, 'traffic_light')
+    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    light_dict = dict()
+    for f in files:
+        light = np.load(os.path.join(path, f), allow_pickle=True)
+        light_id  = int(f.split('.')[0])
+        light_dict[light_id] = light
+    return light_dict
+
+def set_light_state(lights, light_dict, index):
+    for l in lights:
+        index = index if len(light_dict[l.id]) < index else -1
+        state = light_dict[l.id][index]
+        l.set_color(carla.Color(int(state[0]), int(state[1]), int(state[2]), int(state[3])))
+
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
     return control_signal
@@ -1784,12 +1800,13 @@ def game_loop(args):
     except:
         print("檔案夾不存在。")
 
+    # load files for scenario reproducing
     transform_dict = {}
     velocity_dict = {}
     for actor_id, _ in filter_dict.items():
         transform_dict[actor_id] = read_transform(os.path.join(path, 'transform', actor_id + '.npy'))
         velocity_dict[actor_id] = read_velocity(os.path.join(path, 'velocity', actor_id + '.npy'))
-
+    light_dict = read_traffic_lights(path)
     num_files = len(filter_dict)
 
     try:
@@ -1806,26 +1823,31 @@ def game_loop(args):
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
         world = World(client.load_world(args.map), filter_dict['player'], hud, args)            
-        client.get_world().set_weather(args.weather)                     
+        client.get_world().set_weather(args.weather)     
+
+        # sync mode                
         settings = world.world.get_settings()
         settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = True # Enables synchronous mode
         world.world.apply_settings(settings)
 
+        # other setting
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
-
+        lm = world.world.get_lightmanager()
+        lights = lm.get_all_lights()
         clock = pygame.time.Clock()
 
         agents_dict = {}
         controller_dict = {}
         actor_transform_index = {}
-
         auto = {}
 
+        # init position for player 
         world.player.set_transform(transform_dict['player'][0])  
         agents_dict['player'] = world.player
 
+        # set controller
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
                 transform_spawn = transform_dict[actor_id][0]
@@ -1851,6 +1873,7 @@ def game_loop(args):
         time.sleep(2)
         #auto = [False] * num_files
 
+        # dynamic scenario setting
         root = os.path.join('data_collection', args.scenario_id) 
         scenario_name = str(weather) + '_'
         if args.random_objects:
@@ -1862,6 +1885,7 @@ def game_loop(args):
             spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
             scenario_name = scenario_name + 'random_actor_'
         
+        # recording traj
         id = []
         moment = []
         with open("data_collection/" + args.scenario_id + "/timestamp.txt") as f:
@@ -1873,7 +1897,7 @@ def game_loop(args):
         traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
         traj_col.start()
 
-
+        # dynamic scenario setting
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
         stored_path = os.path.join(root, scenario_name)
         if not os.path.exists(stored_path):
@@ -1891,7 +1915,8 @@ def game_loop(args):
             # iterate actors
             for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
-
+                if actor_id == 'player':
+                    set_light_state(lights, light_dict, actor_transform_index[actor_id])
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                     if 'vehicle' in filter_dict[actor_id]:
                         agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
