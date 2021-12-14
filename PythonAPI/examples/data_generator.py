@@ -1,7 +1,4 @@
-self.bbox = []
-        self.last_img = None
-        self.img_dict = {}
-        self.snap_dict = {}#!/usr/bin/env python
+#!/usr/bin/env python
 
 # Copyright (c) 2019 Computer Vision Center (CVC) at the Universitat Autonoma de
 # Barcelona (UAB).
@@ -1114,7 +1111,6 @@ class CameraManager(object):
         self.back_right_depth = []
 
         self.bbox = []
-        self.last_img = None
         self.img_dict = {}
         self.snap_dict = {}
 
@@ -1453,7 +1449,6 @@ class CameraManager(object):
             self.save_bbox([self.bbox,self.img_dict,self.snap_dict],path)
 
             self.bbox = []
-            self.last_img = None
             self.img_dict = {}
             self.snap_dict = {}
 
