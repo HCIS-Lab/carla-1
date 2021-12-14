@@ -1200,7 +1200,7 @@ def save_description(scenario_name, carla_map):
     # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
     actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward'}
+     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
     violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker'}
 
     d = dict()

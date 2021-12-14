@@ -2092,7 +2092,8 @@ def main():
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',
-        action='store_true',
+        type=bool,
+        default=False,
         help='enable random objects')
     argparser.add_argument(
         '-noise_trajectory',

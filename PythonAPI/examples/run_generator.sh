@@ -6,12 +6,12 @@ num_weather=6
 declare -a weather
 
 # weather[0] = 'ClearNoon'
-map={'Town01'}
+map={'Town05'}
 weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'HardRainSunset')
 traj=('True' 'False')
 random_actor=('True' 'False')
 random_object=('True' 'False')
-name=('aaaa' '3')
+name=('t9-1_1_c_r_r_r' '3')
 ../../CarlaUE4.sh &
 sleep 10
 for((i=0; i<${#weather[@]}; i++))
