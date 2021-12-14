@@ -9,49 +9,6 @@
 # Allows controlling a vehicle with a keyboard. For a simpler and more
 # documented example, please take a look at tutorial.py.
 
-"""
-Welcome to CARLA manual control.
-
-Use ARROWS or WASD keys for control.
-
-    W            : throttle
-    S            : brake
-    A/D          : steer left/right
-    Q            : toggle reverse
-    Space        : hand-brake
-    P            : toggle autopilot
-    M            : toggle manual transmission
-    ,/.          : gear up/down
-    CTRL + W     : toggle constant velocity mode at 60 km/h
-
-    L            : toggle next light type
-    SHIFT + L    : toggle high beam
-    Z/X          : toggle right/left blinker
-    I            : toggle interior light
-
-    TAB          : change sensor position
-    ` or N       : next sensor
-    [1-9]        : change to sensor [1-9]
-    G            : toggle radar visualization
-    C            : change weather (Shift+C reverse)
-    Backspace    : change vehicle
-
-    V            : Select next map layer (Shift+V reverse)
-    B            : Load current selected map layer (Shift+B to unload)
-
-    R            : toggle recording images to disk
-    O            : set coordinate
-
-    CTRL + R     : toggle recording of simulation (replacing any previous)
-    CTRL + P     : start replaying last recorded simulation
-    CTRL + +     : increments the start time of the replay by 1 second (+SHIFT = 10 seconds)
-    CTRL + -     : decrements the start time of the replay by 1 second (+SHIFT = 10 seconds)
-
-    F1           : toggle HUD
-    H/?          : toggle help
-    ESC          : quit
-"""
-
 
 from __future__ import print_function
 
@@ -65,13 +22,15 @@ import glob
 import os
 import sys
 import random
+import csv
+import json
 
 try:
     #
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-        sys.version_info.major,
-        sys.version_info.minor,
-        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+       sys.version_info.major,
+       sys.version_info.minor,
+       'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
     #
     sys.path.append('../carla/agents/navigation')
     sys.path.append('../carla/agents')
@@ -92,7 +51,6 @@ from carla import VehicleLightState as vls
 
 from carla import ColorConverter as cc
 from carla import Transform, Location, Rotation
-#from agents.navigation.controller import VehiclePIDController
 from controller import VehiclePIDController
 import argparse
 import collections
@@ -291,6 +249,7 @@ class World(object):
         self.camera_manager.set_sensor(cam_index, notify=False)
         self.camera_manager.background = True
 
+        
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
@@ -339,8 +298,8 @@ class World(object):
         v = self.player.get_velocity()
         c = self.player.get_control()
         self.speed_list.append([frame, v.x, v.y, v.z])
-        self.control_list.append([frame, c.throttle, c.steer, c.brake,
-                                  c.hand_brake, c.manual_gear_shift, c.gear])
+        self.control_list.append([frame, c.throttle, c.steer, c.brake, 
+                                c.hand_brake, c.manual_gear_shift, c.gear])
 
     def save_speed_control(self, path):
         speed = np.asarray(self.speed_list)
@@ -492,13 +451,13 @@ class KeyboardControl(object):
                 elif event.key > K_0 and event.key <= K_9:
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
-                    scenario_name = None
-                    world.camera_manager.recording = not world.camera_manager.recording
+                    scenario_name=None
+                    world.camera_manager.recording= not  world.camera_manager.recording
                     # world.lidar_sensor.recording= not  world.lidar_sensor.recording
                     # if not  world.lidar_sensor.recording:
                     if not world.camera_manager.recording:
-                        scenario_name = input("scenario id: ")
-                    world.camera_manager.toggle_recording(scenario_name)
+                        scenario_name=input("scenario id: ")
+                    world.camera_manager.toggle_recording(scenario_name)                
 
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
                     if (world.recording_enabled):
@@ -608,7 +567,7 @@ class KeyboardControl(object):
             elif isinstance(self._control, carla.WalkerControl):
                 self._parse_walker_keys(
                     pygame.key.get_pressed(), clock.get_time(), world)
-            # world.player.apply_control(self._control)
+            #world.player.apply_control(self._control)
             return 0
 
     def _parse_vehicle_keys(self, keys, milliseconds):
@@ -1029,15 +988,15 @@ class IMUSensor(object):
             max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.z))))
         self.compass = math.degrees(sensor_data.compass)
         if self.recording:
-            self.imu_save.append([sensor_data.frame,
-                                  self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
-                                  self.gyroscope[0], self.gyroscope[1], self.gyroscope[2],
-                                  self.compass])
+            self.imu_save.append([sensor_data.frame, 
+                                self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
+                                self.gyroscope[0], self.gyroscope[1], self.gyroscope[2], 
+                                self.compass])
 
     def toggle_recording_IMU(self, path):
         self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(target=self.save_IMU, args=(path))
+            t_top = threading.Thread(target = self.save_IMU, args=(path))
 
     def save_IMU(self, path):
         np_imu = np.asarray(self.imu_save)
@@ -1158,36 +1117,26 @@ class CameraManager(object):
         if not self._parent.type_id.startswith("walker.pedestrian"):
             self._camera_transforms = [
                 # front view
-                (carla.Transform(carla.Location(x=+0.8*bound_x,
-                 y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z)), Attachment.Rigid),
                 # front-left view
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y,
-                 z=1.3*bound_z), carla.Rotation(yaw=-55)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-55)), Attachment.Rigid),
                 # front-right view
-                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y,
-                 z=1.3*bound_z), carla.Rotation(yaw=55)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=+0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=55)), Attachment.Rigid),
                 # back view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=1.3*bound_z), carla.Rotation(yaw=180)), Attachment.Rigid),
-                # back-left view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=1.3*bound_z), carla.Rotation(yaw=235)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=180)), Attachment.Rigid),
+               # back-left view
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=235)), Attachment.Rigid),
                 # back-right view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=1.3*bound_z), carla.Rotation(yaw=-235)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=1.3*bound_z), carla.Rotation(yaw=-235)), Attachment.Rigid),
                 # top view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)
-            ]
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y, z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)
+                ]
         else:
             self._camera_transforms = [
-                (carla.Transform(carla.Location(x=-5.5, z=2.5),
-                 carla.Rotation(pitch=8.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=1.6, z=1.7)), Attachment.Rigid),
-                (carla.Transform(carla.Location(x=5.5, y=1.5, z=1.5)),
-                 Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-8.0, z=6.0),
-                 carla.Rotation(pitch=6.0)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=5.5, y=1.5, z=1.5)), Attachment.SpringArm),
+                (carla.Transform(carla.Location(x=-8.0, z=6.0), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=-1, y=-bound_y, z=0.5)), Attachment.Rigid)]
 
         self.transform_index = 1
@@ -1195,18 +1144,14 @@ class CameraManager(object):
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
-            ['sensor.camera.depth', cc.LogarithmicDepth,
-                'Camera Depth (Logarithmic Gray Scale)', {}],
-            ['sensor.camera.semantic_segmentation', cc.Raw,
-                'Camera Semantic Segmentation (Raw)', {}],
-            ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
-                'Camera Semantic Segmentation (CityScapes Palette)', {}],
-            ['sensor.lidar.ray_cast', None,
-                'Lidar (Ray-Cast)', {'range': '50'}],
+            ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)', {}],
+            ['sensor.camera.semantic_segmentation', cc.Raw, 'Camera Semantic Segmentation (Raw)', {}],
+            ['sensor.camera.semantic_segmentation', cc.CityScapesPalette, 'Camera Semantic Segmentation (CityScapes Palette)', {}],
+            ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
             #['sensor.camera.optical_flow', None, 'Optical Flow', {}],
-            ['sensor.other.lane_invasion', None, 'Lane lane_invasion', {}]
-        ]
+            ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}]
+            ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
         for item in self.sensors:
@@ -1373,54 +1318,32 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.sensor_top.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'top'))
-            self.sensor_front.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'front'))
-            self.sensor_right.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'right'))
-            self.sensor_left.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'left'))
-            self.sensor_back.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'back'))
-            self.sensor_back_right.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'back_right'))
-            self.sensor_back_left.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
+            self.sensor_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'top'))
+            self.sensor_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'front'))
+            self.sensor_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'right'))
+            self.sensor_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'left'))
+            self.sensor_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back'))
+            self.sensor_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back_right'))
+            self.sensor_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
 
-            self.sensor_lidar.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
-            self.sensor_dvs.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
+            self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+            self.sensor_dvs.listen(lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
             # self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
-            self.seg_top.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_top'))
-            self.seg_front.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_front'))
-            self.seg_right.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_right'))
-            self.seg_left.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_left'))
-            self.seg_back.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_back'))
-            self.seg_back_right.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_back_right'))
-            self.seg_back_left.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'seg_back_left'))
+            self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
+            self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
+            self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
+            self.seg_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_left'))
+            self.seg_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back'))
+            self.seg_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_right'))
+            self.seg_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_back_left'))
 
-            self.depth_front.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'depth_front'))
-            self.depth_right.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'depth_right'))
-            self.depth_left.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'depth_left'))
-            self.depth_back.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'depth_back'))
-            self.depth_back_right.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'depth_back_right'))
-            self.depth_back_left.listen(lambda image: CameraManager._parse_image(
-                weak_self, image, 'depth_back_left'))
+            self.depth_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_front'))
+            self.depth_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_right'))
+            self.depth_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
+            self.depth_back.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_back'))
+            self.depth_back_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_back_right'))
+            self.depth_back_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_back_left'))
 
         if notify:
             self.hud.notification(self.sensors[index][2])
@@ -1432,57 +1355,34 @@ class CameraManager(object):
     def toggle_recording(self, path):
         self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(
-                target=self.save_img, args=(self.top_img, 0, path, 'top'))
-            t_front = threading.Thread(target=self.save_img, args=(
-                self.front_img, 0, path, 'front'))
-            t_right = threading.Thread(target=self.save_img, args=(
-                self.right_img, 0, path, 'right'))
-            t_left = threading.Thread(
-                target=self.save_img, args=(self.left_img, 0, path, 'left'))
-            t_back = threading.Thread(
-                target=self.save_img, args=(self.back_img, 0, path, 'back'))
-            t_back_right = threading.Thread(target=self.save_img, args=(
-                self.back_right_img, 0, path, 'back_right'))
-            t_back_left = threading.Thread(target=self.save_img, args=(
-                self.back_left_img, 0, path, 'back_left'))
+            t_top = threading.Thread(target = self.save_img,args=(self.top_img, 0, path, 'top'))
+            t_front = threading.Thread(target = self.save_img,args=(self.front_img, 0, path, 'front'))
+            t_right = threading.Thread(target = self.save_img,args=(self.right_img, 0, path, 'right'))
+            t_left = threading.Thread(target = self.save_img,args=(self.left_img, 0, path, 'left'))
+            t_back = threading.Thread(target = self.save_img,args=(self.back_img, 0, path, 'back'))
+            t_back_right = threading.Thread(target = self.save_img,args=(self.back_right_img, 0, path, 'back_right'))
+            t_back_left = threading.Thread(target = self.save_img,args=(self.back_left_img, 0, path, 'back_left'))
 
-            t_lidar = threading.Thread(
-                target=self.save_img, args=(self.lidar, 6, path, 'lidar'))
-            t_dvs = threading.Thread(
-                target=self.save_img, args=(self.dvs, 7, path, 'dvs'))
+            t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, path, 'lidar'))
+            t_dvs = threading.Thread(target = self.save_img,args=(self.dvs, 7, path, 'dvs'))
             # t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
-            t_seg_top = threading.Thread(
-                target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
-            t_seg_front = threading.Thread(target=self.save_img, args=(
-                self.front_seg, 5, path, 'seg_front'))
-            t_seg_right = threading.Thread(target=self.save_img, args=(
-                self.right_seg, 5, path, 'seg_right'))
-            t_seg_left = threading.Thread(
-                target=self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
-            t_seg_back = threading.Thread(
-                target=self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
-            t_seg_back_right = threading.Thread(target=self.save_img, args=(
-                self.back_right_seg, 5, path, 'seg_back_right'))
-            t_seg_back_left = threading.Thread(target=self.save_img, args=(
-                self.back_left_seg, 5, path, 'seg_back_left'))
+            t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
+            t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, path, 'seg_front'))
+            t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, path, 'seg_right'))
+            t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
+            t_seg_back = threading.Thread(target = self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
+            t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, path, 'seg_back_right'))
+            t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, path, 'seg_back_left'))
 
-            t_depth_front = threading.Thread(target=self.save_img, args=(
-                self.front_depth, 2, path, 'depth_front'))
-            t_depth_right = threading.Thread(target=self.save_img, args=(
-                self.right_depth, 2, path, 'depth_right'))
-            t_depth_left = threading.Thread(target=self.save_img, args=(
-                self.left_depth, 2, path, 'depth_left'))
-            t_depth_back = threading.Thread(target=self.save_img, args=(
-                self.back_depth, 2, path, 'depth_back'))
-            t_depth_back_right = threading.Thread(target=self.save_img, args=(
-                self.back_right_depth, 2, path, 'depth_back_right'))
-            t_depth_back_left = threading.Thread(target=self.save_img, args=(
-                self.back_left_depth, 2, path, 'depth_back_left'))
+            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 1, path, 'depth_front'))
+            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 1, path, 'depth_right'))
+            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 1, path, 'depth_left'))
+            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 1, path, 'depth_back'))
+            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 1, path, 'depth_back_right'))
+            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 1, path, 'depth_back_left'))
 
-            t_bbox = threading.Thread(
-                target=self.save_bbox, args=(self.bbox, path))
+            t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
 
             t_top.start()
             t_front.start()
@@ -1543,37 +1443,33 @@ class CameraManager(object):
             self.bbox = []
             self.last_img = None
 
-        self.hud.notification('Recording %s' %
-                              ('On' if self.recording else 'Off'))
+        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def save_img(self, img_list, sensor, path, view='top'):
         for img in img_list:
-            if img.frame % 2 == 0:
+            if img.frame%1 == 0:
                 if 'seg' in view:
-                    img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
+                elif 'depth' in view:
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.LogarithmicDepth)
                 elif 'dvs' in view:
                     dvs_events = np.frombuffer(img.raw_data, dtype=np.dtype([
                         ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
-                    dvs_img = np.zeros(
-                        (img.height, img.width, 3), dtype=np.uint8)
+                    dvs_img = np.zeros((img.height, img.width, 3), dtype=np.uint8)
                     # Blue is positive, red is negative
                     dvs_img[dvs_events[:]['y'], dvs_events[:]
-                            ['x'], dvs_events[:]['pol'] * 2] = 255
+                    ['x'], dvs_events[:]['pol'] * 2] = 255
                     # img = img.to_image()
-                    stored_path = os.path.join(
-                        path, self.sensors[sensor][2], view)
+                    stored_path = os.path.join(path, self.sensors[sensor][2], view)
                     if not os.path.exists(stored_path):
                         os.makedirs(stored_path)
                     np.save('%s/%08d' % (stored_path, img.frame), dvs_img)
                     # img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
                 elif 'flow' in view:
                     img = img.get_color_coded_flow()
-                    img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
                 else:
-                    img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
     def save_bbox(self, bbox, path):
@@ -1583,10 +1479,9 @@ class CameraManager(object):
         for index, item in enumerate(bbox):
             vehicles, depth_img, rgb_img, cam = item
             depth_meter = cva.extract_depth(depth_img)
-            filtered, removed = cva.auto_annotate(
-                vehicles, cam, depth_meter, VIEW_WIDTH, VIEW_HEIGHT, VIEW_FOV)
-            cva.save_output(rgb_img, filtered['bbox'], path, filtered['class'],
-                            removed['bbox'], removed['class'], save_patched=True, out_format='json')
+            filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
+            cva.save_output(rgb_img, filtered['bbox'], path, filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
+    
 
     def render(self, display):
         if self.surface is not None:
@@ -1631,7 +1526,7 @@ class CameraManager(object):
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        if self.recording and image.frame % 2 == 0:
+        if self.recording and image.frame%1 == 0:
             if view == 'top':
                 self.top_img.append(image)
             elif view == 'front':
@@ -1675,12 +1570,9 @@ class CameraManager(object):
                 if self.last_img is not None and self.sensor_front is not None:
                     world = self._parent.get_world()
                     snapshot = world.get_snapshot()
-                    vehicles = cva.snap_processing(
-                        world.get_actors().filter('vehicle.*'), snapshot)
-                    vehicles += cva.snap_processing(
-                        world.get_actors().filter('Walker.*'), snapshot)
-                    self.bbox.append(
-                        [vehicles, image, self.last_img, self.sensor_front.get_transform()])
+                    vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
+                    vehicles+=cva.snap_processing(world.get_actors().filter('walker.*'), snapshot)
+                    self.bbox.append([vehicles,image, self.last_img, self.sensor_front.get_transform()])
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
@@ -1690,7 +1582,7 @@ class CameraManager(object):
             elif view == 'depth_back_right':
                 self.back_right_depth.append(image)
             elif view == 'depth_back_left':
-                self.back_left_depth.append(image)
+                self.back_left_depth.append(image)   
 
 
 def record_control(control, control_list):
@@ -1755,55 +1647,100 @@ def read_velocity(path='velocity.npy'):
 
     return velocity_list
 
+def read_traffic_lights(path):
+    path = os.path.join(path, 'traffic_light')
+    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    light_dict = dict()
+    for f in files:
+        light = np.load(os.path.join(path, f), allow_pickle=True)
+        light_id  = int(f.split('.')[0])
+        light_dict[light_id] = light
+    return light_dict
+
+def set_light_state(lights, light_dict, index):
+    for l in lights:
+        index = index if len(light_dict[l.id]) < index else -1
+        state = light_dict[l.id][index]
+        l.set_color(carla.Color(int(state[0]), int(state[1]), int(state[2]), int(state[3])))
 
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
     return control_signal
 
-
-def control_reg_with_waypoint(waypoints, client, location, controller, recorded_control, manual_ratio=0.0):
-    min_d = 1000
-    index = 0
-    for i, waypoint in enumerate(waypoints):
-        d = location.distance(waypoint.transform.location)
-        if min_d > d:
-            min_d = d
-            index = i
-
-    control_signal = controller.run_step(3, waypoints[i])
-    return control_signal
-
-
-def auto_spawn_object(world, second):
-    this_map = world.world.get_map()
-    new_obj = None
+def auto_spawn_object(world,second):
+    this_map=world.world.get_map()
+    new_obj=None
     try:
-        bp_list = world.world.get_blueprint_library().filter('static')
+        bp_list=world.world.get_blueprint_library().filter('static')
         while True:
             time.sleep(second)
             if new_obj is not None:
                 new_obj.destroy()
-                new_obj = None
+                new_obj=None
             if world.player.is_at_traffic_light():
                 continue
-            waypoint = this_map.get_waypoint(
-                world.player.get_location(), lane_type=carla.LaneType.Shoulder)
+            waypoint = this_map.get_waypoint(world.player.get_location(),lane_type=carla.LaneType.Shoulder)
             if waypoint is None:
                 continue
-            waypoint_list = waypoint.next(15)
+            waypoint_list=waypoint.next(15)
             if waypoint_list:
                 waypoint = waypoint_list[0]
 
-            obj_bp = random.choice(bp_list)
-            # carla.Transform(new_obj_location, vehicle_rotation))
-            new_obj = world.world.try_spawn_actor(obj_bp, waypoint.transform)
-            if new_obj != None:
+            obj_bp=random.choice(bp_list)
+            new_obj=world.world.try_spawn_actor(obj_bp, waypoint.transform)#carla.Transform(new_obj_location, vehicle_rotation))
+            if new_obj!=None:
                 print("Spawn object.")
     finally:
         if new_obj is not None:
             new_obj.destroy()
 
+def collect_trajectory(get_world, agent, scenario_id, period_end):
+    filepath = "data_collection/"
+    filepath = filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv'
+    is_exist = os.path.isfile(filepath)
+    f = open(filepath, 'a+')
+    w = csv.writer(f)
 
+    actors = get_world.world.get_actors()
+    town_map = get_world.world.get_map()
+    
+    if not is_exist:
+        w.writerow(['TIMESTAMP', 'TRACK_ID', 'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
+    agent_id = agent.id
+
+    period_start = 0
+    
+    time_start = time.time()
+    try:
+        while True:
+            time_end = time.time()
+            if period_start < period_end:
+                if (time_end - time_start) > 0.1:
+                    period_start += 0.1
+                    #print(period_start, period_end)
+                    time_start = time.time()
+                    for actor in actors:
+                        if agent_id == actor.id:
+                            agent = actor
+                        if agent.get_location().x == 0 and agent.get_location().y == 0:
+                            return true
+                        if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
+                            x = actor.get_location().x 
+                            y = actor.get_location().y
+                            id = actor.id
+                            if x == agent.get_location().x and y == agent.get_location().y:
+                                w.writerow([time_start-10**9, id, 'AGENT', str(x), str(y), town_map.name])
+                            else:
+                                if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
+                                    if actor.type_id[0:7] == 'vehicle':
+                                        w.writerow([time_start-10**9, id, 'vehicle', str(x), str(y), town_map.name])
+                                    elif actor.type_id[0:6] == 'walker':
+                                        w.writerow([time_start-10**9, id, 'walker', str(x), str(y), town_map.name])
+            else:
+                return False
+    except:
+        print("trajectory_collection finished")
+    
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
     blueprint.set_attribute('role_name', actor_id)
@@ -1826,10 +1763,20 @@ def set_bp(blueprint, actor_id):
     # else:
     #     print("No recommended values for 'speed' attribute")
     return blueprint
-# ==============================================================================
-# -- game_loop() ---------------------------------------------------------------
-# ==============================================================================
 
+def save_description(world, args, stored_path):
+    vehicles = world.world.get_actors().filter('vehicle.*')
+    peds = world.world.get_actors().filter('walker.*')
+    d = dict()
+    d['num_actor'] = len(vehicles) + len(peds)
+    d['num_vehicle'] = len(vehicles)
+    d['weather'] = str(args.weather)
+    d['noise_trajectory'] = args.noise_trajectory
+    d['random_objects'] = args.random_objects
+    d['random_actors'] = args.random_actors
+
+    with open('%s/scenario_description.json' % (stored_path), 'w') as f:
+        json.dump(d, f)
 
 def generate_obstacle(world, bp, path):
     f = open(path, 'r')
@@ -1842,6 +1789,9 @@ def generate_obstacle(world, bp, path):
         # print(obstacle_name, " ", transform)
         exec("world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
 
+# ==============================================================================
+# -- game_loop() ---------------------------------------------------------------
+# ==============================================================================
 
 def game_loop(args):
     pygame.init()
@@ -1861,15 +1811,13 @@ def game_loop(args):
     except:
         print("檔案夾不存在。")
 
-    # file_list = []
+    # load files for scenario reproducing
     transform_dict = {}
     velocity_dict = {}
     for actor_id, _ in filter_dict.items():
-        transform_dict[actor_id] = read_transform(
-            os.path.join(path, 'transform', actor_id + '.npy'))
-        velocity_dict[actor_id] = read_velocity(
-            os.path.join(path, 'velocity', actor_id + '.npy'))
-
+        transform_dict[actor_id] = read_transform(os.path.join(path, 'transform', actor_id + '.npy'))
+        velocity_dict[actor_id] = read_velocity(os.path.join(path, 'velocity', actor_id + '.npy'))
+    light_dict = read_traffic_lights(path)
     num_files = len(filter_dict)
 
     try:
@@ -1882,18 +1830,27 @@ def game_loop(args):
         pygame.display.flip()
 
         hud = HUD(args.width, args.height)
-
+            
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
-        world = World(client.load_world(args.map),
-                      filter_dict['player'], hud, args)
-        client.get_world().set_weather(args.weather)
+        world = World(client.load_world(args.map), filter_dict['player'], hud, args)            
+        client.get_world().set_weather(args.weather)     
 
+        # sync mode                
+        settings = world.world.get_settings()
+        settings.fixed_delta_seconds = 0.05
+        settings.synchronous_mode = True # Enables synchronous mode
+        world.world.apply_settings(settings)
+
+        # other setting
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
+        
         generate_obstacle(client.get_world(), blueprint_library,
-                          path+"/obstacle/obstacle_list.txt")
+                    path+"/obstacle/obstacle_list.txt")
 
+        lm = world.world.get_lightmanager()
+        lights = lm.get_all_lights()
         clock = pygame.time.Clock()
 
         agents_dict = {}
@@ -1901,24 +1858,28 @@ def game_loop(args):
         actor_transform_index = {}
         auto = {}
 
-        world.player.set_transform(transform_dict['player'][0])
+        # init position for player 
+        world.player.set_transform(transform_dict['player'][0])  
         agents_dict['player'] = world.player
 
+        # set controller
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
                 transform_spawn = transform_dict[actor_id][0]
                 transform_spawn.location.z += 2
                 agents_dict[actor_id] = client.get_world().spawn_actor(
-                    set_bp(blueprint_library.filter(
-                        filter_dict[actor_id]), actor_id),
+                    set_bp(blueprint_library.filter(filter_dict[actor_id]), actor_id), 
                     transform_spawn)
-            # controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-            #                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                                 max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-            # elif 'walker' in bp:
-
+                                                            max_throttle=2.0, max_brake=1.0, max_steering=1.0)
+            elif 'pedestrian' in bp:
+                controller_dict[actor_id] = client.get_world().spawn_actor(
+                                        blueprint_library.find('controller.ai.walker'),
+                                        carla.Transform(), 
+                                        attach_to=agents_dict[actor_id])
+            
             actor_transform_index[actor_id] = 1
             auto[actor_id] = False
 
@@ -1926,69 +1887,101 @@ def game_loop(args):
 
         time.sleep(2)
         #auto = [False] * num_files
-        root = os.path.join('data_collection', args.scenario_id)
-        scenario_name = str(args.map) + '_' + str(weather) + '_'
+
+        # dynamic scenario setting
+        root = os.path.join('data_collection', args.scenario_id) 
+        scenario_name = str(weather) + '_'
         if args.random_objects:
-            t = threading.Thread(target=auto_spawn_object, args=(world, 5))
+            t = threading.Thread(target = auto_spawn_object,args=(world, 5))
             t.start()
             scenario_name = scenario_name + 'random_objects_'
 
         if args.random_actors:
-            spawn_actor_nearby(distance=100, vehicles=20,
-                               pedestrian=10, transform_dict=transform_dict)
+            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
             scenario_name = scenario_name + 'random_actor_'
+        
+        # recording traj
+        id = []
+        moment = []
+        with open("data_collection/" + args.scenario_id + "/timestamp.txt") as f:
+            for line in f.readlines():
+                s = line.split(',')
+                id.append(int(s[0]))
+                moment.append(s[1])
+        period = float(moment[-1]) - float(moment[0])
+        traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
+        traj_col.start()
 
-        scenario_name = scenario_name + \
-            'noise_trajectory' if args.noise_trajectory else scenario_name
+        # dynamic scenario setting
+        scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
         stored_path = os.path.join(root, scenario_name)
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
 
-        start_frame = client.get_world().wait_for_tick().frame
-        world.camera_manager.toggle_recording(scenario_name)
+        # start_frame = client.get_world().wait_for_tick().frame
+        world.camera_manager.toggle_recording(scenario_name) 
         world.imu_sensor.recording = True
         world.imu_sensor.toggle_recording_IMU(scenario_name)
 
         scenario_finished = False
         while (1):
             clock.tick_busy_loop(20)
-
+            world.world.tick()
             # iterate actors
             for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
-
+                if actor_id == 'player':
+                    set_light_state(lights, light_dict, actor_transform_index[actor_id])
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
-                    agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                        velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
+                    if 'vehicle' in filter_dict[actor_id]:
+                        agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                            velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
 
-                    v = agents_dict[actor_id].get_velocity()
-                    v = (v.x**2 + v.y**2 + v.z**2)**1/3
+                        v = agents_dict[actor_id].get_velocity()
+                        v = (v.x**2 + v.y**2 + v.z**2)**(1/2)
 
-                    # to avoid the actor slowing down for the dense location around
-                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
-
-                        if args.noise_trajectory:
-                            # sampling location with larger distance
-                            actor_transform_index[actor_id] += max(
-                                1, int(7 + v//5.0))
+                        # to avoid the actor slowing down for the dense location around
+                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
+                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 4.0:
+                            if args.noise_trajectory:
+                                # sampling location with larger distance
+                                # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
+                                actor_transform_index[actor_id] += 4
+                            else:
+                                # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
+                                actor_transform_index[actor_id] += 2
                         else:
-                            actor_transform_index[actor_id] += max(
-                                1, int(7 + v//10.0))
-                    else:
-                        actor_transform_index[actor_id] += 1
+                            actor_transform_index[actor_id] += 1
 
-                    if actor_id == 'player':
-                        current_frame = client.get_world().wait_for_tick().frame
-                        world.record_speed_control(current_frame)
+                        # if actor_id == 'player':
+                        #     current_frame = client.get_world().wait_for_tick().frame
+                        #     world.record_speed_control(current_frame)
+                    elif 'pedestrian' in filter_dict[actor_id]:
+                        if actor_transform_index[actor_id] == 1:
+                            try:
+                                controller_dict[actor_id].start()
+                            except:
+                                print('sth wrong w/ walker_start')
 
+                        controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
+                        # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
+                        controller_dict[actor_id].set_max_speed(1.2)
+
+                        actor_transform_index[actor_id] += 7
                 else:
                     # when the client has arrived the last recorded location
-                    if actor_id == 'player':
+                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
+                        if 'vehicle' in filter_dict[actor_id]:
+                            agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                                velocity_dict[actor_id][-30], transform_dict[actor_id][-1]))
+                        elif 'pedestrian' in filter_dict[actor_id]:
+                            controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
+                            controller_dict[actor_id].set_max_speed(1.2)
+
+                    elif actor_id == 'player':
                         scenario_finished = True
                         break
-                    if not auto[actor_id]:
-                        auto[actor_id] = True
-                    agents_dict[actor_id].set_autopilot(True)
+
             if controller.parse_events(client, world, clock) == 1:
                 return
 
@@ -1997,12 +1990,13 @@ def game_loop(args):
             pygame.display.flip()
             if scenario_finished:
                 break
-        end_frame = client.get_world().wait_for_tick().frame
+        # end_frame = client.get_world().wait_for_tick().frame
         world.save_speed_control(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)
         world.imu_sensor.save_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
         world.camera_manager.toggle_recording(stored_path)
+        save_description(world, args, stored_path)
     finally:
 
         if (world and world.recording_enabled):
@@ -2012,7 +2006,7 @@ def game_loop(args):
             world.destroy()
 
         pygame.quit()
-
+    return
 
 # ==============================================================================
 # -- main() --------------------------------------------------------------------
@@ -2076,12 +2070,12 @@ def main():
         default='ClearNoon',
         type=str,
         choices=['ClearNoon', 'CloudyNoon',
-                 'WetNoon', 'WetCloudyNoon',
-                 'MidRainyNoon', 'HardRainNoon',
-                 'SoftRainNoon', 'ClearSunset',
-                 'CloudySunset', 'WetSunset',
-                 'WetCloudySunset', 'MidRainSunset',
-                 'HardRainSunset', 'SoftRainSunset'],
+                'WetNoon', 'WetCloudyNoon',
+                'MidRainyNoon', 'HardRainNoon'
+                'SoftRainNoon', 'ClearSunset',
+                'CloudySunset','WetSunset',
+                'WetCloudySunset', 'MidRainSunset',
+                'HardRainSunset', 'SoftRainSunset'],
         help='weather name')
     argparser.add_argument(
         '-map',
@@ -2090,7 +2084,8 @@ def main():
         help='map name')
     argparser.add_argument(
         '-random_actors',
-        action='store_true',
+        type=bool,
+        default=False,
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',
@@ -2098,8 +2093,10 @@ def main():
         help='enable random objects')
     argparser.add_argument(
         '-noise_trajectory',
-        action='store_true',
+        type=bool,
+        default=False,
         help='apply noise on trajectory')
+
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
@@ -2124,22 +2121,3 @@ def main():
 if __name__ == '__main__':
 
     main()
-
-
-"""
-    Weather argument:
-    ClearNoon
-    CloudyNoon
-    WetNoon
-    WetCloudyNoon
-    MidRainyNoon
-    HardRainNoon
-    SoftRainNoon
-    ClearSunset
-    CloudySunset
-    WetSunset
-    WetCloudySunset
-    MidRainSunset
-    HardRainSunset
-    SoftRainSunset
-"""
