@@ -6,7 +6,8 @@ num_weather=6
 declare -a weather
 
 # weather[0] = 'ClearNoon'
-weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'SoftRainNoon' 'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset', 'HardRainSunset' 'SoftRainSunset')
+map={'Town01'}
+weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'HardRainSunset')
 traj=('True' 'False')
 random_actor=('True' 'False')
 random_object=('True' 'False')
@@ -16,13 +17,19 @@ sleep 10
 for((i=0; i<${#weather[@]}; i++))
 do
         for((j=0; j<${#traj[@]}; j++))
-        done
-        		python ../util/config.py --reload
-        		sleep 5
-                echo ${i}
-                time python data_generator.py -scenario_id ${name[0]} -weather ${weather[i]} -noise_trajectory ${traj[j]}
-                sleep 3
-        done
+        do
+        		for((k=0; k<${#random_actor[@]}; k++))
+        		do
+	        			for((l=0; l<${#random_object[@]}; l++))
+	        			do	
+		        		python ../util/config.py --reload
+		        		sleep 5
+		                echo ${i}
+		                time python data_generator.py -map ${map[0]} -scenario_id ${name[0]} -weather ${weather[i]} -noise_trajectory ${traj[j]} -random_actors ${random_actor[k]} -random_objects ${random_object[l]}
+		                sleep 3
+		            	done
+        		done
+        done	
 done
 
 
