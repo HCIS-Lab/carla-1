@@ -1216,15 +1216,14 @@ def save_description(scenario_name, carla_map):
             d['topology'] = {'left': 1, 'right': 0, 'straight': 1}
     elif 'r' in topo:
         d['topology'] = {'left': 0, 'right': 1, 'straight': 0}
-
     elif 's' in topp:
         d['topology'] = {'left': 0, 'right': 0, 'straight': 1}
-        
-    d['traffic_light'] = 1 if description[1] == '1' else 0
-    d['interaction_actor_type'] = actor[description[2]]
-    d['interaction_action_type'] = action[description[3]]
-    d['my_action'] = action[description[4]]
-    d['violation'] = violation[description[5]]
+
+    d['traffic_light'] = 1 if description[2] == '1' else 0
+    d['interaction_actor_type'] = actor[description[3]]
+    d['interaction_action_type'] = action[description[4]]
+    d['my_action'] = action[description[5]]
+    d['violation'] = violation[description[6]]
     d['map'] = carla_map
     with open('data_collection/%s/scenario_description.json' % (scenario_name), 'w') as f:
         json.dump(d, f)
