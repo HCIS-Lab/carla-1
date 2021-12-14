@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+self.bbox = []
+        self.last_img = None
+        self.img_dict = {}
+        self.snap_dict = {}#!/usr/bin/env python
 
 # Copyright (c) 2019 Computer Vision Center (CVC) at the Universitat Autonoma de
 # Barcelona (UAB).
@@ -146,6 +149,10 @@ def get_actor_display_name(actor, truncate=250):
 class World(object):
     def __init__(self, carla_world, client_bp, hud, args):
         self.world = carla_world
+        settings = self.world.get_settings()
+        settings.fixed_delta_seconds = 0.05
+        settings.synchronous_mode = True # Enables synchronous mode
+        self.world.apply_settings(settings)
         self.actor_role_name = args.rolename
         try:
             self.map = self.world.get_map()
@@ -1108,6 +1115,8 @@ class CameraManager(object):
 
         self.bbox = []
         self.last_img = None
+        self.img_dict = {}
+        self.snap_dict = {}
 
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
@@ -1382,7 +1391,7 @@ class CameraManager(object):
             t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 1, path, 'depth_back_right'))
             t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 1, path, 'depth_back_left'))
 
-            t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
+#             t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
 
             t_top.start()
             t_front.start()
@@ -1411,7 +1420,7 @@ class CameraManager(object):
             t_depth_back_right.start()
             t_depth_back_left.start()
 
-            t_bbox.start()
+#             t_bbox.start()
 
             self.top_img = []
             self.front_img = []
@@ -1440,8 +1449,13 @@ class CameraManager(object):
             self.back_right_depth = []
             self.back_left_depth = []
 
+            t_depth_front.join()
+            self.save_bbox([self.bbox,self.img_dict,self.snap_dict],path)
+
             self.bbox = []
             self.last_img = None
+            self.img_dict = {}
+            self.snap_dict = {}
 
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
@@ -1472,15 +1486,21 @@ class CameraManager(object):
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
-    def save_bbox(self, bbox, path):
+    def save_bbox(self,input_list,path):
         VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
         VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
         VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
-        for index, item in enumerate(bbox):
-            vehicles, depth_img, rgb_img, cam = item
+        bbox,img_dict,snap_dict = input_list
+        for index,item in enumerate(bbox):
+            depth_img = item
+            try:
+                vehicles,cam = snap_dict[depth_img.frame]
+            except:
+                continue
+            rgb_img = img_dict[depth_img.frame]
             depth_meter = cva.extract_depth(depth_img)
             filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
-            cva.save_output(rgb_img, filtered['bbox'], path, filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
+            cva.save_output(rgb_img, filtered['bbox'], path,filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
     
 
     def render(self, display):
@@ -1531,7 +1551,7 @@ class CameraManager(object):
                 self.top_img.append(image)
             elif view == 'front':
                 self.front_img.append(image)
-                self.last_img = image
+                self.img_dict[image.frame]=image
             elif view == 'left':
                 self.left_img.append(image)
             elif view == 'right':
@@ -1567,12 +1587,15 @@ class CameraManager(object):
 
             elif view == 'depth_front':
                 self.front_depth.append(image)
-                if self.last_img is not None and self.sensor_front is not None:
+                if self.sensor_front is not None:#self.img_dict[image.frame] is not None and self.sensor_front is not None:
                     world = self._parent.get_world()
                     snapshot = world.get_snapshot()
-                    vehicles = cva.snap_processing(world.get_actors().filter('vehicle.*'), snapshot)
-                    vehicles+=cva.snap_processing(world.get_actors().filter('walker.*'), snapshot)
-                    self.bbox.append([vehicles,image, self.last_img, self.sensor_front.get_transform()])
+                    sensor_transform = snapshot.find(self.sensor_front.id).get_transform()
+                    actors = world.get_actors()
+                    vehicles = cva.snap_processing(actors.filter('vehicle.*'), snapshot)
+                    vehicles+= cva.snap_processing(actors.filter('walker.*'), snapshot)
+                    self.snap_dict[snapshot.frame] = [vehicles,sensor_transform]
+                    self.bbox.append(image)
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
@@ -1826,10 +1849,10 @@ def game_loop(args):
         client.get_world().set_weather(args.weather)     
 
         # sync mode                
-        settings = world.world.get_settings()
-        settings.fixed_delta_seconds = 0.05
-        settings.synchronous_mode = True # Enables synchronous mode
-        world.world.apply_settings(settings)
+#         settings = world.world.get_settings()
+#         settings.fixed_delta_seconds = 0.05
+#         settings.synchronous_mode = True # Enables synchronous mode
+#         world.world.apply_settings(settings)
 
         # other setting
         controller = KeyboardControl(world, args.autopilot)
@@ -2074,8 +2097,7 @@ def main():
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',
-        type=bool,
-        default=False,
+        action='store_true',
         help='enable random objects')
     argparser.add_argument(
         '-noise_trajectory',
