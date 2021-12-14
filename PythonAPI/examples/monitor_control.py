@@ -1204,7 +1204,7 @@ def save_description(scenario_name, carla_map):
     violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker'}
 
     d = dict()
-    topo = description[0].split('-')[0]
+    topo = description[1].split('-')[0]
     if 'i' in topo:
         d['topology'] = {'left': 1, 'right': 1, 'straight': 1}
     elif 't' in topo:
@@ -1217,6 +1217,9 @@ def save_description(scenario_name, carla_map):
     elif 'r' in topo:
         d['topology'] = {'left': 0, 'right': 1, 'straight': 0}
 
+    elif 's' in topp:
+        d['topology'] = {'left': 0, 'right': 0, 'straight': 1}
+        
     d['traffic_light'] = 1 if description[1] == '1' else 0
     d['interaction_actor_type'] = actor[description[2]]
     d['interaction_action_type'] = action[description[3]]
