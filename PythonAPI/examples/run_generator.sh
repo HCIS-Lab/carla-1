@@ -6,7 +6,7 @@ num_weather=6
 declare -a weather
 
 # weather[0] = 'ClearNoon'
-map={'Town05'}
+map=('Town05')
 weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'HardRainSunset')
 traj=('True' 'False')
 random_actor=('True' 'False')

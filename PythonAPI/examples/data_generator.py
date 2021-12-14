@@ -1677,7 +1677,7 @@ def read_traffic_lights(path):
 
 def set_light_state(lights, light_dict, index):
     for l in lights:
-        index = index if len(light_dict[l.id]) < index else -1
+        index = -1 if len(light_dict[l.id]) < index else index
         state = light_dict[l.id][index]
         l.set_color(carla.Color(int(state[0]), int(state[1]), int(state[2]), int(state[3])))
 
@@ -1933,8 +1933,8 @@ def game_loop(args):
             # iterate actors
             for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
-                if actor_id == 'player':
-                    set_light_state(lights, light_dict, actor_transform_index[actor_id])
+                # if actor_id == 'player':
+                #     set_light_state(lights, light_dict, actor_transform_index[actor_id])
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                     if 'vehicle' in filter_dict[actor_id]:
                         agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
