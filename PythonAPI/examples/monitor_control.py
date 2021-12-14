@@ -1201,7 +1201,7 @@ def save_description(scenario_name, carla_map):
     actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
      'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
-    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker'}
+    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light'}
 
     d = dict()
     topo = description[1].split('-')[0]
@@ -1303,6 +1303,7 @@ def game_loop(args):
             # not recording
             else:
                 actor_dict = extract_actor(actor_dict, world)
+
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
