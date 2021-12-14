@@ -1585,12 +1585,15 @@ class CameraManager(object):
                 if self.sensor_front is not None:#self.img_dict[image.frame] is not None and self.sensor_front is not None:
                     world = self._parent.get_world()
                     snapshot = world.get_snapshot()
-                    sensor_transform = snapshot.find(self.sensor_front.id).get_transform()
                     actors = world.get_actors()
-                    vehicles = cva.snap_processing(actors.filter('vehicle.*'), snapshot)
-                    vehicles+= cva.snap_processing(actors.filter('walker.*'), snapshot)
-                    self.snap_dict[snapshot.frame] = [vehicles,sensor_transform]
-                    self.bbox.append(image)
+                    try:
+                        sensor_transform = snapshot.find(self.sensor_front.id).get_transform()
+                        vehicles = cva.snap_processing(actors.filter('vehicle.*'), snapshot)
+                        vehicles+= cva.snap_processing(actors.filter('walker.*'), snapshot)
+                        self.snap_dict[snapshot.frame] = [vehicles,sensor_transform]
+                        self.bbox.append(image)
+                    except:
+                        print("Initial frame.")
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
