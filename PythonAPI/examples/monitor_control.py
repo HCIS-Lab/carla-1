@@ -1216,7 +1216,7 @@ def save_description(scenario_name, carla_map):
             d['topology'] = {'left': 1, 'right': 0, 'straight': 1}
     elif 'r' in topo:
         d['topology'] = {'left': 0, 'right': 1, 'straight': 0}
-    elif 's' in topp:
+    elif 's' in topo:
         d['topology'] = {'left': 0, 'right': 0, 'straight': 1}
 
     d['traffic_light'] = 1 if description[2] == '1' else 0
