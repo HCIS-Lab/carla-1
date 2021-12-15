@@ -1153,7 +1153,7 @@ class RadarSensor(object):
             def clamp(min_v, max_v, value):
                 return max(min_v, min(value, max_v))
 
-            norm_velocity = detect.velocity / self.velocity_range # range [-1, 1]
+            norm_velocity = detect.vescnario_name_maplocity / self.velocity_range # range [-1, 1]
             r = int(clamp(0.0, 1.0, 1.0 - norm_velocity) * 255.0)
             g = int(clamp(0.0, 1.0, 1.0 - abs(norm_velocity)) * 255.0)
             b = int(abs(clamp(- 1.0, 0.0, - 1.0 - norm_velocity)) * 255.0)
@@ -1268,7 +1268,82 @@ class CameraManager(object):
         self.recording = not self.recording
         if not self.recording:
             end_time=time.time()
-            scenario_name=input("scenario id: ")
+            
+            # enter your scenario id
+            # and there are some format requirement need to clarify
+            scenario_name_map = {'m1':'Town01', 'm2':'Town02', 'm3':'Town03', 'm5':'Town04'}
+            #scenario_name_road_type_id = {}
+            scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
+            scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
+            scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
+             'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
+            scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
+             'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
+            scenario_name_violated_rule = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light'}
+
+            while True:
+                scenario_name = ""
+                print("Scenario Categorization:")
+                print("Input map_id:")
+                for key in scenario_name_map:
+                    print(key + ': ' + scenario_name_map[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_map:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += input_option
+
+                print("Input road_id:")
+                input_option = str(input())
+                scenario_name += "_" + input_option
+                
+                
+                print("Input is_traffic_light:")
+                for key in scenario_name_is_traffic_light:
+                    print(key + ': ' + scenario_name_is_traffic_light[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_is_traffic_light:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += "_" + input_option
+
+                print("Input actor_type:")
+                for key in scenario_name_actor_type:
+                    print(key + ': ' + scenario_name_actor_type[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_actor_type:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += "_" + input_option
+
+                print("Input actor_type_action:")
+                for key in scenario_name_actor_type_action:
+                    print(key + ': ' + scenario_name_actor_type_action[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_actor_type_action:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += "_" + input_option
+
+                print("Input name_my_action:")
+                for key in scenario_name_my_action:
+                    print(key + ': ' + scenario_name_my_action[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_my_action:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += "_" + input_option
+
+                print("Input name_violated_rule:")
+                for key in scenario_name_violated_rule:
+                    print(key + ': ' + scenario_name_violated_rule[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_violated_rule:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += "_" + input_option
+                break
+                
             self.scenario_id = scenario_name
             for img in self.record_image:
                 if img.frame%100 == 0:
