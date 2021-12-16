@@ -1000,12 +1000,13 @@ class IMUSensor(object):
     def toggle_recording_IMU(self, path):
         self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(target = self.save_IMU, args=(path))
+            t_top = threading.Thread(target = self.save_IMU, args=(self.imu_save, path))
+            t_top.start()
+            self.imu_save = []
 
-    def save_IMU(self, path):
-        np_imu = np.asarray(self.imu_save)
+    def save_IMU(self, save_list, path):
+        np_imu = np.asarray(save_list)
         np.save('%s/imu' % (path), np_imu)
-        self.imu_save = []
 # ==============================================================================
 # -- RadarSensor ---------------------------------------------------------------
 # ==============================================================================
@@ -1921,18 +1922,18 @@ def game_loop(args):
         # dynamic scenario setting
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
         stored_path = os.path.join(root, scenario_name)
+        print(stored_path)
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
 
         # start_frame = client.get_world().wait_for_tick().frame
-        world.camera_manager.toggle_recording(scenario_name) 
-        world.imu_sensor.recording = True
-        world.imu_sensor.toggle_recording_IMU(scenario_name)
+        world.camera_manager.toggle_recording(stored_path) 
+        world.imu_sensor.toggle_recording_IMU(stored_path)
 
         scenario_finished = False
         while (1):
             clock.tick_busy_loop(20)
-            world.world.tick()
+            frame = world.world.tick()
             # iterate actors
             for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
@@ -1959,9 +1960,9 @@ def game_loop(args):
                         else:
                             actor_transform_index[actor_id] += 1
 
-                        # if actor_id == 'player':
-                        #     current_frame = client.get_world().wait_for_tick().frame
-                        #     world.record_speed_control(current_frame)
+                        if actor_id == 'player':
+                            world.record_speed_control(frame)
+
                     elif 'pedestrian' in filter_dict[actor_id]:
                         if actor_transform_index[actor_id] == 1:
                             try:
@@ -1999,7 +2000,6 @@ def game_loop(args):
         # end_frame = client.get_world().wait_for_tick().frame
         world.save_speed_control(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)
-        world.imu_sensor.save_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
         world.camera_manager.toggle_recording(stored_path)
         save_description(world, args, stored_path)
