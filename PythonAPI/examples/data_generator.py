@@ -64,6 +64,7 @@ import time
 import threading
 import xml.etree.ElementTree as ET
 import carla_vehicle_annotator as cva
+import matplotlib.pyplot as plt
 
 
 from random_actors import spawn_actor_nearby
@@ -1780,7 +1781,82 @@ def collect_trajectory(get_world, agent, scenario_id, period_end):
                 return False
     except:
         print("trajectory_collection finished")
-    
+
+def collect_topology(get_world, agent, scenario_id, t):
+    filepath = "data_collection/"
+    town_map = get_world.world.get_map()
+    if not os.path.exists('data_collection/%s/topology/'% (scenario_id)):
+        os.mkdir('data_collection/%s/topology/'% (scenario_id))
+    time_start = time.time()
+    try:
+        while True:
+            time_end = time.time()
+            if (time_end - time_start) > 2:         # may need change 
+                waypoint = town_map.get_waypoint(agent.get_location())
+                waypoint_list = town_map.generate_waypoints(2.0)
+                nearby_waypoint = []
+                roads = []
+                all = []
+                for wp in waypoint_list:
+                    dist_x = int(wp.transform.location.x) - int(waypoint.transform.location.x)
+                    dist_y = int(wp.transform.location.y) - int(waypoint.transform.location.y)
+                    if abs(dist_x) <= 37.5 and abs(dist_y) <= 37.5:
+                        nearby_waypoint.append(wp)
+                        roads.append((wp.road_id, wp.lane_id))
+                for wp in nearby_waypoint:
+                    for id in roads:
+                        if wp.road_id == id[0] and wp.lane_id == id[1]:
+                            all.append(((wp.road_id, wp.lane_id), wp))
+                            break
+                all = sorted(all, key = lambda s: s[0][1])
+                temp_d = {}
+                d = {}
+                for (i, j), wp in all:
+                    if (i, j) in temp_d:
+                        temp_d[(i, j)] += 1 
+                    else:
+                        temp_d[(i, j)] = 1
+                for (i, j) in temp_d:
+                    if temp_d[(i, j)] != 1:
+                        d[(i, j)] = temp_d[(i, j)]
+                rotate_quat = np.array([[0.0, -1.0], [1.0, 0.0]])
+                lane_feature_ls = []
+                for i, j in d:
+                    halluc_lane_1, halluc_lane_2 = np.empty((0, 3*2)), np.empty((0, 3*2))
+                    is_traffic_control = False
+                    is_junction = False
+                    for k in range(len(all)-1):
+                        if (i, j) == all[k][0] and (i, j) == all[k+1][0]:
+                            if all[k][1].get_landmarks(50, False):      # may change & need traffic light
+                                is_traffic_control = True
+                            if all[k][1].is_junction:                   
+                                is_junction = True
+                            # -= norm center
+                            before = [all[k][1].transform.location.x, all[k][1].transform.location.y]
+                            after = [all[k+1][1].transform.location.x, all[k+1][1].transform.location.y]
+                            distance = []
+                            for t in range(len(before)):
+                                distance.append(after[t] - before[t])
+                            np_distance = np.array(distance)
+                            norm = np.linalg.norm(np_distance)
+                            e1, e2 = rotate_quat @ np_distance / norm, rotate_quat.T @ np_distance / norm
+                            lane_1 = np.hstack((before + e1 * all[k][1].lane_width/2, all[k][1].transform.location.z, after + e1 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
+                            lane_2 = np.hstack((before + e2 * all[k][1].lane_width/2, all[k][1].transform.location.z, after + e2 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
+                            halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
+                            halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
+                    lane_feature_ls.append([halluc_lane_1, halluc_lane_2, is_traffic_control, is_junction, (i, j)])           
+                np.save('data_collection/' + str(scenario_id) + '/topology/' + str(scenario_id), np.array(lane_feature_ls))
+                for features in lane_feature_ls:
+                    xs, ys = np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 0], np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 1]
+                    plt.plot(xs, ys, '--', color='grey')
+                    x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
+                    plt.plot(x_s, y_s, '--', color='grey')
+                plt.savefig('data_collection/' + str(scenario_id) + '/topology/topology.png')
+                break
+        return False 
+    except:
+        print("topology_collection finished")
+
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
     blueprint.set_attribute('role_name', actor_id)
@@ -1935,6 +2011,9 @@ def game_loop(args):
         period = float(moment[-1]) - float(moment[0])
         traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
         traj_col.start()
+
+        topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, 2))
+        topo_col.start()
 
         # dynamic scenario setting
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
