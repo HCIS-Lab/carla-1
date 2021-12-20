@@ -1096,6 +1096,7 @@ class CameraManager(object):
         self.flow = []
         self.dvs = []
 
+        self.top_iseg = []
         self.top_seg = []
         self.front_seg = []
         self.left_seg = []
@@ -1155,8 +1156,10 @@ class CameraManager(object):
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette, 'Camera Semantic Segmentation (CityScapes Palette)', {}],
             ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)', {'range': '50'}],
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
-            #['sensor.camera.optical_flow', None, 'Optical Flow', {}],
-            ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}]
+            ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
+            ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}],
+            ['sensor.camera.instance_segmentation', cc.CityScapesPalette, 'Camera Instance Segmentation (CityScapes Palette)', {}],
+
             ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
@@ -1253,6 +1256,12 @@ class CameraManager(object):
             #     attachment_type=self._camera_transforms[0][1])
 
             # segmentation sensor
+            self.iseg_top = self._parent.get_world().spawn_actor(
+                self.sensors[-1][-1],
+                self._camera_transforms[6][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[6][1])
+
             self.seg_top = self._parent.get_world().spawn_actor(
                 self.sensors[5][-1],
                 self._camera_transforms[6][0],
@@ -1335,7 +1344,8 @@ class CameraManager(object):
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
             self.sensor_dvs.listen(lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
             # self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
-
+            
+            self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
             self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
             self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
             self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
@@ -1373,6 +1383,7 @@ class CameraManager(object):
             t_dvs = threading.Thread(target = self.save_img,args=(self.dvs, 7, path, 'dvs'))
             # t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
+            t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
             t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
             t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, path, 'seg_front'))
             t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, path, 'seg_right'))
@@ -1402,6 +1413,7 @@ class CameraManager(object):
             t_dvs.start()
             # t_flow.start()
 
+            t_iseg_top.start()
             t_seg_top.start()
             t_seg_front.start()
             t_seg_right.start()
@@ -1431,6 +1443,7 @@ class CameraManager(object):
             self.dvs = []
             # self.flow = []
 
+            self.top_iseg = []
             self.top_seg = []
             self.front_seg = []
             self.right_seg = []
@@ -1673,11 +1686,16 @@ def read_traffic_lights(path):
     path = os.path.join(path, 'traffic_light')
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     light_dict = dict()
-    for f in files:
+
+    for i, f in enumerate(files):
         light = np.load(os.path.join(path, f), allow_pickle=True)
+        if i == 0:
+            min_len = light.shape[0]
+        elif light.shape[0] < min_len:
+            min_len = light.shape[0]
         light_id  = int(f.split('.')[0])
         light_dict[light_id] = light
-    return light_dict
+    return light_dict, min_len
 
 def set_light_state(lights, light_dict, index):
     for l in lights:
@@ -1828,7 +1846,7 @@ def game_loop(args):
     for actor_id, _ in filter_dict.items():
         transform_dict[actor_id] = read_transform(os.path.join(path, 'transform', actor_id + '.npy'))
         velocity_dict[actor_id] = read_velocity(os.path.join(path, 'velocity', actor_id + '.npy'))
-    light_dict = read_traffic_lights(path)
+    light_dict, min_light_len = read_traffic_lights(path)
     num_files = len(filter_dict)
 
     try:
@@ -1937,8 +1955,10 @@ def game_loop(args):
             # iterate actors
             for actor_id, _ in filter_dict.items():
                 # apply recorded location and velocity on the controller
-                # if actor_id == 'player':
-                #     set_light_state(lights, light_dict, actor_transform_index[actor_id])
+
+                # reproduce traffic light state
+                if actor_id == 'player' and min_light_len > actor_transform_index[actor_id]:
+                    set_light_state(lights, light_dict, actor_transform_index[actor_id])
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                     if 'vehicle' in filter_dict[actor_id]:
                         agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
