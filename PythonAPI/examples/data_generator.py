@@ -1866,10 +1866,10 @@ def game_loop(args):
         client.get_world().set_weather(args.weather)     
 
         # sync mode                
-#         settings = world.world.get_settings()
-#         settings.fixed_delta_seconds = 0.05
-#         settings.synchronous_mode = True # Enables synchronous mode
-#         world.world.apply_settings(settings)
+        settings = world.world.get_settings()
+        settings.fixed_delta_seconds = 0.05
+        settings.synchronous_mode = True # Enables synchronous mode
+        world.world.apply_settings(settings)
 
         # other setting
         controller = KeyboardControl(world, args.autopilot)
@@ -1911,7 +1911,6 @@ def game_loop(args):
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         time.sleep(2)
-        #auto = [False] * num_files
 
         # dynamic scenario setting
         root = os.path.join('data_collection', args.scenario_id) 
@@ -1944,7 +1943,6 @@ def game_loop(args):
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
 
-        # start_frame = client.get_world().wait_for_tick().frame
         world.camera_manager.toggle_recording(stored_path) 
         world.imu_sensor.toggle_recording_IMU(stored_path)
 
@@ -1977,8 +1975,8 @@ def game_loop(args):
                             else:
                                 # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
                                 actor_transform_index[actor_id] += 2
-                        else:
-                            actor_transform_index[actor_id] += 1
+                        # else:
+                        #     actor_transform_index[actor_id] += 1
 
                         if actor_id == 'player':
                             world.record_speed_control(frame)
