@@ -2012,7 +2012,7 @@ def game_loop(args):
         if args.random_actors != 'None':
             if args.random_actors == 'low':
                 spawn_actor_nearby(distance=100, vehicles=5, pedestrian=2, transform_dict=transform_dict)
-            elif args.random_actors == 'med':
+            elif args.random_actors == 'mid':
                 spawn_actor_nearby(distance=100, vehicles=10, pedestrian=5, transform_dict=transform_dict)
             elif args.random_actors == 'high':
                 spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
@@ -2207,7 +2207,7 @@ def main():
         '-random_actors',
         type=str,
         default='None',
-        choices=['None', 'low', 'med', 'high'],
+        choices=['None', 'low', 'mid', 'high'],
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',

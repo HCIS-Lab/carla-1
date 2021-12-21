@@ -8,7 +8,7 @@ num_weather=6
 map=('None' 'Town01' 'Town02' 'Town03' 'Town04' 'Town05')
 weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'HardRainSunset')
 traj=('False' 'True')
-random_actor=('low' 'med' 'high')
+random_actor=('low' 'mid' 'high')
 random_object=('False' 'True')
 name=('3_t5-5_1_p_r_r_r')
 
