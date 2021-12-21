@@ -2089,7 +2089,7 @@ def game_loop(args):
                         # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
                         controller_dict[actor_id].set_max_speed(1.2)
 
-                        actor_transform_index[actor_id] += 7
+                        actor_transform_index[actor_id] += 3
                 else:
                     # when the client has arrived the last recorded location
                     if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
