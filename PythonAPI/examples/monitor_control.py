@@ -1509,6 +1509,7 @@ def record_traffic_lights(lights_dict, lights):
     for l in lights:
         if not l.id in lights_dict:
             lights_dict[l.id] = []
+            lights_dict[l.id].append([l.location.x, l.location.y, l.location.z, 0.0])
         lights_dict[l.id].append([l.color.r, l.color.g, l.color.b, l.color.a])
     return lights_dict
 

@@ -1094,10 +1094,10 @@ class CameraManager(object):
         self.back_right_img = []
 
         self.lidar = []
-        self.flow = []
+        # self.flow = []
         self.dvs = []
 
-        self.top_iseg = []
+        # self.top_iseg = []
         self.top_seg = []
         self.front_seg = []
         self.left_seg = []
@@ -1257,11 +1257,11 @@ class CameraManager(object):
             #     attachment_type=self._camera_transforms[0][1])
 
             # segmentation sensor
-            self.iseg_top = self._parent.get_world().spawn_actor(
-                self.sensors[-1][-1],
-                self._camera_transforms[6][0],
-                attach_to=self._parent,
-                attachment_type=self._camera_transforms[6][1])
+            # self.iseg_top = self._parent.get_world().spawn_actor(
+            #     self.sensors[-1][-1],
+            #     self._camera_transforms[6][0],
+            #     attach_to=self._parent,
+            #     attachment_type=self._camera_transforms[6][1])
 
             self.seg_top = self._parent.get_world().spawn_actor(
                 self.sensors[5][-1],
@@ -1346,7 +1346,7 @@ class CameraManager(object):
             self.sensor_dvs.listen(lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
             # self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
             
-            self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
+            # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
             self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
             self.seg_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_front'))
             self.seg_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_right'))
@@ -1384,7 +1384,7 @@ class CameraManager(object):
             t_dvs = threading.Thread(target = self.save_img,args=(self.dvs, 7, path, 'dvs'))
             # t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
-            t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
+            # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
             t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
             t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, path, 'seg_front'))
             t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, path, 'seg_right'))
@@ -1414,7 +1414,7 @@ class CameraManager(object):
             t_dvs.start()
             # t_flow.start()
 
-            t_iseg_top.start()
+            # t_iseg_top.start()
             t_seg_top.start()
             t_seg_front.start()
             t_seg_right.start()
@@ -1444,7 +1444,7 @@ class CameraManager(object):
             self.dvs = []
             # self.flow = []
 
-            self.top_iseg = []
+            # self.top_iseg = []
             self.top_seg = []
             self.front_seg = []
             self.right_seg = []
@@ -1489,9 +1489,9 @@ class CameraManager(object):
                         os.makedirs(stored_path)
                     np.save('%s/%08d' % (stored_path, img.frame), dvs_img)
                     # img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
-                elif 'flow' in view:
-                    img = img.get_color_coded_flow()
-                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
+                # elif 'flow' in view:
+                #     # img = img.get_color_coded_flow()
+                #     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
                 else:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
@@ -1577,8 +1577,8 @@ class CameraManager(object):
                 self.lidar.append(image)
             elif view == 'dvs':
                 self.dvs.append(image)
-            elif view == 'flow':
-                self.flow.append(image)
+            # elif view == 'flow':
+            #     self.flow.append(image)
 
             elif view == 'seg_top':
                 self.top_seg.append(image)
@@ -1683,26 +1683,38 @@ def read_velocity(path='velocity.npy'):
 
     return velocity_list
 
-def read_traffic_lights(path):
+def read_traffic_lights(path, lights):
+    
     path = os.path.join(path, 'traffic_light')
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     light_dict = dict()
-
     for i, f in enumerate(files):
         light = np.load(os.path.join(path, f), allow_pickle=True)
         if i == 0:
-            min_len = light.shape[0]
-        elif light.shape[0] < min_len:
-            min_len = light.shape[0]
-        light_id  = int(f.split('.')[0])
-        light_dict[light_id] = light
+            min_len = light.shape[0]-1
+        elif light.shape[0]-1 < min_len:
+            min_len = light.shape[0] -1
+        # light_id  = int(f.split('.')[0])
+        l_loc = carla.Location(light[0][0], light[0][1], light[0][2])
+        min_d = 500.0
+        for new_l in lights:
+            if new_l.location.distance(l_loc) < min_d:
+                min_d = new_l.location.distance(l_loc)
+                new_id = new_l.id
+                
+        light_dict[new_id] = light[1:]
+    # print(len(files))
+    # print(len(lights))
+    # print(len(light_dict))
+
     return light_dict, min_len
 
 def set_light_state(lights, light_dict, index):
     for l in lights:
-        index = -1 if len(light_dict[l.id]) < index else index
-        state = light_dict[l.id][index]
-        l.set_color(carla.Color(int(state[0]), int(state[1]), int(state[2]), int(state[3])))
+        if l.id in light_dict:
+            index = -1 if len(light_dict[l.id]) < index else index
+            state = light_dict[l.id][index]
+            l.set_color(carla.Color(int(state[0]), int(state[1]), int(state[2]), int(state[3])))
 
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
@@ -1922,7 +1934,6 @@ def game_loop(args):
     for actor_id, _ in filter_dict.items():
         transform_dict[actor_id] = read_transform(os.path.join(path, 'transform', actor_id + '.npy'))
         velocity_dict[actor_id] = read_velocity(os.path.join(path, 'velocity', actor_id + '.npy'))
-    light_dict, min_light_len = read_traffic_lights(path)
     num_files = len(filter_dict)
 
     try:
@@ -1940,7 +1951,7 @@ def game_loop(args):
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
         world = World(client.load_world(args.map), filter_dict['player'], hud, args)            
         client.get_world().set_weather(args.weather)     
-
+        
         # sync mode                
         settings = world.world.get_settings()
         settings.fixed_delta_seconds = 0.05
@@ -1952,6 +1963,8 @@ def game_loop(args):
         blueprint_library = client.get_world().get_blueprint_library()
         lm = world.world.get_lightmanager()
         lights = lm.get_all_lights()
+        light_dict, min_light_len = read_traffic_lights(path, lights)
+
         clock = pygame.time.Clock()
 
         agents_dict = {}
