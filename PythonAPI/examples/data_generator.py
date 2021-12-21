@@ -1996,9 +1996,14 @@ def game_loop(args):
             t.start()
             scenario_name = scenario_name + 'random_objects_'
 
-        if args.random_actors:
-            spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
-            scenario_name = scenario_name + 'random_actor_'
+        if args.random_actors != 'None':
+            if args.random_actors == 'low':
+                spawn_actor_nearby(distance=100, vehicles=5, pedestrian=2, transform_dict=transform_dict)
+            elif args.random_actors == 'med':
+                spawn_actor_nearby(distance=100, vehicles=10, pedestrian=5, transform_dict=transform_dict)
+            elif args.random_actors == 'high':
+                spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
+            scenario_name = scenario_name + args.random_actors + '_'
         
         # recording traj
         id = []
@@ -2187,8 +2192,9 @@ def main():
         help='map name')
     argparser.add_argument(
         '-random_actors',
-        type=bool,
-        default=False,
+        type=str,
+        default='None',
+        choices=['None', 'low', 'med', 'high']
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',
