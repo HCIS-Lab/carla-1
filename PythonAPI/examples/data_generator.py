@@ -2194,7 +2194,7 @@ def main():
         '-random_actors',
         type=str,
         default='None',
-        choices=['None', 'low', 'med', 'high']
+        choices=['None', 'low', 'med', 'high'],
         help='enable roaming actors')
     argparser.add_argument(
         '-random_objects',
