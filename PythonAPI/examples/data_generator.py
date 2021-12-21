@@ -1970,7 +1970,7 @@ def game_loop(args):
         agents_dict = {}
         controller_dict = {}
         actor_transform_index = {}
-        auto = {}
+        finish = {}
 
         # init position for player 
         world.player.set_transform(transform_dict['player'][0])  
@@ -1995,7 +1995,7 @@ def game_loop(args):
                                         attach_to=agents_dict[actor_id])
             
             actor_transform_index[actor_id] = 1
-            auto[actor_id] = False
+            finish[actor_id] = False
 
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
@@ -2087,7 +2087,7 @@ def game_loop(args):
 
                         controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
                         # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
-                        controller_dict[actor_id].set_max_speed(1.2)
+                        controller_dict[actor_id].set_max_speed(1.4)
                         if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1.5:
                             actor_transform_index[actor_id] += 10
                         else:
@@ -2100,11 +2100,16 @@ def game_loop(args):
                                 velocity_dict[actor_id][-30], transform_dict[actor_id][-1]))
                         elif 'pedestrian' in filter_dict[actor_id]:
                             controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
-                            controller_dict[actor_id].set_max_speed(1.2)
+                            controller_dict[actor_id].set_max_speed(1.4)
 
-                    elif actor_id == 'player':
-                        scenario_finished = True
-                        break
+                    else:
+                        finish[actor_id] = True
+
+                    # elif actor_id == 'player':
+                    #     scenario_finished = True
+                    #     break
+            if not False in finish.values():
+                    break
 
             if controller.parse_events(client, world, clock) == 1:
                 return
@@ -2112,8 +2117,8 @@ def game_loop(args):
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
-            if scenario_finished:
-                break
+            # if scenario_finished:
+            #     break
         # end_frame = client.get_world().wait_for_tick().frame
         world.save_speed_control(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)
