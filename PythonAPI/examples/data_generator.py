@@ -1799,11 +1799,13 @@ def collect_topology(get_world, agent, scenario_id, t):
     town_map = get_world.world.get_map()
     if not os.path.exists('data_collection/%s/topology/'% (scenario_id)):
         os.mkdir('data_collection/%s/topology/'% (scenario_id))
+    with open(filepath + scenario_id + '/scenario_description.json') as f:
+        data = json.load(f)
     time_start = time.time()
     try:
         while True:
             time_end = time.time()
-            if (time_end - time_start) > 2:         # may need change 
+            if (time_end - time_start) > t:         # may need change 
                 waypoint = town_map.get_waypoint(agent.get_location())
                 waypoint_list = town_map.generate_waypoints(2.0)
                 nearby_waypoint = []
@@ -1856,8 +1858,15 @@ def collect_topology(get_world, agent, scenario_id, t):
                             lane_2 = np.hstack((before + e2 * all[k][1].lane_width/2, all[k][1].transform.location.z, after + e2 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
                             halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
                             halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
+                    if data['traffic_light']:
+                        is_junction = True
                     lane_feature_ls.append([halluc_lane_1, halluc_lane_2, is_traffic_control, is_junction, (i, j)])           
                 np.save('data_collection/' + str(scenario_id) + '/topology/' + str(scenario_id), np.array(lane_feature_ls))
+
+                # Other objects can also be plot in the graph
+                #with open(filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv', newline='') as csvfile:
+                #    rows = csv.DictReader(csvfile)
+
                 for features in lane_feature_ls:
                     xs, ys = np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 0], np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 1]
                     plt.plot(xs, ys, '--', color='grey')
@@ -2027,10 +2036,11 @@ def game_loop(args):
                 id.append(int(s[0]))
                 moment.append(s[1])
         period = float(moment[-1]) - float(moment[0])
+        half_period = period / 2
         traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
         traj_col.start()
 
-        topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, 2))
+        topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period))
         topo_col.start()
 
         # dynamic scenario setting
