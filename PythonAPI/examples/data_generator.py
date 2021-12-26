@@ -1982,7 +1982,10 @@ def game_loop(args):
         finish = {}
 
         # init position for player 
-        world.player.set_transform(transform_dict['player'][0])  
+        # world.player.set_transform(transform_dict['player'][0])  
+        ego_transform = transform_dict['player'][0]
+        ego_transform.location.z += 5
+        world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
 
         # set controller
