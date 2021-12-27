@@ -337,6 +337,7 @@ class World(object):
             self.camera_manager.sensor_back_right,
             self.camera_manager.sensor_lidar,
             self.camera_manager.sensor_dvs,
+            self.camera_manager.sensor_flow,
             self.camera_manager.seg_top,
             self.camera_manager.seg_front,
             self.camera_manager.seg_back,
@@ -1094,7 +1095,7 @@ class CameraManager(object):
         self.back_right_img = []
 
         self.lidar = []
-        # self.flow = []
+        self.flow = []
         self.dvs = []
 
         # self.top_iseg = []
@@ -1250,11 +1251,11 @@ class CameraManager(object):
                 attachment_type=self._camera_transforms[0][1])
 
             # optical flow
-            # self.sensor_flow = self._parent.get_world().spawn_actor(
-            #     self.sensors[8][-1],
-            #     self._camera_transforms[0][0],
-            #     attach_to=self._parent,
-            #     attachment_type=self._camera_transforms[0][1])
+            self.sensor_flow = self._parent.get_world().spawn_actor(
+                self.sensors[8][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
 
             # segmentation sensor
             # self.iseg_top = self._parent.get_world().spawn_actor(
@@ -1344,7 +1345,7 @@ class CameraManager(object):
 
             self.sensor_lidar.listen(lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
             self.sensor_dvs.listen(lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
-            # self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
+            self.sensor_flow.listen(lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
             
             # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
             self.seg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'seg_top'))
@@ -1382,7 +1383,7 @@ class CameraManager(object):
 
             t_lidar = threading.Thread(target = self.save_img,args=(self.lidar, 6, path, 'lidar'))
             t_dvs = threading.Thread(target = self.save_img,args=(self.dvs, 7, path, 'dvs'))
-            # t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
+            t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
             t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
@@ -1412,7 +1413,7 @@ class CameraManager(object):
 
             t_lidar.start()
             t_dvs.start()
-            # t_flow.start()
+            t_flow.start()
 
             # t_iseg_top.start()
             t_seg_top.start()
@@ -1442,7 +1443,7 @@ class CameraManager(object):
 
             self.lidar = []
             self.dvs = []
-            # self.flow = []
+            self.flow = []
 
             # self.top_iseg = []
             self.top_seg = []
@@ -1488,10 +1489,17 @@ class CameraManager(object):
                     if not os.path.exists(stored_path):
                         os.makedirs(stored_path)
                     np.save('%s/%08d' % (stored_path, img.frame), dvs_img)
-                    # img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
-                # elif 'flow' in view:
-                #     # img = img.get_color_coded_flow()
-                #     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
+                elif 'flow' in view:
+                    frame = img.frame
+                    img = img.get_color_coded_flow()
+                    array = np.frombuffer(img.raw_data, dtype=np.dtype("uint8"))
+                    array = np.reshape(array, (img.height, img.width, 4))
+                    array = array[:, :, :3]
+                    array = array[:, :, ::-1]
+                    stored_path = os.path.join(path, self.sensors[sensor][2], view)
+                    if not os.path.exists(stored_path):
+                        os.makedirs(stored_path)
+                    np.save('%s/%08d' % (stored_path, frame), array)
                 else:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
@@ -1546,6 +1554,7 @@ class CameraManager(object):
                     ['x'], dvs_events[:]['pol'] * 2] = 255
             self.surface = pygame.surfarray.make_surface(
                 dvs_img.swapaxes(0, 1))
+
         elif view == 'top':
             image.convert(self.sensors[self.index][1])
             array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
@@ -1577,8 +1586,11 @@ class CameraManager(object):
                 self.lidar.append(image)
             elif view == 'dvs':
                 self.dvs.append(image)
-            # elif view == 'flow':
-            #     self.flow.append(image)
+            elif view == 'flow':
+                self.flow.append(image)
+
+            # elif view == 'iseg_top':
+            #     self.top_iseg.append(image)
 
             elif view == 'seg_top':
                 self.top_seg.append(image)
@@ -1982,9 +1994,8 @@ def game_loop(args):
         finish = {}
 
         # init position for player 
-        # world.player.set_transform(transform_dict['player'][0])  
         ego_transform = transform_dict['player'][0]
-        ego_transform.location.z += 5
+        ego_transform.location.z += 3
         world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
 
@@ -2011,7 +2022,7 @@ def game_loop(args):
 
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
-        time.sleep(2)
+        # time.sleep(2)
 
         # dynamic scenario setting
         root = os.path.join('data_collection', args.scenario_id) 
@@ -2053,83 +2064,88 @@ def game_loop(args):
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
 
-        world.camera_manager.toggle_recording(stored_path) 
-        world.imu_sensor.toggle_recording_IMU(stored_path)
-
         scenario_finished = False
+        iter_tick = 0
+        iter_start = 8
         while (1):
-            clock.tick_busy_loop(20)
+            clock.tick_busy_loop(40)
             frame = world.world.tick()
-            # iterate actors
-            for actor_id, _ in filter_dict.items():
-                # apply recorded location and velocity on the controller
+            iter_tick += 1
+            if iter_tick == iter_start + 1:
+                world.camera_manager.toggle_recording(stored_path) 
+                world.imu_sensor.toggle_recording_IMU(stored_path)
+            elif iter_tick > iter_start:
+                # iterate actors
+                for actor_id, _ in filter_dict.items():
+                    # apply recorded location and velocity on the controller
 
-                # reproduce traffic light state
-                if actor_id == 'player' and min_light_len > actor_transform_index[actor_id]:
-                    set_light_state(lights, light_dict, actor_transform_index[actor_id])
-                if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
-                    if 'vehicle' in filter_dict[actor_id]:
-                        agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                            velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
-
-                        v = agents_dict[actor_id].get_velocity()
-                        v = (v.x**2 + v.y**2 + v.z**2)**(1/2)
-
-                        # to avoid the actor slowing down for the dense location around
-                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
-                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 4.0:
-                            if args.noise_trajectory:
-                                # sampling location with larger distance
-                                # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
-                                actor_transform_index[actor_id] += 4
-                            else:
-                                # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
-                                actor_transform_index[actor_id] += 2
-                        # else:
-                        #     actor_transform_index[actor_id] += 1
-
-                        if actor_id == 'player':
-                            world.record_speed_control(frame)
-
-                    elif 'pedestrian' in filter_dict[actor_id]:
-                        if actor_transform_index[actor_id] == 1:
-                            try:
-                                controller_dict[actor_id].start()
-                            except:
-                                print('sth wrong w/ walker_start')
-
-                        controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
-                        # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
-                        controller_dict[actor_id].set_max_speed(1.4)
-                        if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1.5:
-                            actor_transform_index[actor_id] += 10
-                        else:
-                            actor_transform_index[actor_id] += 7
-                else:
-                    # when the client has arrived the last recorded location
-                    if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
+                    # reproduce traffic light state
+                    if actor_id == 'player' and min_light_len > actor_transform_index[actor_id]:
+                        set_light_state(lights, light_dict, actor_transform_index[actor_id])
+                    if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                         if 'vehicle' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                                velocity_dict[actor_id][-30], transform_dict[actor_id][-1]))
-                        elif 'pedestrian' in filter_dict[actor_id]:
-                            controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
-                            controller_dict[actor_id].set_max_speed(1.4)
+                                velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
 
+                            v = agents_dict[actor_id].get_velocity()
+                            v = (v.x**2 + v.y**2 + v.z**2)**(1/2)
+
+                            # to avoid the actor slowing down for the dense location around
+                            # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
+                            if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 4.0:
+                                if args.noise_trajectory:
+                                    # sampling location with larger distance
+                                    # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
+                                    actor_transform_index[actor_id] += 8
+                                else:
+                                    # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
+                                    actor_transform_index[actor_id] += 4
+                            # else:
+                            #     actor_transform_index[actor_id] += 1
+
+                            if actor_id == 'player':
+                                world.record_speed_control(frame)
+
+                        elif 'pedestrian' in filter_dict[actor_id]:
+                            if actor_transform_index[actor_id] == 1:
+                                try:
+                                    controller_dict[actor_id].start()
+                                except:
+                                    print('sth wrong w/ walker_start')
+
+                            controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
+                            # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
+                            controller_dict[actor_id].set_max_speed(1.4)
+                            if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1.5:
+                                actor_transform_index[actor_id] += 10
+                            else:
+                                actor_transform_index[actor_id] += 7
                     else:
+                        # when the client has arrived the last recorded location
+                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
+                        #     if 'vehicle' in filter_dict[actor_id]:
+                        #         agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                        #             velocity_dict[actor_id][-30], transform_dict[actor_id][-1]))
+                        #     elif 'pedestrian' in filter_dict[actor_id]:
+                        #         controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
+                        #         controller_dict[actor_id].set_max_speed(1.4)
+
+                        # else:
                         finish[actor_id] = True
 
-                    # elif actor_id == 'player':
-                    #     scenario_finished = True
-                    #     break
-            if not False in finish.values():
-                    break
+                        # elif actor_id == 'player':
+                        #     scenario_finished = True
+                        #     break
+                if not False in finish.values():
+                        break
 
-            if controller.parse_events(client, world, clock) == 1:
-                return
+                if controller.parse_events(client, world, clock) == 1:
+                    return
 
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
+
             # if scenario_finished:
             #     break
         # end_frame = client.get_world().wait_for_tick().frame
