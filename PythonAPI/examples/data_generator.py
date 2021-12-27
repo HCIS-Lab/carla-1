@@ -2100,8 +2100,8 @@ def game_loop(args):
                                 else:
                                     # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
                                     actor_transform_index[actor_id] += 4
-                            # else:
-                            #     actor_transform_index[actor_id] += 1
+                            else:
+                                actor_transform_index[actor_id] += 1
 
                             if actor_id == 'player':
                                 world.record_speed_control(frame)
