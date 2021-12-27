@@ -1556,7 +1556,7 @@ def game_loop(args):
         clock = pygame.time.Clock()
 
         while True:
-            clock.tick_busy_loop(20)
+            clock.tick_busy_loop(40)
             code = controller.parse_events(client, world, clock)
             # exception
             if controller.r == 1:
