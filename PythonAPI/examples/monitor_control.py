@@ -1489,7 +1489,7 @@ def save_description(scenario_name, carla_map):
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
      'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
     violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light'}
-
+    interaction = {'0': 'None', '1': 'True', '2': 'False'}
     d = dict()
     topo = description[1].split('-')[0]
     if 'i' in topo:
@@ -1510,7 +1510,8 @@ def save_description(scenario_name, carla_map):
     d['interaction_actor_type'] = actor[description[3]]
     d['interaction_action_type'] = action[description[4]]
     d['my_action'] = action[description[5]]
-    d['violation'] = violation[description[6]]
+    d['interaction'] = interaction[description[6]]
+    d['violation'] = violation[description[7]]
     d['map'] = carla_map
     with open('data_collection/%s/scenario_description.json' % (scenario_name), 'w') as f:
         json.dump(d, f)
