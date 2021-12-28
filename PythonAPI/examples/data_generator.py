@@ -1923,6 +1923,7 @@ def save_description(world, args, stored_path):
     d['noise_trajectory'] = args.noise_trajectory
     d['random_objects'] = args.random_objects
     d['random_actors'] = args.random_actors
+    d['simulation_time'] = int(world.hud.simulation_time)
 
     with open('%s/scenario_description.json' % (stored_path), 'w') as f:
         json.dump(d, f)

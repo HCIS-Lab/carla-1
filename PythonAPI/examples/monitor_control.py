@@ -1279,6 +1279,7 @@ class CameraManager(object):
              'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
             scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
              'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
+            scenario_name_is_ego_first = {'0': 'None', '1':  'True', '2': 'False'}
             scenario_name_violated_rule = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light'}
 
             while True:
@@ -1330,6 +1331,15 @@ class CameraManager(object):
                     print(key + ': ' + scenario_name_my_action[key] + ' ')
                 input_option = str(input())
                 if input_option not in scenario_name_my_action:
+                    print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    continue
+                scenario_name += "_" + input_option
+
+                print("Input is_ego_car_first:")
+                for key in scenario_name_is_ego_first:
+                    print(key + ': ' + scenario_name_is_ego_first[key] + ' ')
+                input_option = str(input())
+                if input_option not in scenario_name_is_ego_first:
                     print("INVALID INPUT! RESTART NAMING SCENARIO.")
                     continue
                 scenario_name += "_" + input_option
