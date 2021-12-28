@@ -1553,9 +1553,11 @@ def game_loop(args):
 
         hud = HUD(args.width, args.height)
         world = World(client.load_world(args.map), hud, args)
-        controller = KeyboardControl(world, args.autopilot)
 
-        #controller = DualControl(world, args.autopilot)
+        if args.controller == 'wheel':  # controller type
+            controller = DualControl(world, args.autopilot)
+        else:
+            controller = KeyboardControl(world, args.autopilot)
 
         lm = world.world.get_lightmanager()
         lights = lm.get_all_lights()
@@ -1662,6 +1664,11 @@ def main():
         default='Town03',
         type=str,
         help='map name')
+    argparser.add_argument(
+        '--controller',
+        default='keyboard',
+        type=str,
+        help='controller: keyboard, wheel (default: keyboard)')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
