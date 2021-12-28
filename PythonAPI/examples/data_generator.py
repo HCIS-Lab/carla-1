@@ -2066,7 +2066,7 @@ def game_loop(args):
 
         scenario_finished = False
         iter_tick = 0
-        iter_start = 8
+        iter_start = 25
         while (1):
             clock.tick_busy_loop(40)
             frame = world.world.tick()
@@ -2092,14 +2092,16 @@ def game_loop(args):
 
                             # to avoid the actor slowing down for the dense location around
                             # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
-                            if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 4.0:
+                            if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2.0:
                                 if args.noise_trajectory:
                                     # sampling location with larger distance
                                     # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
                                     actor_transform_index[actor_id] += 8
                                 else:
                                     # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
-                                    actor_transform_index[actor_id] += 4
+                                    actor_transform_index[actor_id] += 2
+                            elif agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) > 6.0:
+                                actor_transform_index[actor_id] += 6
                             else:
                                 actor_transform_index[actor_id] += 1
 
