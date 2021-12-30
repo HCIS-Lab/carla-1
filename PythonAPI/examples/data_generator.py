@@ -1689,7 +1689,7 @@ def read_velocity(path='velocity.npy'):
     velocity_npy = np.load(path)
     velocity_list = []
     for velocity in velocity_npy:
-        v = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2)**1/2
+        v = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2)**0.5
         velocity_list.append(v)
         # velocity_list.append(carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2]))
 
@@ -2011,7 +2011,7 @@ def game_loop(args):
 
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                            max_throttle=2.0, max_brake=1.0, max_steering=1.0)
+                                                            max_throttle=1.0, max_brake=1.0, max_steering=1.0)
             elif 'pedestrian' in bp:
                 controller_dict[actor_id] = client.get_world().spawn_actor(
                                         blueprint_library.find('controller.ai.walker'),
@@ -2086,10 +2086,11 @@ def game_loop(args):
                     if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                         if 'vehicle' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                                velocity_dict[actor_id][actor_transform_index[actor_id]], transform_dict[actor_id][actor_transform_index[actor_id]]))
+                                (velocity_dict[actor_id][actor_transform_index[actor_id]])*3600/1000.0, transform_dict[actor_id][actor_transform_index[actor_id]]))
 
                             v = agents_dict[actor_id].get_velocity()
-                            v = (v.x**2 + v.y**2 + v.z**2)**(1/2)
+                            v = ((v.x)**2 + (v.y)**2+(v.z)**2)**(0.5)
+
 
                             # to avoid the actor slowing down for the dense location around
                             # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
