@@ -1701,32 +1701,48 @@ def read_traffic_lights(path, lights):
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     light_dict = dict()
     for i, f in enumerate(files):
-        light = np.load(os.path.join(path, f), allow_pickle=True)
-        if i == 0:
-            min_len = light.shape[0]-1
-        elif light.shape[0]-1 < min_len:
-            min_len = light.shape[0] -1
+        l_id = int(f.split('.npy')[0])
+        light_state = np.load(os.path.join(path, f), allow_pickle=True)
+        new_light_state = []
+        for iter, state in enumerate(light_state):
+            if iter == 0:
+                l_loc = carla.Location(float(state[0]), float(state[1]), float(state[2]))
+            if state[0] == 'Red':
+                new_light_state.append(carla.TrafficLightState.Red)
+            elif state[0] == 'Yellow':
+                new_light_state.append(carla.TrafficLightState.Yellow)
+            elif state[0] == 'Green':
+                new_light_state.append(carla.TrafficLightState.Green)
+            elif state[0] == 'Off':
+                new_light_state.append(carla.TrafficLightState.Off)
+            else:
+                new_light_state.append(carla.TrafficLightState.Unknown)
+        # if i == 0:
+        #     min_len = light.shape[0]-1
+        # elif light.shape[0]-1 < min_len:
+        #     min_len = light.shape[0] -1
         # light_id  = int(f.split('.')[0])
-        l_loc = carla.Location(light[0][0], light[0][1], light[0][2])
+        # l_loc = carla.Location(light[0][0], light[0][1], light[0][2])
         min_d = 500.0
         for new_l in lights:
-            if new_l.location.distance(l_loc) < min_d:
-                min_d = new_l.location.distance(l_loc)
+            if new_l.get_location().distance(l_loc) < min_d:
+                min_d = new_l.get_location().distance(l_loc)
                 new_id = new_l.id
-                
-        light_dict[new_id] = light[1:]
+        light_dict[new_id] = new_light_state
+        # light_dict[l_id] = light_state
     # print(len(files))
     # print(len(lights))
     # print(len(light_dict))
 
-    return light_dict, min_len
+    return light_dict
+    # return light_dict, min_len
 
 def set_light_state(lights, light_dict, index):
     for l in lights:
         if l.id in light_dict:
-            index = -1 if len(light_dict[l.id]) < index else index
+            index = index if len(light_dict[l.id]) > index else -1
             state = light_dict[l.id][index]
-            l.set_color(carla.Color(int(state[0]), int(state[1]), int(state[2]), int(state[3])))
+            l.set_state(state)
 
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
@@ -1881,9 +1897,9 @@ def collect_topology(get_world, agent, scenario_id, t):
 
                 for features in lane_feature_ls:
                     xs, ys = np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 0], np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 1]
-                    plt.plot(xs, ys, '--', color='grey')
+                    plt.plot(xs, ys, '--', color='red')
                     x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
-                    plt.plot(x_s, y_s, '--', color='grey')
+                    plt.plot(x_s, y_s, '--', color='blue')
                 plt.savefig('data_collection/' + str(scenario_id) + '/topology/topology.png')
                 break
         return False 
@@ -1983,9 +1999,14 @@ def game_loop(args):
         # other setting
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
-        lm = world.world.get_lightmanager()
-        lights = lm.get_all_lights()
-        light_dict, min_light_len = read_traffic_lights(path, lights)
+        # lm = world.world.get_lightmanager()
+        # lights = lm.get_all_lights()
+        lights = []
+        actors = world.world.get_actors()
+        for l in actors:
+            if 5 in l.semantic_tags and 18 in l.semantic_tags:
+                lights.append(l)
+        light_dict = read_traffic_lights(path, lights)
 
         clock = pygame.time.Clock()
 
@@ -2052,11 +2073,11 @@ def game_loop(args):
                 moment.append(s[1])
         period = float(moment[-1]) - float(moment[0])
         half_period = period / 2
-        traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
-        traj_col.start()
+        # traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
+        # traj_col.start()
 
-        topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period))
-        topo_col.start()
+        # topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period))
+        # topo_col.start()
 
         # dynamic scenario setting
         scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
@@ -2075,13 +2096,18 @@ def game_loop(args):
             if iter_tick == iter_start + 1:
                 world.camera_manager.toggle_recording(stored_path) 
                 world.imu_sensor.toggle_recording_IMU(stored_path)
+                traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
+                traj_col.start()
+
+                topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period))
+                topo_col.start()
             elif iter_tick > iter_start:
                 # iterate actors
                 for actor_id, _ in filter_dict.items():
                     # apply recorded location and velocity on the controller
 
                     # reproduce traffic light state
-                    if actor_id == 'player' and min_light_len > actor_transform_index[actor_id]:
+                    if actor_id == 'player':
                         set_light_state(lights, light_dict, actor_transform_index[actor_id])
                     if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                         if 'vehicle' in filter_dict[actor_id]:

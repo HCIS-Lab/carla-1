@@ -1628,8 +1628,9 @@ def record_traffic_lights(lights_dict, lights):
     for l in lights:
         if not l.id in lights_dict:
             lights_dict[l.id] = []
-            lights_dict[l.id].append([l.location.x, l.location.y, l.location.z, 0.0])
-        lights_dict[l.id].append([l.color.r, l.color.g, l.color.b, l.color.a])
+            location = l.get_location()
+            lights_dict[l.id].append([location.x, location.y, location.z])
+        lights_dict[l.id].append([str(l.get_state()), 0, 0])
     return lights_dict
 
 def save_traffic_lights(lights_dict, scenario_name):
@@ -1668,9 +1669,14 @@ def game_loop(args):
         else:
             controller = KeyboardControl(world, args.autopilot)
 
-        lm = world.world.get_lightmanager()
-        lights = lm.get_all_lights()
-
+        # lm = world.world.get_lightmanager()
+        # lights = lm.get_all_lights(carla.LightGroup.Street)
+        lights = []
+        actors = world.world.get_actors()
+        for l in actors:
+            if 5 in l.semantic_tags and 18 in l.semantic_tags:
+                lights.append(l)
+        print(lights)
         actor_dict = {}
         timestamp_list = []
         traffic_light = dict()
