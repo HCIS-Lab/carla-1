@@ -1374,6 +1374,7 @@ class CameraManager(object):
 
     def toggle_recording(self):
         self.recording = not self.recording
+        restar = 0
         if not self.recording:
             end_time=time.time()
             
@@ -1397,9 +1398,15 @@ class CameraManager(object):
                 for key in scenario_name_map:
                     print(key + ': ' + scenario_name_map[key] + ' ')
                 input_option = str(input())
+                #if record is wrong press 0
+                if input_option == '0':
+                    print("Cancelling")
+                    restart = 1
+                    break
                 if input_option not in scenario_name_map:
                     print("INVALID INPUT! RESTART NAMING SCENARIO.")
                     continue
+                
                 scenario_name += input_option
 
                 print("Input road_id:")
@@ -1461,12 +1468,12 @@ class CameraManager(object):
                     continue
                 scenario_name += "_" + input_option
                 break
-                
-            self.scenario_id = scenario_name
-            for img in self.record_image:
-                if img.frame%100 == 0:
-                    img.save_to_disk('_out/%s/%s/%08d' % (self.sensors[self.index][2],scenario_name,img.frame))
-            print('Recorded video time : %4.2f seconds' % (end_time-self.start_time))
+            if not restart:  
+                self.scenario_id = scenario_name
+                for img in self.record_image:
+                    if img.frame%100 == 0:
+                        img.save_to_disk('_out/%s/%s/%08d' % (self.sensors[self.index][2],scenario_name,img.frame))
+                print('Recorded video time : %4.2f seconds' % (end_time-self.start_time))
 
             self.record_image=[]
         else:
@@ -1475,6 +1482,8 @@ class CameraManager(object):
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
         if self.recording: 
             return 3
+        elif restart:
+            return 6
         else:
             return 4
 
@@ -1707,7 +1716,14 @@ def game_loop(args):
                 controller.r = 2
 
                 print('has finished saving')
+                actor_dict = {}
+                timestamp_list = []
+                traffic_light = dict()
             # not recording
+            elif code == 6:
+                actor_dict = {}
+                timestamp_list = []
+                traffic_light = dict()
             else:
                 actor_dict = extract_actor(actor_dict, world)
 
