@@ -1382,9 +1382,9 @@ class CameraManager(object):
             scenario_name_map = {'1':'Town01', '2':'Town02', '3':'Town03', '4':'Town04', '5': 'Town05'}
             #scenario_name_road_type_id = {}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
-            scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
+            scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
             scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
-             'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
+             'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'. '0': 'None'}
             scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
              'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
             scenario_name_is_ego_first = {'0': 'None', '1':  'True', '2': 'False'}
@@ -1593,10 +1593,10 @@ def save_actor(actor_dict, scenario_name, timestamp_list):
 def save_description(scenario_name, carla_map):
     description = scenario_name.split('_')
     # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
-    actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', 'n': 'None'}
+    actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', 'n': 'None'}
-    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light'}
+     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 's': 'driving on a sidewalk'}
     interaction = {'0': 'None', '1': 'True', '2': 'False'}
     d = dict()
     topo = description[1].split('-')[0]
