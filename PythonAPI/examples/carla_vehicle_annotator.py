@@ -21,6 +21,7 @@ import glob
 import sys
 import cv2
 import carla
+import fnmatch
 
 
 ### PART 0
@@ -451,11 +452,44 @@ def get_vehicle_class(vehicles, json_path=None):
 ### Use this function to save the rgb image (with and without bounding box) and bounding boxes data 
 def save_output(carla_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, old_vehicle_class=None, cc_rgb=carla.ColorConverter.Raw, path='', save_patched=False, add_data=None, out_format='pickle'):
     #carla_img.save_to_disk(path + 'out_rgb/%06d.png' % carla_img.frame, cc_rgb)
-
+    class_labels = ['Pedestrian','Truck','Bike','Motor','Car']
+    class_bps = [['walker.*'],
+                 ['vehicle.carlamotors.carlacola','vehicle.carlamotors.firetruck','vehicle.ford.ambulance','vehicle.gazelle.omafiets','vehicle.jeep.wrangler_rubicon','vehicle.mercedes.sprinter','vehicle.tesla.cybertruck','vehicle.volkswagen.t2','vehicle.volkswagen.t2_2021'],
+                 ['vehicle.bh.crossbike','vehicle.diamondback.century'],
+                 ['vehicle.harley-davidson.low_rider','vehicle.kawasaki.ninja','vehicle.vespa.zx125','vehicle.yamaha.yzf']
+                 ]
     out_dict = {}
     bboxes_list = [bbox.tolist() for bbox in bboxes]
     out_dict['bboxes'] = bboxes_list
-    filtered_actor_list = [actor.type_id for actor in vehicle_class]
+    filtered_actor_list = []
+    removed_actor_list = []
+    for actor in vehicle_class:
+        check = False
+        for i,bps in enumerate(class_bps):
+            for bp in bps:
+                if fnmatch.fnmatchcase(actor.type_id,bp):
+                    filtered_actor_list.append(class_labels[i])
+                    check = True
+                if check:
+                    break
+            if check :
+                break
+        if not check:
+            filtered_actor_list.append(class_labels[-1])
+    for actor in old_vehicle_class:
+        check = False
+        for i,bps in enumerate(class_bps):
+            for bp in bps:
+                if fnmatch.fnmatchcase(actor.type_id,bp):
+                    removed_actor_list.append(class_labels[i])
+                    check = True
+                if check:
+                    break
+            if check :
+                break
+        if not check:
+            removed_actor_list.append(class_labels[-1])
+
     removed_actor_list = [actor.type_id for actor in old_vehicle_class]
     if vehicle_class is not None:
         out_dict['vehicle_class'] = filtered_actor_list
