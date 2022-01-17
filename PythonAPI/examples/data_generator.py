@@ -1929,13 +1929,13 @@ def set_bp(blueprint, actor_id):
     #     print("No recommended values for 'speed' attribute")
     return blueprint
 
-def save_description(world, args, stored_path):
+def save_description(world, args, stored_path, weather):
     vehicles = world.world.get_actors().filter('vehicle.*')
     peds = world.world.get_actors().filter('walker.*')
     d = dict()
     d['num_actor'] = len(vehicles) + len(peds)
     d['num_vehicle'] = len(vehicles)
-    d['weather'] = str(args.weather)
+    d['weather'] = str(weather)
     d['noise_trajectory'] = args.noise_trajectory
     d['random_objects'] = args.random_objects
     d['random_actors'] = args.random_actors
@@ -2183,7 +2183,7 @@ def game_loop(args):
         world.imu_sensor.toggle_recording_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
         world.camera_manager.toggle_recording(stored_path)
-        save_description(world, args, stored_path)
+        save_description(world, args, stored_path, weather)
     finally:
 
         if (world and world.recording_enabled):
