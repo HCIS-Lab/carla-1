@@ -1941,7 +1941,7 @@ def save_description(world, args, stored_path, weather):
     d['random_actors'] = args.random_actors
     d['simulation_time'] = int(world.hud.simulation_time)
 
-    with open('%s/scenario_description.json' % (stored_path), 'w') as f:
+    with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
         json.dump(d, f)
 
 # ==============================================================================
