@@ -194,6 +194,7 @@ class World(object):
 
         self.speed_list = []
         self.control_list = []
+        self.transform_list = []
 
     def restart(self):
         self.player_max_speed = 1.589
@@ -299,21 +300,27 @@ class World(object):
     def tick(self, clock):
         self.hud.tick(self, clock)
 
-    def record_speed_control(self, frame):
+    def record_speed_control_transform(self, frame):
         v = self.player.get_velocity()
         c = self.player.get_control()
+        t = self.player.get_transform()
         self.speed_list.append([frame, v.x, v.y, v.z])
         self.control_list.append([frame, c.throttle, c.steer, c.brake, 
                                 c.hand_brake, c.manual_gear_shift, c.gear])
+        self.transform_list.append([t.location.x, t.location.y, t.location.z, 
+                                    t.rotation.pitch, t.rotation.yaw, t.rotation.roll])
 
-    def save_speed_control(self, path):
+    def save_speed_control_transform(self, path):
         speed = np.asarray(self.speed_list)
         control = np.asarray(self.control_list)
+        transform = np.asarray(self.transform_list)
 
         np.save('%s/speed' % (path), speed)
         np.save('%s/control' % (path), control)
+        np.save('%s/transform' % (path), transform)
         self.speed_list = []
         self.control_list = []
+        self.transform_list = []
 
     def render(self, display):
         self.camera_manager.render(display)
@@ -2134,7 +2141,7 @@ def game_loop(args):
                                 actor_transform_index[actor_id] += 1
 
                             if actor_id == 'player':
-                                world.record_speed_control(frame)
+                                world.record_speed_control_transform(frame)
 
                         elif 'pedestrian' in filter_dict[actor_id]:
                             if actor_transform_index[actor_id] == 1:
@@ -2179,7 +2186,7 @@ def game_loop(args):
             # if scenario_finished:
             #     break
         # end_frame = client.get_world().wait_for_tick().frame
-        world.save_speed_control(stored_path)
+        world.save_speed_control_transform(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
         world.camera_manager.toggle_recording(stored_path)
