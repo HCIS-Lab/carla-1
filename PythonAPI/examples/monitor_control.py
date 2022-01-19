@@ -1606,7 +1606,8 @@ def save_description(scenario_name, carla_map):
     actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
      'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
-    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 's': 'driving on a sidewalk'}
+    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 
+    'j': 'jay-walker', 'rl': 'running traffic light', 's': 'driving on a sidewalk', 'ss': 'stop sign'}
     interaction = {'0': 'None', '1': 'True', '2': 'False'}
     d = dict()
     topo = description[1].split('-')[0]
