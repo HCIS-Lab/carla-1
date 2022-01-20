@@ -1470,7 +1470,7 @@ class CameraManager(object):
                     continue
                 scenario_name += "_" + input_option
                 scenario_num = 0
-                if os.path.isdir(scenario_name):
+                if os.path.isdir('data_collection/'+ scenario_name):
                     scenario_num +=1
                     while(1):
                         if os.path.isdir(scenario_name + '_' + str(scenario_num)):
@@ -1478,7 +1478,6 @@ class CameraManager(object):
                         else:
                             scenario_name = scenario_name + '_' + str(scenario_num)
                             break
-
                 break
             if not restart:  
                 self.scenario_id = scenario_name
