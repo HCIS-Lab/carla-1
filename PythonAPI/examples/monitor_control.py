@@ -1469,6 +1469,16 @@ class CameraManager(object):
                     print("INVALID INPUT! RESTART NAMING SCENARIO.")
                     continue
                 scenario_name += "_" + input_option
+                scenario_num = 0
+                if os.path.isdir(scenario_name):
+                    scenario_name +=1
+                    while(1):
+                        if os.path.isdir(scenario_name + '_' + str(scenario_num)):
+                            scenario_name += 1
+                        else:
+                            scenario_name = scenario_name + '_' + str(scenario_num)
+                            break
+
                 break
             if not restart:  
                 self.scenario_id = scenario_name
@@ -1633,6 +1643,7 @@ def save_description(scenario_name, carla_map):
     d['interaction'] = interaction[description[6]]
     d['violation'] = violation[description[7]]
     d['map'] = carla_map
+
     with open('data_collection/%s/scenario_description.json' % (scenario_name), 'w') as f:
         json.dump(d, f)
 
