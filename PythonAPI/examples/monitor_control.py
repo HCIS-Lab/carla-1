@@ -1471,7 +1471,7 @@ class CameraManager(object):
                 scenario_name += "_" + input_option
                 scenario_num = 0
                 if os.path.isdir(scenario_name):
-                    scenario_name +=1
+                    scenario_num +=1
                     while(1):
                         if os.path.isdir(scenario_name + '_' + str(scenario_num)):
                             scenario_name += 1
