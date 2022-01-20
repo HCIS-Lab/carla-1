@@ -1389,9 +1389,8 @@ class CameraManager(object):
             scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
              'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing'}
             scenario_name_is_ego_first = {'0': 'None', '1':  'True', '2': 'False'}
-            scenario_name_violated_rule = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn',
-            'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 
-            's': 'driving on sidewalk', 'ss': 'stop sign'}
+            scenario_name_violated_rule = {'0': 'None','p': 'parking', 'j': 'jay-walker', 
+            'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
             restart = 0
             while True:
                 scenario_name = ""
@@ -1616,8 +1615,8 @@ def save_description(scenario_name, carla_map):
     actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
      'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
-    violation = {'0': 'None', 'r': 'right_turn', 'l': 'left_turn', 'p': 'parking', 
-    'j': 'jay-walker', 'rl': 'running traffic light', 's': 'driving on a sidewalk', 'ss': 'stop sign'}
+    violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 
+    's': 'driving on a sidewalk', 'ss': 'stop sign'}
     interaction = {'0': 'None', '1': 'True', '2': 'False'}
     d = dict()
     topo = description[1].split('-')[0]
