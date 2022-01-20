@@ -1738,6 +1738,7 @@ def game_loop(args):
                 actor_dict = {}
                 timestamp_list = []
                 traffic_light = dict()
+                actor_dict = extract_actor(actor_dict, world)
             else:
                 actor_dict = extract_actor(actor_dict, world)
 
