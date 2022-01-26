@@ -1782,9 +1782,10 @@ def auto_spawn_object(world,second):
         if new_obj is not None:
             new_obj.destroy()
 
-def collect_trajectory(get_world, agent, scenario_id, period_end):
-    filepath = "data_collection/"
-    filepath = filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv'
+def collect_trajectory(get_world, agent, scenario_id, period_end, path):
+    if not os.path.exists(path + '/trajectory/'):
+        os.mkdir(path + '/trajectory/')
+    filepath = path + '/trajectory/' + str(scenario_id) + '.csv'
     is_exist = os.path.isfile(filepath)
     f = open(filepath, 'a+')
     w = csv.writer(f)
@@ -1811,7 +1812,7 @@ def collect_trajectory(get_world, agent, scenario_id, period_end):
                         if agent_id == actor.id:
                             agent = actor
                         if agent.get_location().x == 0 and agent.get_location().y == 0:
-                            return true
+                            return True
                         if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
                             x = actor.get_location().x 
                             y = actor.get_location().y
@@ -1829,11 +1830,11 @@ def collect_trajectory(get_world, agent, scenario_id, period_end):
     except:
         print("trajectory_collection finished")
 
-def collect_topology(get_world, agent, scenario_id, t):
+def collect_topology(get_world, agent, scenario_id, t, path):
     filepath = "data_collection/"
     town_map = get_world.world.get_map()
-    if not os.path.exists('data_collection/%s/topology/'% (scenario_id)):
-        os.mkdir('data_collection/%s/topology/'% (scenario_id))
+    if not os.path.exists(path + '/topology/'):
+        os.mkdir(path + '/topology/')
     with open(filepath + scenario_id + '/scenario_description.json') as f:
         data = json.load(f)
     time_start = time.time()
@@ -1896,7 +1897,7 @@ def collect_topology(get_world, agent, scenario_id, t):
                     if data['traffic_light']:
                         is_junction = True
                     lane_feature_ls.append([halluc_lane_1, halluc_lane_2, is_traffic_control, is_junction, (i, j)])           
-                np.save('data_collection/' + str(scenario_id) + '/topology/' + str(scenario_id), np.array(lane_feature_ls))
+                np.save(path + '/topology/' + str(scenario_id), np.array(lane_feature_ls))
 
                 # Other objects can also be plot in the graph
                 #with open(filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv', newline='') as csvfile:
@@ -1907,7 +1908,7 @@ def collect_topology(get_world, agent, scenario_id, t):
                     plt.plot(xs, ys, '--', color='red')
                     x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
                     plt.plot(x_s, y_s, '--', color='blue')
-                plt.savefig('data_collection/' + str(scenario_id) + '/topology/topology.png')
+                plt.savefig(path + '/topology/topology.png')
                 break
         return False 
     except:
@@ -2103,10 +2104,10 @@ def game_loop(args):
             if iter_tick == iter_start + 1:
                 world.camera_manager.toggle_recording(stored_path) 
                 world.imu_sensor.toggle_recording_IMU(stored_path)
-                traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
+                traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period, stored_path))
                 traj_col.start()
 
-                topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period))
+                topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period, stored_path))
                 topo_col.start()
             elif iter_tick > iter_start:
                 # iterate actors
