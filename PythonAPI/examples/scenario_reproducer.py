@@ -11,6 +11,7 @@
 
 
 from __future__ import print_function
+from asyncore import write
 
 
 # ==============================================================================
@@ -1955,11 +1956,18 @@ def save_description(world, args, stored_path, weather):
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
+import cv2
+
+
+
+
 def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
     path = 'data_collection/'+str(args.scenario_id)
+    
+    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30,  (1280, 720) )
 
     filter_dict = {}
     try:
@@ -2185,7 +2193,11 @@ def game_loop(args):
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
-
+            
+            pygame.image.save(display, "screenshot.jpeg")
+            image = cv2.imread("screenshot.jpeg")
+            out.write(image)
+        
             # if scenario_finished:
             #     break
         # end_frame = client.get_world().wait_for_tick().frame
@@ -2194,8 +2206,11 @@ def game_loop(args):
         #world.collision_sensor.save_history(stored_path)
         # world.camera_manager.toggle_recording(stored_path)
         #save_description(world, args, stored_path, weather)
+        
     finally:
-
+        # to svae a top view video
+        out.release()
+        
         if (world and world.recording_enabled):
             client.stop_recorder()
 
