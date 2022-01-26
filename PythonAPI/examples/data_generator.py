@@ -1944,7 +1944,6 @@ def save_description(world, args, stored_path, weather):
     d['num_actor'] = len(vehicles) + len(peds)
     d['num_vehicle'] = len(vehicles)
     d['weather'] = str(weather)
-    d['noise_trajectory'] = args.noise_trajectory
     d['random_objects'] = args.random_objects
     d['random_actors'] = args.random_actors
     d['simulation_time'] = int(world.hud.simulation_time)
@@ -2088,7 +2087,6 @@ def game_loop(args):
         # topo_col.start()
 
         # dynamic scenario setting
-        scenario_name = scenario_name + 'noise_trajectory' if args.noise_trajectory else scenario_name
         stored_path = os.path.join(root, scenario_name)
         print(stored_path)
         if not os.path.exists(stored_path):
@@ -2129,13 +2127,7 @@ def game_loop(args):
                             # to avoid the actor slowing down for the dense location around
                             # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
                             if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2.0:
-                                if args.noise_trajectory:
-                                    # sampling location with larger distance
-                                    # actor_transform_index[actor_id] += max(1, int(7 + v//5.0))
-                                    actor_transform_index[actor_id] += 8
-                                else:
-                                    # actor_transform_index[actor_id] += max(1, int(7 + v//10.0))
-                                    actor_transform_index[actor_id] += 2
+                                actor_transform_index[actor_id] += 2
                             elif agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) > 6.0:
                                 actor_transform_index[actor_id] += 6
                             else:
@@ -2288,11 +2280,6 @@ def main():
         type=bool,
         default=False,
         help='enable random objects')
-    argparser.add_argument(
-        '-noise_trajectory',
-        type=bool,
-        default=False,
-        help='apply noise on trajectory')
 
     args = argparser.parse_args()
 
