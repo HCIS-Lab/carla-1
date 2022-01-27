@@ -1707,6 +1707,7 @@ def read_traffic_lights(path, lights):
     path = os.path.join(path, 'traffic_light')
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     light_dict = dict()
+    light_transform_dict = dict()
     for i, f in enumerate(files):
         l_id = int(f.split('.npy')[0])
         light_state = np.load(os.path.join(path, f), allow_pickle=True)
@@ -1724,31 +1725,115 @@ def read_traffic_lights(path, lights):
                 new_light_state.append(carla.TrafficLightState.Off)
             else:
                 new_light_state.append(carla.TrafficLightState.Unknown)
-        # if i == 0:
-        #     min_len = light.shape[0]-1
-        # elif light.shape[0]-1 < min_len:
-        #     min_len = light.shape[0] -1
-        # light_id  = int(f.split('.')[0])
-        # l_loc = carla.Location(light[0][0], light[0][1], light[0][2])
+
         min_d = 500.0
+        light = None
         for new_l in lights:
             if new_l.get_location().distance(l_loc) < min_d:
                 min_d = new_l.get_location().distance(l_loc)
                 new_id = new_l.id
+                light = new_l
         light_dict[new_id] = new_light_state
-        # light_dict[l_id] = light_state
-    # print(len(files))
-    # print(len(lights))
-    # print(len(light_dict))
+        light_transform_dict[light] = light.get_transform()
 
-    return light_dict
-    # return light_dict, min_len
+    return light_dict, light_transform_dict
 
-def set_light_state(lights, light_dict, index):
+def get_next_traffic_light(actor, world, light_transform_dict):
+
+    location = actor.get_transform().location
+    waypoint = world.get_map().get_waypoint(location)
+    # Create list of all waypoints until next intersection
+    list_of_waypoints = []
+    while waypoint and not waypoint.is_intersection:
+        list_of_waypoints.append(waypoint)
+        waypoint = waypoint.next(2.0)[0]
+
+    # If the list is empty, the actor is in an intersection
+    if not list_of_waypoints:
+        return None
+
+    relevant_traffic_light = None
+    distance_to_relevant_traffic_light = float("inf")
+
+    for traffic_light, transform in light_transform_dict.items():
+        if hasattr(traffic_light, 'trigger_volume'):
+            tl_t = light_transform_dict[traffic_light]
+            transformed_tv = tl_t.transform(traffic_light.trigger_volume.location)
+            distance = carla.Location(transformed_tv).distance(list_of_waypoints[-1].transform.location)
+
+            if distance < distance_to_relevant_traffic_light:
+                relevant_traffic_light = traffic_light
+                distance_to_relevant_traffic_light = distance
+
+    return relevant_traffic_light
+
+def get_trafficlight_trigger_location(traffic_light):    # pylint: disable=invalid-name
+    """
+    Calculates the yaw of the waypoint that represents the trigger volume of the traffic light
+    """
+    def rotate_point(point, angle):
+        """
+        rotate a given point by a given angle
+        """
+        x_ = math.cos(math.radians(angle)) * point.x - math.sin(math.radians(angle)) * point.y
+        y_ = math.sin(math.radians(angle)) * point.x - math.cos(math.radians(angle)) * point.y
+
+        return carla.Vector3D(x_, y_, point.z)
+
+    base_transform = traffic_light.get_transform()
+    base_rot = base_transform.rotation.yaw
+    area_loc = base_transform.transform(traffic_light.trigger_volume.location)
+    area_ext = traffic_light.trigger_volume.extent
+
+    point = rotate_point(carla.Vector3D(0, 0, area_ext.z), base_rot)
+    point_location = area_loc + carla.Location(x=point.x, y=point.y)
+
+    return carla.Location(point_location.x, point_location.y, point_location.z)
+
+def annotate_trafficlight_in_group(ref, lights, world):
+    """
+    Get dictionary with traffic light group info for a given traffic light
+    """
+    dict_annotations = {'ref': [], 'opposite': [], 'left': [], 'right': []}
+
+    # Get the waypoints
+    ref_location = get_trafficlight_trigger_location(ref)
+    ref_waypoint = world.get_map().get_waypoint(ref_location)
+    ref_yaw = ref_waypoint.transform.rotation.yaw
+
+
+    for target_tl in lights:
+        if ref.id == target_tl.id:
+            dict_annotations['ref'].append(target_tl)
+        else:
+            # Get the angle between yaws
+            target_location = get_trafficlight_trigger_location(target_tl)
+            target_waypoint = world.get_map().get_waypoint(target_location)
+            target_yaw = target_waypoint.transform.rotation.yaw
+
+            diff = (target_yaw - ref_yaw) % 360
+
+            if diff > 330:
+                continue
+            elif diff > 225:
+                dict_annotations['right'].append(target_tl)
+            elif diff > 135.0:
+                dict_annotations['opposite'].append(target_tl)
+            elif diff > 30:
+                dict_annotations['left'].append(target_tl)
+
+    return dict_annotations
+
+
+
+def set_light_state(lights, light_dict, index, annotate):
     for l in lights:
         if l.id in light_dict:
             index = index if len(light_dict[l.id]) > index else -1
-            state = light_dict[l.id][index]
+            if l in annotate['opposite']:
+                state = light_dict[annotate['ref'][0].id][index]
+            else:
+                state = light_dict[l.id][index]
             l.set_state(state)
 
 def control_with_trasform_controller(controller, transform):
@@ -2013,7 +2098,7 @@ def game_loop(args):
         for l in actors:
             if 5 in l.semantic_tags and 18 in l.semantic_tags:
                 lights.append(l)
-        light_dict = read_traffic_lights(path, lights)
+        light_dict, light_transform_dict = read_traffic_lights(path, lights)
 
         clock = pygame.time.Clock()
 
@@ -2104,9 +2189,10 @@ def game_loop(args):
                 world.imu_sensor.toggle_recording_IMU(stored_path)
                 traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period, stored_path))
                 traj_col.start()
-
                 topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period, stored_path))
                 topo_col.start()
+                ref_light = get_next_traffic_light(world.player, world.world, light_transform_dict)
+                annotate = annotate_trafficlight_in_group(ref_light, lights, world.world)
             elif iter_tick > iter_start:
                 # iterate actors
                 for actor_id, _ in filter_dict.items():
@@ -2114,7 +2200,7 @@ def game_loop(args):
 
                     # reproduce traffic light state
                     if actor_id == 'player':
-                        set_light_state(lights, light_dict, actor_transform_index[actor_id])
+                        set_light_state(lights, light_dict, actor_transform_index[actor_id], annotate)
                     if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                         if 'vehicle' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
