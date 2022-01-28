@@ -1408,7 +1408,7 @@ class CameraManager(object):
             t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 1, path, 'depth_back_right'))
             t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 1, path, 'depth_back_left'))
 
-#             t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
+            t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
 
             t_top.start()
             t_front.start()
@@ -1454,7 +1454,7 @@ class CameraManager(object):
 
             # self.top_iseg = []
             self.top_seg = []
-            self.front_seg = []
+            # self.front_seg = []
             self.right_seg = []
             self.left_seg = []
             self.back_seg = []
@@ -1469,8 +1469,9 @@ class CameraManager(object):
             self.back_left_depth = []
 
             t_depth_front.join()
-            self.save_bbox([self.bbox,self.img_dict,self.snap_dict],path)
-
+            self.save_bbox([self.bbox,self.img_dict,self.snap_dict],path,self.front_seg)
+            
+            self.front_seg = []
             self.bbox = []
             self.img_dict = {}
             self.snap_dict = {}
@@ -1511,10 +1512,14 @@ class CameraManager(object):
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
-    def save_bbox(self,input_list,path):
+    def save_bbox(self,input_list,path,seg_list):
         VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
         VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
         VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
+        # change seg to dict, key: frame_num
+        seg_dict = {}
+        for seg_img in seg_list:
+            seg_dict[seg_img.frame] = seg_img
         bbox,img_dict,snap_dict = input_list
         for index,item in enumerate(bbox):
             depth_img = item
@@ -1525,7 +1530,7 @@ class CameraManager(object):
             rgb_img = img_dict[depth_img.frame]
             depth_meter = cva.extract_depth(depth_img)
             filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
-            cva.save_output(rgb_img, filtered['bbox'], path,filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
+            cva.save_output(rgb_img, seg_dict[depth_img.frame], filtered['bbox'], path,filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
     
 
     def render(self, display):
