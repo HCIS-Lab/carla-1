@@ -450,7 +450,7 @@ def get_vehicle_class(vehicles, json_path=None):
 #######################################################
 
 ### Use this function to save the rgb image (with and without bounding box) and bounding boxes data 
-def save_output(carla_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, old_vehicle_class=None, cc_rgb=carla.ColorConverter.Raw, path='', save_patched=False, add_data=None, out_format='pickle'):
+def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, old_vehicle_class=None, cc_rgb=carla.ColorConverter.Raw, path='', save_patched=False, add_data=None, out_format='pickle'):
     #carla_img.save_to_disk(path + 'out_rgb/%06d.png' % carla_img.frame, cc_rgb)
     class_labels = ['Pedestrian','Truck','Bike','Motor','Car']
     class_bps = [['walker.*'],
@@ -458,11 +458,20 @@ def save_output(carla_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, 
                  ['vehicle.bh.crossbike','vehicle.diamondback.century'],
                  ['vehicle.harley-davidson.low_rider','vehicle.kawasaki.ninja','vehicle.vespa.zx125','vehicle.yamaha.yzf']
                  ]
+    class_seg = {'Pedestrian':(220,20,60),'vehicles':(0,0,142)}
     out_dict = {}
-    bboxes_list = [bbox.tolist() for bbox in bboxes]
-    out_dict['bboxes'] = bboxes_list
     filtered_actor_list = []
     removed_actor_list = []
+    seg_img.convert(carla.ColorConverter.CityScapesPalette)
+    seg_img_bgra = np.array(seg_img.raw_data).reshape((seg_img.height,seg_img.width,4))
+    seg_img_rgb = np.zeros((seg_img.height,seg_img.width,3))
+
+    seg_img_rgb[:,:,0] = seg_img_bgra[:,:,2]
+    seg_img_rgb[:,:,1] = seg_img_bgra[:,:,1]
+    seg_img_rgb[:,:,2] = seg_img_bgra[:,:,0]
+    seg_image = np.uint8(seg_img_rgb)
+    # seg_image = Image.fromarray(seg_img_rgb, 'RGB')
+
     for actor in vehicle_class:
         check = False
         for i,bps in enumerate(class_bps):
@@ -489,15 +498,61 @@ def save_output(carla_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, 
                 break
         if not check:
             removed_actor_list.append(class_labels[-1])
-
-    removed_actor_list = [actor.type_id for actor in old_vehicle_class]
-    if vehicle_class is not None:
-        out_dict['vehicle_class'] = filtered_actor_list
-    if old_bboxes is not None:
-        old_bboxes_list = [bbox.tolist() for bbox in old_bboxes]
-        out_dict['removed_bboxes'] = old_bboxes_list
-    if old_vehicle_class is not None:
-        out_dict['removed_vehicle_class'] = removed_actor_list
+    filtered_actor_list += removed_actor_list
+    bboxes_list = [bbox.tolist() for bbox in bboxes]
+    # out_dict['bboxes'] = bboxes_list
+    old_bboxes_list = [bbox.tolist() for bbox in old_bboxes]
+    bboxes_list += old_bboxes_list
+    true_bbox = []
+    false_bbox = []
+    true_class = []
+    false_class = []
+    with_ped = ['Bike','Motor']
+    for i,bbox in enumerate(bboxes_list):
+        # check for bike or motor
+        flag = False
+        try:
+            color = class_seg[filtered_actor_list[i]]
+        except:
+            color = class_seg['vehicles']
+        threshold = 0.38
+        if filtered_actor_list[i] in with_ped:
+            flag = True
+            # threshold = 0.2
+        x,y = bbox[0]
+        x = max(int(x),0)
+        y = max(int(y),0)
+        w,h = bbox[1]
+        w = min(int(w),seg_img.width)
+        h = min(int(h),seg_img.height)
+        bbox = [[x,y],[w,h]]
+        w -= x
+        h -= y
+        score = 0.0
+        for yy in range(y,y+h):
+            for xx in range(x,x+w):
+                if flag:
+                    if tuple(seg_image[yy][xx]) == color or tuple(seg_image[yy][xx]) == (220,20,60):
+                        score += 1
+                else:
+                    if tuple(seg_image[yy][xx]) == color:
+                        score += 1
+        # print(color)
+        score = score/(w*h)
+        # if flag:
+        #     print(score)
+        if score >= threshold:
+            true_bbox.append(bbox)
+            true_class.append(filtered_actor_list[i])
+        else:
+            false_bbox.append(bbox)
+            false_class.append(filtered_actor_list[i])
+    out_dict['bboxes'] = true_bbox
+    out_dict['vehicle_class'] = true_class
+    if len(false_bbox)>0:
+        out_dict['removed_bboxes'] = false_bbox
+    if len(false_class)>0:
+        out_dict['removed_vehicle_class'] = false_class
     if add_data is not None:
         out_dict['others'] = add_data
     if out_format=='json':
@@ -524,20 +579,24 @@ def save_output(carla_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, 
         img_rgb = np.uint8(img_rgb)
         image = Image.fromarray(img_rgb, 'RGB')
         img_draw = ImageDraw.Draw(image)  
-        for crop in bboxes:
-            u1 = int(crop[0,0])
-            v1 = int(crop[0,1])
-            u2 = int(crop[1,0])
-            v2 = int(crop[1,1])
-            crop_bbox = [(u1,v1),(u2,v2)]
-            img_draw.rectangle(crop_bbox, outline ="green")
-        for crop in old_bboxes:
-            u1 = int(crop[0,0])
-            v1 = int(crop[0,1])
-            u2 = int(crop[1,0])
-            v2 = int(crop[1,1])
-            crop_bbox = [(u1,v1),(u2,v2)]
-            img_draw.rectangle(crop_bbox, outline ="red")
+        if len(true_bbox)>0:
+            for crop in true_bbox:
+                crop = np.array(crop)
+                u1 = int(crop[0,0])
+                v1 = int(crop[0,1])
+                u2 = int(crop[1,0])
+                v2 = int(crop[1,1])
+                crop_bbox = [(u1,v1),(u2,v2)]
+                img_draw.rectangle(crop_bbox, outline ="green")
+        if len(false_bbox)>0:
+            for crop in false_bbox:
+                crop = np.array(crop)
+                u1 = int(crop[0,0])
+                v1 = int(crop[0,1])
+                u2 = int(crop[1,0])
+                v2 = int(crop[1,1])
+                crop_bbox = [(u1,v1),(u2,v2)]
+                img_draw.rectangle(crop_bbox, outline ="red")
         
         filename = path + path_2+ '/out_rgb_bbox/%06d.png' % carla_img.frame
         if not os.path.exists(os.path.dirname(filename)):
