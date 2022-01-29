@@ -28,23 +28,23 @@ function random_range()
 a=$(random_range 0 6)
 b=$(random_range 7 13)
 c=$(random_range 14 20)
-w=(weather[$a] weather[$b] weather[$c])
+# w=(weather[$a] weather[$b] weather[$c])
+w=($a $b $c)
 echo $w[*]
-# echo (${weather[$(random_range 0 20)]})
-# ../../CarlaUE4.sh &
-# sleep 15
-# for((i=0; i<${#weather[@]}; i++))
-# do
-# 		for((k=0; k<${#random_actor[@]}; k++))
-# 		do
-#     		python ../util/config.py --reload
-#     		sleep 8
-#             echo ${i}
-#             echo ${k}
-#             time python data_generator.py -map ${map[${DES[0]}]} -scenario_id ${name[0]} -weather ${weather[i]} -random_actors ${random_actor[k]}
-#             sleep 3
-# 		done
-# done
+../../CarlaUE4.sh &
+sleep 15
+for((i=0; i<3; i++))
+do
+		for((k=0; k<${#random_actor[@]}; k++))
+		do
+    		python ../util/config.py --reload
+    		sleep 8
+            echo ${i}
+            echo ${k}
+            time python data_generator.py -map ${map[${DES[0]}]} -scenario_id ${name[0]} -weather ${weather[$w[$i]]} -random_actors ${random_actor[k]}
+            sleep 3
+		done
+done
 
 
 
