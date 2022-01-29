@@ -1480,7 +1480,7 @@ class CameraManager(object):
 
     def save_img(self, img_list, sensor, path, view='top'):
         for img in img_list:
-            if img.frame%1 == 0:
+            if img.frame%100 == 0:
                 if 'seg' in view:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
                 elif 'depth' in view:
@@ -1577,7 +1577,7 @@ class CameraManager(object):
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        if self.recording and image.frame%1 == 0:
+        if self.recording and image.frame%100 == 0:
             if view == 'top':
                 self.top_img.append(image)
             elif view == 'front':
@@ -1695,6 +1695,17 @@ def read_transform(path='control.npy'):
                                                   Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
 
     return transform_list
+
+def read_ped_control(path='control.npy'):
+    """ param:
+
+    """
+    control_npy = np.load(path)
+    control_list = []
+    for i, control in enumerate(control_npy):
+        control_list.append(carla.WalkerControl(carla.Vector3D(x=control[0], y=control[1], z=control[2]+1),
+                                              float(control[3]), bool(control[4])))
+    return control_list
 
 
 def read_velocity(path='velocity.npy'):
@@ -1845,32 +1856,32 @@ def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
     return control_signal
 
-def auto_spawn_object(world,second):
-    this_map=world.world.get_map()
-    new_obj=None
-    try:
-        bp_list=world.world.get_blueprint_library().filter('static')
-        while True:
-            time.sleep(second)
-            if new_obj is not None:
-                new_obj.destroy()
-                new_obj=None
-            if world.player.is_at_traffic_light():
-                continue
-            waypoint = this_map.get_waypoint(world.player.get_location(),lane_type=carla.LaneType.Shoulder)
-            if waypoint is None:
-                continue
-            waypoint_list=waypoint.next(15)
-            if waypoint_list:
-                waypoint = waypoint_list[0]
+# def auto_spawn_object(world,second):
+#     this_map=world.world.get_map()
+#     new_obj=None
+#     try:
+#         bp_list=world.world.get_blueprint_library().filter('static')
+#         while True:
+#             time.sleep(second)
+#             if new_obj is not None:
+#                 new_obj.destroy()
+#                 new_obj=None
+#             if world.player.is_at_traffic_light():
+#                 continue
+#             waypoint = this_map.get_waypoint(world.player.get_location(),lane_type=carla.LaneType.Shoulder)
+#             if waypoint is None:
+#                 continue
+#             waypoint_list=waypoint.next(15)
+#             if waypoint_list:
+#                 waypoint = waypoint_list[0]
 
-            obj_bp=random.choice(bp_list)
-            new_obj=world.world.try_spawn_actor(obj_bp, waypoint.transform)#carla.Transform(new_obj_location, vehicle_rotation))
-            if new_obj!=None:
-                print("Spawn object.")
-    finally:
-        if new_obj is not None:
-            new_obj.destroy()
+#             obj_bp=random.choice(bp_list)
+#             new_obj=world.world.try_spawn_actor(obj_bp, waypoint.transform)#carla.Transform(new_obj_location, vehicle_rotation))
+#             if new_obj!=None:
+#                 print("Spawn object.")
+    # finally:
+    #     if new_obj is not None:
+    #         new_obj.destroy()
 
 def collect_trajectory(get_world, agent, scenario_id, period_end, path):
     if not os.path.exists(path + '/trajectory/'):
@@ -2034,7 +2045,7 @@ def save_description(world, args, stored_path, weather):
     d['num_actor'] = len(vehicles) + len(peds)
     d['num_vehicle'] = len(vehicles)
     d['weather'] = str(weather)
-    d['random_objects'] = args.random_objects
+    # d['random_objects'] = args.random_objects
     d['random_actors'] = args.random_actors
     d['simulation_time'] = int(world.hud.simulation_time)
 
@@ -2066,9 +2077,12 @@ def game_loop(args):
     # load files for scenario reproducing
     transform_dict = {}
     velocity_dict = {}
-    for actor_id, _ in filter_dict.items():
+    ped_control_dict = {}
+    for actor_id, filter in filter_dict.items():
         transform_dict[actor_id] = read_transform(os.path.join(path, 'transform', actor_id + '.npy'))
         velocity_dict[actor_id] = read_velocity(os.path.join(path, 'velocity', actor_id + '.npy'))
+        if 'pedestrian' in filter:
+            ped_control_dict[actor_id] = read_ped_control(os.path.join(path, 'control', actor_id + '.npy')) 
     num_files = len(filter_dict)
 
     try:
@@ -2130,11 +2144,11 @@ def game_loop(args):
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-            elif 'pedestrian' in bp:
-                controller_dict[actor_id] = client.get_world().spawn_actor(
-                                        blueprint_library.find('controller.ai.walker'),
-                                        carla.Transform(), 
-                                        attach_to=agents_dict[actor_id])
+            # elif 'pedestrian' in bp:
+            #     controller_dict[actor_id] = client.get_world().spawn_actor(
+            #                             blueprint_library.find('controller.ai.walker'),
+            #                             carla.Transform(), 
+            #                             attach_to=agents_dict[actor_id])
             
             actor_transform_index[actor_id] = 1
             finish[actor_id] = False
@@ -2146,10 +2160,10 @@ def game_loop(args):
         # dynamic scenario setting
         root = os.path.join('data_collection', args.scenario_id) 
         scenario_name = str(weather) + '_'
-        if args.random_objects:
-            t = threading.Thread(target = auto_spawn_object,args=(world, 5))
-            t.start()
-            scenario_name = scenario_name + 'random_objects_'
+        # if args.random_objects:
+        #     t = threading.Thread(target = auto_spawn_object,args=(world, 5))
+        #     t.start()
+        #     scenario_name = scenario_name + 'random_objects_'
 
         if args.random_actors != 'None':
             if args.random_actors == 'low':
@@ -2170,11 +2184,6 @@ def game_loop(args):
                 moment.append(s[1])
         period = float(moment[-1]) - float(moment[0])
         half_period = period / 2
-        # traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period))
-        # traj_col.start()
-
-        # topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period))
-        # topo_col.start()
 
         # dynamic scenario setting
         stored_path = os.path.join(root, scenario_name)
@@ -2228,19 +2237,8 @@ def game_loop(args):
                                 world.record_speed_control_transform(frame)
 
                         elif 'pedestrian' in filter_dict[actor_id]:
-                            if actor_transform_index[actor_id] == 1:
-                                try:
-                                    controller_dict[actor_id].start()
-                                except:
-                                    print('sth wrong w/ walker_start')
-
-                            controller_dict[actor_id].go_to_location(transform_dict[actor_id][actor_transform_index[actor_id]].location)
-                            # controller_dict[actor_id].set_max_speed(velocity_dict[actor_id][actor_transform_index[actor_id]])
-                            controller_dict[actor_id].set_max_speed(1.4)
-                            if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 1.5:
-                                actor_transform_index[actor_id] += 10
-                            else:
-                                actor_transform_index[actor_id] += 7
+                            agents_dict[actor_id].apply_control(ped_control_dict[actor_id][actor_transform_index[actor_id]])
+                            actor_transform_index[actor_id] += 2
                     else:
                         # when the client has arrived the last recorded location
                         # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
@@ -2269,7 +2267,7 @@ def game_loop(args):
 
             # if scenario_finished:
             #     break
-        # end_frame = client.get_world().wait_for_tick().frame
+
         world.save_speed_control_transform(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)
         world.collision_sensor.save_history(stored_path)
@@ -2347,13 +2345,9 @@ def main():
         '-weather',
         default='ClearNoon',
         type=str,
-        choices=['ClearNoon', 'CloudyNoon',
-                'WetNoon', 'WetCloudyNoon',
-                'MidRainyNoon', 'HardRainNoon'
-                'SoftRainNoon', 'ClearSunset',
-                'CloudySunset','WetSunset',
-                'WetCloudySunset', 'MidRainSunset',
-                'HardRainSunset', 'SoftRainSunset'],
+        choices=['ClearNoon', 'CloudyNoon', 'WetNoon', 'WetCloudyNoon', 'MidRainyNoon', 'HardRainNoon', 'SoftRainNoon',
+    'ClearSunset', 'CloudySunset', 'WetSunset', 'WetCloudySunset', 'MidRainSunset', 'HardRainSunset', 'SoftRainSunset',
+    'ClearNight', 'CloudyNight', 'WetNight', 'WetCloudyNight', 'MidRainNight', 'HardRainNight', 'SoftRainNight'],
         help='weather name')
     argparser.add_argument(
         '-map',
@@ -2366,11 +2360,11 @@ def main():
         default='None',
         choices=['None', 'low', 'mid', 'high'],
         help='enable roaming actors')
-    argparser.add_argument(
-        '-random_objects',
-        type=bool,
-        default=False,
-        help='enable random objects')
+    # argparser.add_argument(
+    #     '-random_objects',
+    #     type=bool,
+    #     default=False,
+    #     help='enable random objects')
 
     args = argparser.parse_args()
 

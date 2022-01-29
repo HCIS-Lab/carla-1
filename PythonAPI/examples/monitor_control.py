@@ -1547,9 +1547,21 @@ def record_transform(actor_dict, world):
         np_transform[3:6] = [transform.rotation.pitch, transform.rotation.yaw, transform.rotation.roll]
         if actor.id == world.player.id:
             actor_dict['player']['transform'].append(np_transform)
-        elif 'vehicle' in str(actor.type_id) or 'walker' in str(actor.type_id):
+        elif 'vehicle' in str(actor.type_id) or 'pedestrian' in str(actor.type_id):
             actor_dict[str(actor.id)]['transform'].append(np_transform)
     return actor_dict
+
+def record_ped_control(control_dict, world):
+    actor_list = world.world.get_actors()
+    for actor in actor_list:
+        if 'pedestrian' in actor.type_id:
+            control = actor.get_control()
+            np_control = np.zeros(5)
+            np_control[0:5] = [control.direction.x, control.direction.y, control.direction.z,
+                                control.speed, control.jump]
+
+            control_dict[str(actor.id)]['control'].append(np_control)
+    return control_dict
     
 def record_velocity(actor_dict, world):
     actor_list = world.world.get_actors()
@@ -1563,7 +1575,7 @@ def record_velocity(actor_dict, world):
             actor_dict[str(actor.id)]['velocity'].append(np_velocity)
     return actor_dict
 
-def extract_actor(actor_dict, world):
+def extract_actor(actor_dict, control_dict, world):
     actor_list = world.world.get_actors()
     # print(actor_dict)
     for actor in actor_list:
@@ -1572,19 +1584,23 @@ def extract_actor(actor_dict, world):
             actor_dict['player'] = {'filter': str(world.player.type_id), 
                                     'transform': [],
                                     'velocity': []}
-        elif 'vehicle' in str(actor.type_id) or 'walker' in str(actor.type_id):
+        elif 'vehicle' in str(actor.type_id) or 'pedestrian' in str(actor.type_id):
             actor_dict[str(actor.id)] = {'filter': actor.type_id, 
                                     'transform': [],
                                     'velocity': []}
-    return actor_dict
+        if 'pedestrian' in str(actor.type_id):
+            control_dict[str(actor.id)] = {'control': []}
+    return actor_dict, control_dict
 
-def save_actor(actor_dict, scenario_name, timestamp_list):
+def save_actor(actor_dict, control_dict, scenario_name, timestamp_list):
     if not os.path.exists('data_collection/'):
         os.mkdir('data_collection/')
     if not os.path.exists('data_collection/%s/' % (scenario_name)):
         os.mkdir('data_collection/%s/' % (scenario_name))
     if not os.path.exists('data_collection/%s/transform/'% (scenario_name)):
         os.mkdir('data_collection/%s/transform/'% (scenario_name))
+    if not os.path.exists('data_collection/%s/control/'% (scenario_name)):
+        os.mkdir('data_collection/%s/control'% (scenario_name))
     if not os.path.exists('data_collection/%s/velocity/'% (scenario_name)):
         os.mkdir('data_collection/%s/velocity/'% (scenario_name))
     if not os.path.exists('data_collection/%s/filter/'% (scenario_name)):
@@ -1593,7 +1609,6 @@ def save_actor(actor_dict, scenario_name, timestamp_list):
         os.mkdir('data_collection/%s/timestamp/'% (scenario_name))
 
     for actor_id, data in actor_dict.items():
-
         np.save('data_collection/%s/transform/%s' % (scenario_name, actor_id), np.array(data['transform']))
         np.save('data_collection/%s/velocity/%s' % (scenario_name, actor_id), np.array(data['velocity']))   # velocity list np array saved as a .npy file
         with open("data_collection/%s/filter/%s.txt" % (scenario_name, actor_id), "w") as text_file:
@@ -1602,12 +1617,16 @@ def save_actor(actor_dict, scenario_name, timestamp_list):
         data['velocity'] = []
         data['filter'] = []
 
+    for actor_id, data in control_dict.items():
+         np.save('data_collection/%s/control/%s' % (scenario_name, actor_id), np.array(data['control']))
+         data['control'] = []
+
     time_file = open("data_collection/%s/timestamp.txt"%(scenario_name), "w")
     for time in timestamp_list:
         time_file.write(str(time[0]) + ',' + str(time[1]) + "\n")
     time_file.close()
     timestamp_list = []
-    return actor_dict, timestamp_list
+    return actor_dict, control_dict, timestamp_list
 
 def save_description(scenario_name, carla_map):
     description = scenario_name.split('_')
@@ -1699,6 +1718,7 @@ def game_loop(args):
                 lights.append(l)
         print(lights)
         actor_dict = {}
+        control_dict = {}
         timestamp_list = []
         traffic_light = dict()
         clock = pygame.time.Clock()
@@ -1714,6 +1734,7 @@ def game_loop(args):
                 timestamp_list.append([client.get_world().wait_for_tick().frame, time.time()])
                 actor_dict = record_transform(actor_dict, world)
                 actor_dict = record_velocity(actor_dict, world)
+                control_dict = record_ped_control(control_dict, world)
                 traffic_light = record_traffic_lights(traffic_light, lights)
             # stop recording
             elif code == 4:
@@ -1722,13 +1743,14 @@ def game_loop(args):
                 end_time = timestamp_list[-1]
                 print('start time: ' + str(start_time))
                 print('end time: ' + str(end_time))
-                actor_dict, timestamp_list = save_actor(actor_dict, scenario_name, timestamp_list)
+                actor_dict, control_dict, timestamp_list = save_actor(actor_dict, control_dict, scenario_name, timestamp_list)
                 save_traffic_lights(traffic_light, scenario_name)
                 save_description(scenario_name, args.map)
                 controller.r = 2
 
                 print('has finished saving')
                 actor_dict = {}
+                control_dict = {}
                 timestamp_list = []
                 traffic_light = dict()
             # not recording
@@ -1736,9 +1758,9 @@ def game_loop(args):
                 actor_dict = {}
                 timestamp_list = []
                 traffic_light = dict()
-                actor_dict = extract_actor(actor_dict, world)
+                actor_dict, control_dict = extract_actor(actor_dict, control_dict, world)
             else:
-                actor_dict = extract_actor(actor_dict, world)
+                actor_dict, control_dict = extract_actor(actor_dict, control_dict, world)
 
             world.tick(clock)
             world.render(display)
