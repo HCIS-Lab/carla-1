@@ -1480,7 +1480,7 @@ class CameraManager(object):
 
     def save_img(self, img_list, sensor, path, view='top'):
         for img in img_list:
-            if img.frame%100 == 0:
+            if img.frame%1 == 0:
                 if 'seg' in view:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
                 elif 'depth' in view:
@@ -1577,7 +1577,7 @@ class CameraManager(object):
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-        if self.recording and image.frame%100 == 0:
+        if self.recording and image.frame%1 == 0:
             if view == 'top':
                 self.top_img.append(image)
             elif view == 'front':
@@ -2167,11 +2167,11 @@ def game_loop(args):
 
         if args.random_actors != 'None':
             if args.random_actors == 'low':
-                spawn_actor_nearby(distance=100, vehicles=5, pedestrian=2, transform_dict=transform_dict)
+                spawn_actor_nearby(distance=100, v_ratio=0.3, pedestrian=20, transform_dict=transform_dict)
             elif args.random_actors == 'mid':
-                spawn_actor_nearby(distance=100, vehicles=10, pedestrian=5, transform_dict=transform_dict)
+                spawn_actor_nearby(distance=100, v_ratio=0.6, pedestrian=40, transform_dict=transform_dict)
             elif args.random_actors == 'high':
-                spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=transform_dict)
+                spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=80, transform_dict=transform_dict)
             scenario_name = scenario_name + args.random_actors + '_'
         
         # recording traj

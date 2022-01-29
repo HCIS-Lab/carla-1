@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/carla/carla/PythonAPI/carla/dist/carla-0.9.11-py3.6-linux-x86_64.egg')
+sys.path.append('/home/carla/carla/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg')
 sys.path.append('/home/carla/carla/PythonAPI')
 sys.path.append('/home/carla/carla/PythonAPI/carla/')
 sys.path.append('/home/carla/carla/PythonAPI/carla/agents')
@@ -19,7 +19,7 @@ from agents.navigation.behavior_agent import BehaviorAgent
 
 client = carla.Client('localhost', 2000)
 # client.set_timeout(5.0)
-def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict={}): 
+def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
     # get world and spawn points
     world = client.get_world()
     map = world.get_map()
@@ -119,8 +119,8 @@ def spawn_actor_nearby(distance=100, vehicles=20, pedestrian=10, transform_dict=
 
     batch = []
 
-    vehicle = min(math.ceil(len(waypoint_list) * 0.8), vehicles) if len(waypoint_list) >= 20 else len(waypoint_list)
-    
+    # vehicle = min(math.ceil(len(waypoint_list) * 0.8), vehicles) if len(waypoint_list) >= 20 else len(waypoint_list)
+    vehicle = math.ceil(len(waypoint_list) * v_ratio)
     for n, transform in enumerate(waypoint_list):
         if n >= vehicle:
             break

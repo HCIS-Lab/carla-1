@@ -11,7 +11,7 @@ weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'Hard
 	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
 	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainNight' 'HardRainNight' 'SoftRainNight')
 random_actor=('low' 'mid' 'high')
-name=('3_t5-5_1_p_r_r_r')
+name=('5_i8_1_0_0_f_1_0')
 
 IFS='_' read -ra DES <<< "$name"
 
