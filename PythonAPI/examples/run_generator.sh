@@ -9,7 +9,7 @@ map=('None' 'Town01' 'Town02' 'Town03' 'Town04' 'Town05')
 
 weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'SoftRainNoon'
 	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
-	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainyNight' 'HardRainNight' 'SoftRainNight')
+	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainNight' 'HardRainNight' 'SoftRainNight')
 random_actor=('low' 'mid' 'high')
 name=('3_t5-5_1_p_r_r_r')
 
@@ -27,7 +27,7 @@ function random_range()
 }
 a=$(random_range 0 6)
 b=$(random_range 7 13)
-c==$(random_range 14 20)
+c=$(random_range 14 20)
 w=(weather[$a] weather[$b] weather[$c])
 echo $w[*]
 # echo (${weather[$(random_range 0 20)]})
