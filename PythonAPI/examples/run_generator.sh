@@ -33,11 +33,6 @@ folder=`ls -d ./data_collection/*`
 sleep 15
 for scenario_name in $folder
 do
-	a=$(random_range 0 6)
-	b=$(random_range 7 13)
-	c=$(random_range 14 20)
-	# w=(weather[$a] weather[$b] weather[$c])
-	w=($a $b $c)
 	for((i=0; i<3; i++))
 	do
 			for((j=0; j<${#random_actor[@]}; j++))
@@ -49,12 +44,17 @@ do
 						echo "$SERVICE is  stopped"
 						../../CarlaUE4.sh & sleep 15	
 					fi
+					a=$(random_range 0 6)
+					b=$(random_range 7 13)
+					c=$(random_range 14 20)
+					w=($a $b $c)
+
 					python ../util/config.py --reload
 					sleep 8
 					echo ${i}
 					echo ${k}
 					echo ${scenario_name:18}
-					time python data_generator.py -map ${map[${DES[0]}]} -scenario_id ${scenario_name:18}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
+					time python data_generator.py -map Town05 -scenario_id ${scenario_name:18}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
 					sleep 3
 			done
 	done
