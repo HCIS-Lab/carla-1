@@ -11,7 +11,7 @@ weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'Hard
 	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
 	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainNight' 'HardRainNight' 'SoftRainNight')
 random_actor=('low' 'mid' 'high')
-name=('5_i8_1_0_0_f_1_0')
+name=('3_t3-8_1_c_u_f_2_0')
 
 IFS='_' read -ra DES <<< "$name"
 
@@ -25,27 +25,41 @@ function random_range()
     range=$(($2 - $1))
     echo $(($low+$RANDOM % $range))
 }
-a=$(random_range 0 6)
-b=$(random_range 7 13)
-c=$(random_range 14 20)
-# w=(weather[$a] weather[$b] weather[$c])
-w=($a $b $c)
 
 
+SERVICE="CarlaUE4"
+folder=`ls -d ./data_collection/*`
 ../../CarlaUE4.sh &
 sleep 15
-for((i=0; i<3; i++))
+for scenario_name in $folder
 do
-		for((j=0; j<${#random_actor[@]}; j++))
-		do
-	    		python ../util/config.py --reload
-	    		sleep 8
-	            echo ${i}
-	            echo ${k}
-	            time python data_generator.py -map ${map[${DES[0]}]} -scenario_id ${name[0]} -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
-	            sleep 3
-		done
+	a=$(random_range 0 6)
+	b=$(random_range 7 13)
+	c=$(random_range 14 20)
+	# w=(weather[$a] weather[$b] weather[$c])
+	w=($a $b $c)
+	for((i=0; i<3; i++))
+	do
+			for((j=0; j<${#random_actor[@]}; j++))
+			do
+					if pgrep "$SERVICE" >/dev/null
+					then
+						echo "$SERVICE is running"
+					else
+						echo "$SERVICE is  stopped"
+						../../CarlaUE4.sh & sleep 15	
+					fi
+					python ../util/config.py --reload
+					sleep 8
+					echo ${i}
+					echo ${k}
+					echo ${scenario_name:18}
+					time python data_generator.py -map ${map[${DES[0]}]} -scenario_id ${scenario_name:18}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
+					sleep 3
+			done
+	done
 done
+
 
 
 
