@@ -538,6 +538,8 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
                     if tuple(seg_image[yy][xx]) == color:
                         score += 1
         # print(color)
+        if w == 0 or h == 0:
+            continue
         score = score/(w*h)
         # if flag:
         #     print(score)
