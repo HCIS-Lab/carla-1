@@ -2347,7 +2347,7 @@ def main():
         type=str,
         choices=['ClearNoon', 'CloudyNoon', 'WetNoon', 'WetCloudyNoon', 'MidRainyNoon', 'HardRainNoon', 'SoftRainNoon',
     'ClearSunset', 'CloudySunset', 'WetSunset', 'WetCloudySunset', 'MidRainSunset', 'HardRainSunset', 'SoftRainSunset',
-    'ClearNight', 'CloudyNight', 'WetNight', 'WetCloudyNight', 'MidRainNight', 'HardRainNight', 'SoftRainNight'],
+    'ClearNight', 'CloudyNight', 'WetNight', 'WetCloudyNight', 'MidRainyNight', 'HardRainNight', 'SoftRainNight'],
         help='weather name')
     argparser.add_argument(
         '-map',

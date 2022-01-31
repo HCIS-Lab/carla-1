@@ -9,7 +9,7 @@ map=('None' 'Town01' 'Town02' 'Town03' 'Town04' 'Town05')
 
 weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'SoftRainNoon'
 	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
-	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainNight' 'HardRainNight' 'SoftRainNight')
+	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainyNight' 'HardRainNight' 'SoftRainNight')
 random_actor=('low' 'mid' 'high')
 #name=('3_t3-8_1_c_u_f_2_0')
 
