@@ -11,9 +11,9 @@ weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'Hard
 	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
 	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainNight' 'HardRainNight' 'SoftRainNight')
 random_actor=('low' 'mid' 'high')
-name=('3_t3-8_1_c_u_f_2_0')
+#name=('3_t3-8_1_c_u_f_2_0')
 
-IFS='_' read -ra DES <<< "$name"
+#IFS='_' read -ra DES <<< "$name"
 
 function random_range()
 {
@@ -54,7 +54,7 @@ do
 					echo ${i}
 					echo ${k}
 					echo ${scenario_name:18}
-					time python data_generator.py -map Town05 -scenario_id ${scenario_name:18}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
+					time python data_generator.py -map Town0${scenario_name:18:1} -scenario_id ${scenario_name:18}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
 					sleep 3
 			done
 	done
