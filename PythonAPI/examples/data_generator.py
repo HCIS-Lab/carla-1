@@ -1810,35 +1810,35 @@ def annotate_trafficlight_in_group(ref, lights, world):
     """
     Get dictionary with traffic light group info for a given traffic light
     """
-    dict_annotations = {'ref': [], 'opposite': [], 'left': [], 'right': []}
+    if ref:
+        dict_annotations = {'ref': [], 'opposite': [], 'left': [], 'right': []}
 
-    # Get the waypoints
-    ref_location = get_trafficlight_trigger_location(ref)
-    ref_waypoint = world.get_map().get_waypoint(ref_location)
-    ref_yaw = ref_waypoint.transform.rotation.yaw
+        # Get the waypoints
+        ref_location = get_trafficlight_trigger_location(ref)
+        ref_waypoint = world.get_map().get_waypoint(ref_location)
+        ref_yaw = ref_waypoint.transform.rotation.yaw
 
 
-    for target_tl in lights:
-        if ref.id == target_tl.id:
-            dict_annotations['ref'].append(target_tl)
-        else:
-            # Get the angle between yaws
-            target_location = get_trafficlight_trigger_location(target_tl)
-            target_waypoint = world.get_map().get_waypoint(target_location)
-            target_yaw = target_waypoint.transform.rotation.yaw
+        for target_tl in lights:
+            if ref.id == target_tl.id:
+                dict_annotations['ref'].append(target_tl)
+            else:
+                # Get the angle between yaws
+                target_location = get_trafficlight_trigger_location(target_tl)
+                target_waypoint = world.get_map().get_waypoint(target_location)
+                target_yaw = target_waypoint.transform.rotation.yaw
 
-            diff = (target_yaw - ref_yaw) % 360
+                diff = (target_yaw - ref_yaw) % 360
 
-            if diff > 330:
-                continue
-            elif diff > 225:
-                dict_annotations['right'].append(target_tl)
-            elif diff > 135.0:
-                dict_annotations['opposite'].append(target_tl)
-            elif diff > 30:
-                dict_annotations['left'].append(target_tl)
-
-    return dict_annotations
+                if diff > 330:
+                    continue
+                elif diff > 225:
+                    dict_annotations['right'].append(target_tl)
+                elif diff > 135.0:
+                    dict_annotations['opposite'].append(target_tl)
+                elif diff > 30:
+                    dict_annotations['left'].append(target_tl)
+        return dict_annotations
 
 
 
@@ -2213,7 +2213,7 @@ def game_loop(args):
                     # apply recorded location and velocity on the controller
 
                     # reproduce traffic light state
-                    if actor_id == 'player':
+                    if actor_id == 'player' and ref_light:
                         set_light_state(lights, light_dict, actor_transform_index[actor_id], annotate)
                     if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                         if 'vehicle' in filter_dict[actor_id]:
