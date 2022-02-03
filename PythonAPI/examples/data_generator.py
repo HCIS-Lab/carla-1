@@ -2274,6 +2274,8 @@ def game_loop(args):
         world.camera_manager.toggle_recording(stored_path)
         save_description(world, args, stored_path, weather)
     finally:
+        finish_tag = open(stored_path+'/finish.txt', 'w')
+        finish_tag.close
 
         if (world and world.recording_enabled):
             client.stop_recorder()

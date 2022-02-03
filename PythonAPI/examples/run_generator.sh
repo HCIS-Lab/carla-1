@@ -58,6 +58,23 @@ do
 					sleep 3
 			done
 	done
+	x="./data_collection/${scenario_name:18}"
+	f=`ls -d ${x}/*_*_`
+	rm -r "${x}/timestamp"
+	mkdir "${x}/variant scenario"
+	for name in $f
+	do 
+		FILE=${name}/finish.txt
+		if test -f "$FILE"; 
+		then
+			echo "$FILE exists."
+			mv ${name} "${x}/variant scenario"
+		else
+			echo "$FILE not exist. remove this folder"
+			rm -r ${name}
+		fi
+
+	done
 done
 
 
