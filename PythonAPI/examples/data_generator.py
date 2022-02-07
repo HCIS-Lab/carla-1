@@ -1479,12 +1479,13 @@ class CameraManager(object):
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def save_img(self, img_list, sensor, path, view='top'):
+        modality = self.sensors[sensor][0].split('.')[-1]
         for img in img_list:
             if img.frame%1 == 0:
                 if 'seg' in view:
-                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.CityScapesPalette)
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.CityScapesPalette)
                 elif 'depth' in view:
-                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame), cc.LogarithmicDepth)
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.LogarithmicDepth)
                 elif 'dvs' in view:
                     dvs_events = np.frombuffer(img.raw_data, dtype=np.dtype([
                         ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
@@ -1493,7 +1494,7 @@ class CameraManager(object):
                     dvs_img[dvs_events[:]['y'], dvs_events[:]
                     ['x'], dvs_events[:]['pol'] * 2] = 255
                     # img = img.to_image()
-                    stored_path = os.path.join(path, self.sensors[sensor][2], view)
+                    stored_path = os.path.join(path, modality, view)
                     if not os.path.exists(stored_path):
                         os.makedirs(stored_path)
                     np.save('%s/%08d' % (stored_path, img.frame), dvs_img)
@@ -1504,12 +1505,12 @@ class CameraManager(object):
                     array = np.reshape(array, (img.height, img.width, 4))
                     array = array[:, :, :3]
                     array = array[:, :, ::-1]
-                    stored_path = os.path.join(path, self.sensors[sensor][2], view)
+                    stored_path = os.path.join(path, modality, view)
                     if not os.path.exists(stored_path):
                         os.makedirs(stored_path)
                     np.save('%s/%08d' % (stored_path, frame), array)
                 else:
-                    img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
+                    img.save_to_disk('%s/%s/%s/%08d' % (path, modality, view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
     def save_bbox(self,input_list,path,seg_list):
