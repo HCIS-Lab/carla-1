@@ -1642,18 +1642,18 @@ def save_description(scenario_name, carla_map):
     d = dict()
     topo = description[1].split('-')[0]
     if 'i' in topo:
-        d['topology'] = {'left': 1, 'right': 1, 'straight': 1}
+        d['topology'] = '4_way_intersection'
     elif 't' in topo:
-        if topo[1] == '1':
-            d['topology'] = {'left': 1, 'right': 1, 'straight': 0}
+        if topo[1] == '1':  
+            d['topology'] = '4_way_intersection_1'
         elif topo[1] == '2':
-            d['topology'] = {'left': 0, 'right': 1, 'straight': 1}
+            d['topology'] = '4_way_intersection_2'
         elif topo[1] == '3':
-            d['topology'] = {'left': 1, 'right': 0, 'straight': 1}
+            d['topology'] = '4_way_intersection_3'
     elif 'r' in topo:
-        d['topology'] = {'left': 0, 'right': 1, 'straight': 0}
+        d['topology'] = 'roundabout'
     elif 's' in topo:
-        d['topology'] = {'left': 0, 'right': 0, 'straight': 1}
+        d['topology'] = 'straight'
 
     d['traffic_light'] = 1 if description[2] == '1' else 0
     d['interaction_actor_type'] = actor[description[3]]
