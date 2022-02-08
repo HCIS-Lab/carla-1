@@ -1388,7 +1388,7 @@ class CameraManager(object):
              'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
             scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
              'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
-            scenario_name_is_ego_first = {'0': 'None', '1':  'True', '2': 'False'}
+            scenario_name_interaction = {'0': 'False', '1':  'True'}
             scenario_name_violated_rule = {'0': 'None','p': 'parking', 'j': 'jay-walker', 
             'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
             restart = 0
@@ -1433,7 +1433,7 @@ class CameraManager(object):
                     continue
                 scenario_name += "_" + input_option
 
-                print("Input actor_type_action:")
+                print("Input actor_action:")
                 for key in scenario_name_actor_type_action:
                     print(key + ': ' + scenario_name_actor_type_action[key] + ' ')
                 input_option = str(input())
@@ -1451,11 +1451,11 @@ class CameraManager(object):
                     continue
                 scenario_name += "_" + input_option
 
-                print("Input is_ego_car_first:")
-                for key in scenario_name_is_ego_first:
-                    print(key + ': ' + scenario_name_is_ego_first[key] + ' ')
+                print("Input is_interactive:")
+                for key in scenario_name_interaction:
+                    print(key + ': ' + scenario_name_interaction[key] + ' ')
                 input_option = str(input())
-                if input_option not in scenario_name_is_ego_first:
+                if input_option not in scenario_name_interaction:
                     print("INVALID INPUT! RESTART NAMING SCENARIO.")
                     continue
                 scenario_name += "_" + input_option
