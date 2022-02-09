@@ -173,6 +173,7 @@ class World(object):
         self._weather_index = 0
         self._actor_filter = client_bp
         self._gamma = args.gamma
+        self.ego_data = {}
         self.restart()
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
@@ -192,10 +193,6 @@ class World(object):
             carla.MapLayer.Walls,
             carla.MapLayer.All
         ]
-
-        self.speed_list = []
-        self.control_list = []
-        self.transform_list = []
 
     def restart(self):
         self.player_max_speed = 1.589
@@ -249,8 +246,8 @@ class World(object):
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
-        self.gnss_sensor = GnssSensor(self.player)
-        self.imu_sensor = IMUSensor(self.player)
+        self.gnss_sensor = GnssSensor(self.player, self.ego_data)
+        self.imu_sensor = IMUSensor(self.player, self.ego_data)
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
@@ -305,23 +302,23 @@ class World(object):
         v = self.player.get_velocity()
         c = self.player.get_control()
         t = self.player.get_transform()
-        self.speed_list.append([frame, v.x, v.y, v.z])
-        self.control_list.append([frame, c.throttle, c.steer, c.brake, 
-                                c.hand_brake, c.manual_gear_shift, c.gear])
-        self.transform_list.append([t.location.x, t.location.y, t.location.z, 
-                                    t.rotation.pitch, t.rotation.yaw, t.rotation.roll])
+        if frame not in self.ego_data:
+            self.ego_data[frame] = {}
+        self.ego_data[frame]['speed'] = {'constant': math.sqrt(v.x**2 + v.y**2 + v.z**2),
+                                         'x':v.x, 'y': v.y, 'z': v.z}
+        self.ego_data[frame]['control'] = {'throttle': c.throttle, 'steer': c.steer,
+                                         'brake': c.brake, 'hand_brake': c.hand_brake,
+                                         'manual_gear_shift': c.manual_gear_shift,
+                                         'gear': c.gear}
+        self.ego_data[frame]['transform'] = {'x':t.location.x, 'y': t.location.y, 'z': t.location.z,
+                                            'pitch': t.rotation.pitch, 'yaw': t.rotation.yaw, 'roll': t.rotation.roll}
 
-    def save_speed_control_transform(self, path):
-        speed = np.asarray(self.speed_list)
-        control = np.asarray(self.control_list)
-        transform = np.asarray(self.transform_list)
-
-        np.save('%s/speed' % (path), speed)
-        np.save('%s/control' % (path), control)
-        np.save('%s/transform' % (path), transform)
-        self.speed_list = []
-        self.control_list = []
-        self.transform_list = []
+    def save_ego_data(self, path):
+        self.imu_sensor.toggle_recording_IMU()
+        self.gnss_sensor.toggle_recording_Gnss()
+        with open(os.path.join(path,'ego_data.json'), 'w') as f:
+            json.dump(self.ego_data, f, indent=4)
+        self.ego_data = {}
 
     def render(self, display):
         self.camera_manager.render(display)
@@ -936,7 +933,7 @@ class LaneInvasionSensor(object):
 
 
 class GnssSensor(object):
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor, ego_data):
         self.sensor = None
         self._parent = parent_actor
         self.lat = 0.0
@@ -947,6 +944,8 @@ class GnssSensor(object):
             carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
+        self.recording = False
+        self.ego_dict = ego_data
         weak_self = weakref.ref(self)
         self.sensor.listen(
             lambda event: GnssSensor._on_gnss_event(weak_self, event))
@@ -958,7 +957,18 @@ class GnssSensor(object):
             return
         self.lat = event.latitude
         self.lon = event.longitude
+        if self.recording:
+            gnss = {'lat': event.latitude, 'lon': event.longitude}
+            gnss_transform = {'x': event.transform.location.x, 'y': event.transform.location.y, 'z': event.transform.location.z,
+                                'pitch': event.transform.rotation.pitch, 'yaw': event.transform.rotation.yaw, 'roll': event.transform.rotation.roll}
 
+            if not event.frame in self.ego_dict:
+                self.ego_dict[event.frame] = {}
+            self.ego_dict[event.frame]['gnss'] = gnss
+            self.ego_dict[event.frame]['gnss_transform'] = gnss_transform
+
+    def toggle_recording_Gnss(self):
+        self.recording = not self.recording
 
 # ==============================================================================
 # -- IMUSensor -----------------------------------------------------------------
@@ -966,7 +976,7 @@ class GnssSensor(object):
 
 
 class IMUSensor(object):
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor, ego_data):
         self.sensor = None
         self._parent = parent_actor
         self.accelerometer = (0.0, 0.0, 0.0)
@@ -980,7 +990,8 @@ class IMUSensor(object):
         # reference.
         weak_self = weakref.ref(self)
         self.recording = False
-        self.imu_save = []
+        # self.imu_save = []
+        self.ego_dict = ego_data
         self.sensor.listen(
             lambda sensor_data: IMUSensor._IMU_callback(weak_self, sensor_data))
 
@@ -1002,21 +1013,28 @@ class IMUSensor(object):
             max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.z))))
         self.compass = math.degrees(sensor_data.compass)
         if self.recording:
-            self.imu_save.append([sensor_data.frame, 
-                                self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
-                                self.gyroscope[0], self.gyroscope[1], self.gyroscope[2], 
-                                self.compass])
+            imu = {'accelerometer_x': self.accelerometer[0], 'accelerometer_y': self.accelerometer[1],
+                    'accelerometer_z': self.accelerometer[2], 'gyroscope_x': self.gyroscope[0],
+                    'gyroscope_y': self.gyroscope[1], 'gyroscope_z': self.gyroscope[2],
+                    'compass': self.compass}
+            # self.imu_save.append([sensor_data.frame, 
+            #                     self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
+            #                     self.gyroscope[0], self.gyroscope[1], self.gyroscope[2], 
+            #                     self.compass])
+            if not sensor_data.frame in self.ego_dict:
+                self.ego_dict[sensor_data.frame] = {}
+            self.ego_dict[sensor_data.frame]['imu'] = imu
 
-    def toggle_recording_IMU(self, path):
+    def toggle_recording_IMU(self):
         self.recording = not self.recording
-        if not self.recording:
-            t_top = threading.Thread(target = self.save_IMU, args=(self.imu_save, path))
-            t_top.start()
-            self.imu_save = []
+    #     if not self.recording:
+    #         t_top = threading.Thread(target = self.save_IMU, args=(self.imu_save, path))
+    #         t_top.start()
+    #         self.imu_save = []
 
-    def save_IMU(self, save_list, path):
-        np_imu = np.asarray(save_list)
-        np.save('%s/imu' % (path), np_imu)
+    # def save_IMU(self, save_list, path):
+    #     np_imu = np.asarray(save_list)
+    #     np.save('%s/imu' % (path), np_imu)
 # ==============================================================================
 # -- RadarSensor ---------------------------------------------------------------
 # ==============================================================================
@@ -2003,7 +2021,8 @@ def game_loop(args):
             iter_tick += 1
             if iter_tick == iter_start + 1:
                 world.camera_manager.toggle_recording(stored_path) 
-                world.imu_sensor.toggle_recording_IMU(stored_path)
+                world.imu_sensor.toggle_recording_IMU()
+                world.gnss_sensor.toggle_recording_Gnss()
                 traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period, stored_path))
                 traj_col.start()
                 topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period, stored_path))
@@ -2058,9 +2077,8 @@ def game_loop(args):
             world.render(display)
             pygame.display.flip()
 
-
-        world.save_speed_control_transform(stored_path)
-        world.imu_sensor.toggle_recording_IMU(stored_path)
+        world.imu_sensor.toggle_recording_IMU()
+        world.save_ego_data(stored_path)
         world.collision_sensor.save_history(stored_path)
         world.camera_manager.toggle_recording(stored_path)
         save_description(world, args, stored_path, weather)
