@@ -68,7 +68,8 @@ import matplotlib.pyplot as plt
 
 
 from random_actors import spawn_actor_nearby
-
+from get_and_control_trafficlight import *
+from read_input import *
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -1168,7 +1169,6 @@ class CameraManager(object):
             ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
             ['sensor.other.lane_invasion', None, 'Lane lane_invasion',{}],
             ['sensor.camera.instance_segmentation', cc.CityScapesPalette, 'Camera Instance Segmentation (CityScapes Palette)', {}],
-
             ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
@@ -1659,199 +1659,6 @@ def record_control(control, control_list):
     control_list.append(np_control)
 
 
-def get_transform(np_transform):
-    transform = carla.Transform(Location(np_transform[0], np_transform[1], np_transform[2]),
-                                Rotation(np_transform[3], np_transform[4], np_transform[5]))
-    return transform
-
-
-def read_control(path='control.npy'):
-    """ param:
-
-    """
-    control = np.load(path)
-    control_list = []
-    init_transform = control[0]
-    init_transform = carla.Transform(Location(x=control[0][0], y=control[0][1], z=control[0][2]+1),
-                                     Rotation(pitch=control[0][3], yaw=control[0][4], roll=control[0][5]))
-    for i in range(1, len(control)):
-        control_list.append(carla.VehicleControl(float(control[i][0]), float(control[i][1]), float(control[i][2]), bool(control[i][3]),
-                                                 bool(control[i][4]), bool(control[i][5]), int(control[i][6])))
-
-    return init_transform, control_list
-
-
-def read_transform(path='control.npy'):
-    """ param:
-
-    """
-    transform_npy = np.load(path)
-    transform_list = []
-    for i, transform in enumerate(transform_npy):
-        if i == 0:
-            transform_list.append(carla.Transform(Location(x=transform[0], y=transform[1], z=transform[2]+1),
-                                                  Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
-        else:
-            transform_list.append(carla.Transform(Location(x=transform[0], y=transform[1], z=transform[2]),
-                                                  Rotation(pitch=transform[3], yaw=transform[4], roll=transform[5])))
-
-    return transform_list
-
-def read_ped_control(path='control.npy'):
-    """ param:
-
-    """
-    control_npy = np.load(path)
-    control_list = []
-    for i, control in enumerate(control_npy):
-        control_list.append(carla.WalkerControl(carla.Vector3D(x=control[0], y=control[1], z=control[2]+1),
-                                              float(control[3]), bool(control[4])))
-    return control_list
-
-
-def read_velocity(path='velocity.npy'):
-    velocity_npy = np.load(path)
-    velocity_list = []
-    for velocity in velocity_npy:
-        v = (velocity[0]**2 + velocity[1]**2 + velocity[2]**2)**0.5
-        velocity_list.append(v)
-        # velocity_list.append(carla.Vector3D(x=velocity[0], y=velocity[1], z=velocity[2]))
-
-    return velocity_list
-
-def read_traffic_lights(path, lights):
-    
-    path = os.path.join(path, 'traffic_light')
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    light_dict = dict()
-    light_transform_dict = dict()
-    for i, f in enumerate(files):
-        l_id = int(f.split('.npy')[0])
-        light_state = np.load(os.path.join(path, f), allow_pickle=True)
-        new_light_state = []
-        for iter, state in enumerate(light_state):
-            if iter == 0:
-                l_loc = carla.Location(float(state[0]), float(state[1]), float(state[2]))
-            if state[0] == 'Red':
-                new_light_state.append(carla.TrafficLightState.Red)
-            elif state[0] == 'Yellow':
-                new_light_state.append(carla.TrafficLightState.Yellow)
-            elif state[0] == 'Green':
-                new_light_state.append(carla.TrafficLightState.Green)
-            elif state[0] == 'Off':
-                new_light_state.append(carla.TrafficLightState.Off)
-            else:
-                new_light_state.append(carla.TrafficLightState.Unknown)
-
-        min_d = 500.0
-        light = None
-        for new_l in lights:
-            if new_l.get_location().distance(l_loc) < min_d:
-                min_d = new_l.get_location().distance(l_loc)
-                new_id = new_l.id
-                light = new_l
-        light_dict[new_id] = new_light_state
-        light_transform_dict[light] = light.get_transform()
-
-    return light_dict, light_transform_dict
-
-def get_next_traffic_light(actor, world, light_transform_dict):
-
-    location = actor.get_transform().location
-    waypoint = world.get_map().get_waypoint(location)
-    # Create list of all waypoints until next intersection
-    list_of_waypoints = []
-    while waypoint and not waypoint.is_intersection:
-        list_of_waypoints.append(waypoint)
-        waypoint = waypoint.next(2.0)[0]
-
-    # If the list is empty, the actor is in an intersection
-    if not list_of_waypoints:
-        return None
-
-    relevant_traffic_light = None
-    distance_to_relevant_traffic_light = float("inf")
-
-    for traffic_light, transform in light_transform_dict.items():
-        if hasattr(traffic_light, 'trigger_volume'):
-            tl_t = light_transform_dict[traffic_light]
-            transformed_tv = tl_t.transform(traffic_light.trigger_volume.location)
-            distance = carla.Location(transformed_tv).distance(list_of_waypoints[-1].transform.location)
-
-            if distance < distance_to_relevant_traffic_light:
-                relevant_traffic_light = traffic_light
-                distance_to_relevant_traffic_light = distance
-
-    return relevant_traffic_light
-
-def get_trafficlight_trigger_location(traffic_light):    # pylint: disable=invalid-name
-    """
-    Calculates the yaw of the waypoint that represents the trigger volume of the traffic light
-    """
-    def rotate_point(point, angle):
-        """
-        rotate a given point by a given angle
-        """
-        x_ = math.cos(math.radians(angle)) * point.x - math.sin(math.radians(angle)) * point.y
-        y_ = math.sin(math.radians(angle)) * point.x - math.cos(math.radians(angle)) * point.y
-
-        return carla.Vector3D(x_, y_, point.z)
-
-    base_transform = traffic_light.get_transform()
-    base_rot = base_transform.rotation.yaw
-    area_loc = base_transform.transform(traffic_light.trigger_volume.location)
-    area_ext = traffic_light.trigger_volume.extent
-
-    point = rotate_point(carla.Vector3D(0, 0, area_ext.z), base_rot)
-    point_location = area_loc + carla.Location(x=point.x, y=point.y)
-
-    return carla.Location(point_location.x, point_location.y, point_location.z)
-
-def annotate_trafficlight_in_group(ref, lights, world):
-    """
-    Get dictionary with traffic light group info for a given traffic light
-    """
-    if ref:
-        dict_annotations = {'ref': [], 'opposite': [], 'left': [], 'right': []}
-
-        # Get the waypoints
-        ref_location = get_trafficlight_trigger_location(ref)
-        ref_waypoint = world.get_map().get_waypoint(ref_location)
-        ref_yaw = ref_waypoint.transform.rotation.yaw
-
-
-        for target_tl in lights:
-            if ref.id == target_tl.id:
-                dict_annotations['ref'].append(target_tl)
-            else:
-                # Get the angle between yaws
-                target_location = get_trafficlight_trigger_location(target_tl)
-                target_waypoint = world.get_map().get_waypoint(target_location)
-                target_yaw = target_waypoint.transform.rotation.yaw
-
-                diff = (target_yaw - ref_yaw) % 360
-
-                if diff > 330:
-                    continue
-                elif diff > 225:
-                    dict_annotations['right'].append(target_tl)
-                elif diff > 135.0:
-                    dict_annotations['opposite'].append(target_tl)
-                elif diff > 30:
-                    dict_annotations['left'].append(target_tl)
-        return dict_annotations
-
-
-
-def set_light_state(lights, light_dict, index, annotate):
-    for l in lights:
-        if l.id in light_dict:
-            index = index if len(light_dict[l.id]) > index else -1
-            if l in annotate['opposite']:
-                state = light_dict[annotate['ref'][0].id][index]
-            else:
-                state = light_dict[l.id][index]
-            l.set_state(state)
 
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
@@ -2145,12 +1952,7 @@ def game_loop(args):
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                             max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-            # elif 'pedestrian' in bp:
-            #     controller_dict[actor_id] = client.get_world().spawn_actor(
-            #                             blueprint_library.find('controller.ai.walker'),
-            #                             carla.Transform(), 
-            #                             attach_to=agents_dict[actor_id])
-            
+
             actor_transform_index[actor_id] = 1
             finish[actor_id] = False
 
@@ -2241,16 +2043,6 @@ def game_loop(args):
                             agents_dict[actor_id].apply_control(ped_control_dict[actor_id][actor_transform_index[actor_id]])
                             actor_transform_index[actor_id] += 2
                     else:
-                        # when the client has arrived the last recorded location
-                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][-1].location) > 3.0:
-                        #     if 'vehicle' in filter_dict[actor_id]:
-                        #         agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                        #             velocity_dict[actor_id][-30], transform_dict[actor_id][-1]))
-                        #     elif 'pedestrian' in filter_dict[actor_id]:
-                        #         controller_dict[actor_id].go_to_location(transform_dict[actor_id][-1].location)
-                        #         controller_dict[actor_id].set_max_speed(1.4)
-
-                        # else:
                         finish[actor_id] = True
 
                         # elif actor_id == 'player':
@@ -2266,8 +2058,6 @@ def game_loop(args):
             world.render(display)
             pygame.display.flip()
 
-            # if scenario_finished:
-            #     break
 
         world.save_speed_control_transform(stored_path)
         world.imu_sensor.toggle_recording_IMU(stored_path)

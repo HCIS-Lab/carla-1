@@ -1577,7 +1577,6 @@ def record_velocity(actor_dict, world):
 
 def extract_actor(actor_dict, control_dict, world):
     actor_list = world.world.get_actors()
-    # print(actor_dict)
     for actor in actor_list:
         # if actor.id not in actor_dict:
         if actor.id == world.player.id:
@@ -1718,7 +1717,6 @@ def game_loop(args):
         for l in actors:
             if 5 in l.semantic_tags and 18 in l.semantic_tags:
                 lights.append(l)
-        print(lights)
         actor_dict = {}
         control_dict = {}
         timestamp_list = []
