@@ -1651,8 +1651,7 @@ def save_actor(actor_dict, scenario_name, timestamp_list, obstacle_list):
 def save_description(scenario_name, carla_map):
     description = scenario_name.split('_')
 
-    action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-              'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+    action = {'l':'left_turn', 'r': 'right_turn', 'sl': 'slide_left','sr': 'slide_right'}
     obstacle_type = {'0': 'traffic cone', '1': 'street barrier', '2': 'traffic warning'}
 
     d = dict()
