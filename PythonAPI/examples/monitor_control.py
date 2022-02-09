@@ -1399,12 +1399,18 @@ class CameraManager(object):
                                 '6': 'Town06', '7': 'Town07', '10': 'Town10HD'}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
             if self.scenario_type == 'interactive':
+
                 scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
-                scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
-                 'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward', 'c': 'crossing'}
-                scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
+
+                scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
+                 'sl': 'slide_left','sr': 'slide_right', 'u': 'u-turn', 'b': 'backward', 
+                 'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking'}
+
+                scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                  'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+
                 scenario_name_interaction = {'0': 'False', '1':  'True'}
+
                 scenario_name_violated_rule = {'0': 'None','p': 'parking', 'j': 'jay-walker', 
                 'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
                 restart = 0
@@ -1749,8 +1755,11 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
     # if scenario_type == 'interactive':  
     # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
     actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
+    
     action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', 
+     'w': 'walking on sidewalk', 'j': 'jaywalking' '0': 'None'}
+    
     violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 
     's': 'driving on a sidewalk', 'ss': 'stop sign'}
     
