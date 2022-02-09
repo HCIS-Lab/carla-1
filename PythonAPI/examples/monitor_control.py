@@ -1874,6 +1874,8 @@ def game_loop(args):
                 control_dict = {}
                 timestamp_list = []
                 traffic_light = dict()
+                stored_path = os.path.join('data_collection', args.map, args.scenario_type)
+
             # not recording
             elif code == 6:
                 actor_dict = {}
