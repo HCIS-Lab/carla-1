@@ -1709,10 +1709,10 @@ def control_with_trasform_controller(controller, transform):
     #     if new_obj is not None:
     #         new_obj.destroy()
 
-def collect_trajectory(get_world, agent, scenario_id, period_end, path):
-    if not os.path.exists(path + '/trajectory/'):
-        os.mkdir(path + '/trajectory/')
-    filepath = path + '/trajectory/' + str(scenario_id) + '.csv'
+def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path):
+    if not os.path.exists(stored_path + '/trajectory/'):
+        os.mkdir(stored_path + '/trajectory/')
+    filepath = stored_path + '/trajectory/' + str(scenario_id) + '.csv'
     is_exist = os.path.isfile(filepath)
     f = open(filepath, 'a+')
     w = csv.writer(f)
@@ -1757,12 +1757,11 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, path):
     except:
         print("trajectory_collection finished")
 
-def collect_topology(get_world, agent, scenario_id, t, path):
-    filepath = "data_collection/"
+def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
     town_map = get_world.world.get_map()
-    if not os.path.exists(path + '/topology/'):
-        os.mkdir(path + '/topology/')
-    with open(filepath + scenario_id + '/scenario_description.json') as f:
+    if not os.path.exists(stored_path + '/topology/'):
+        os.mkdir(stored_path + '/topology/')
+    with open(root + scenario_id + '/scenario_description.json') as f:
         data = json.load(f)
     time_start = time.time()
     try:
@@ -1886,7 +1885,8 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    path = 'data_collection/'+str(args.scenario_id)
+
+    path = os.path.join('data_collection',args.map, args.scenario_type, args.scenario_id)
 
     filter_dict = {}
     try:
@@ -1979,7 +1979,7 @@ def game_loop(args):
         # time.sleep(2)
 
         # dynamic scenario setting
-        root = os.path.join('data_collection', args.scenario_id) 
+        root = os.path.join('data_collection', args.map, args.scenario_type, args.scenario_id) 
         scenario_name = str(weather) + '_'
         # if args.random_objects:
         #     t = threading.Thread(target = auto_spawn_object,args=(world, 5))
@@ -1998,7 +1998,7 @@ def game_loop(args):
         # recording traj
         id = []
         moment = []
-        with open("data_collection/" + args.scenario_id + "/timestamp.txt") as f:
+        with open(os.path.join(root, 'timestamp.txt')) as f:
             for line in f.readlines():
                 s = line.split(',')
                 id.append(int(s[0]))
@@ -2025,7 +2025,7 @@ def game_loop(args):
                 world.gnss_sensor.toggle_recording_Gnss()
                 traj_col = threading.Thread(target = collect_trajectory,args=(world, world.player, args.scenario_id, period, stored_path))
                 traj_col.start()
-                topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period, stored_path))
+                topo_col = threading.Thread(target = collect_topology,args=(world, world.player, args.scenario_id, half_period, root, stored_path))
                 topo_col.start()
                 ref_light = get_next_traffic_light(world.player, world.world, light_transform_dict)
                 annotate = annotate_trafficlight_in_group(ref_light, lights, world.world)
@@ -2170,6 +2170,11 @@ def main():
         type=str,
         default='None',
         choices=['None', 'low', 'mid', 'high'],
+        help='enable roaming actors')
+    argparser.add_argument(
+        '--scenario_type',
+        type=str,
+        choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
         help='enable roaming actors')
     # argparser.add_argument(
     #     '-random_objects',
