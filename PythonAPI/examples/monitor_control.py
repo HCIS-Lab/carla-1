@@ -1382,15 +1382,26 @@ class CameraManager(object):
         if not self.recording:
             end_time=time.time()
             
+            # original description
+
+            # scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
+            # scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
+            #  'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+            # scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
+            #  'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+            # scenario_name_interaction = {'0': 'False', '1':  'True'}
+            # scenario_name_violated_rule = {'0': 'None','p': 'parking', 'j': 'jay-walker', 
+            # 'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
+
             # enter your scenario id
             # and there are some format requirement need to clarify
             scenario_name_map = {'1':'Town01', '2':'Town02', '3':'Town03', '4':'Town04', '5': 'Town05', 
                                 '6': 'Town06', '7': 'Town07', '10': 'Town10HD'}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
             if self.scenario_type == 'interactive':
-                scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
+                scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
-                 'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+                 'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward', 'c': 'crossing'}
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
                  'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
                 scenario_name_interaction = {'0': 'False', '1':  'True'}
