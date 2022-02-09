@@ -178,6 +178,7 @@ class World(object):
             print('  The server could not send the OpenDRIVE (.xodr) file:')
             print('  Make sure it exists, has the same name of your town, and is correct.')
             sys.exit(1)
+        self.scenario_type = args.scenario_type
         self.hud = hud
         self.player = None
         self.collision_sensor = None
@@ -258,7 +259,7 @@ class World(object):
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.gnss_sensor = GnssSensor(self.player)
         self.imu_sensor = IMUSensor(self.player)
-        self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
+        self.camera_manager = CameraManager(self.player, self.hud, self._gamma, self.scenario_type)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
@@ -1278,10 +1279,11 @@ class RadarSensor(object):
 
 
 class CameraManager(object):
-    def __init__(self, parent_actor, hud, gamma_correction):
+    def __init__(self, parent_actor, hud, gamma_correction, scenario_type):
         self.sensor = None
         self.surface = None
         self._parent = parent_actor
+        self.scenario_type = scenario_type
         self.hud = hud
         self.recording = False
         self.record_image=[]
@@ -1380,7 +1382,8 @@ class CameraManager(object):
             
             # enter your scenario id
             # and there are some format requirement need to clarify
-            scenario_name_map = {'1':'Town01', '2':'Town02', '3':'Town03', '4':'Town04', '5': 'Town05'}
+            scenario_name_map = {'1':'Town01', '2':'Town02', '3':'Town03', '4':'Town04', '5': 'Town05', 
+                                '6': 'Town06', '7': 'Town07', '10': 'Town10HD'}
             #scenario_name_road_type_id = {}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
             scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
@@ -1469,11 +1472,12 @@ class CameraManager(object):
                     continue
                 scenario_name += "_" + input_option
                 scenario_num = 0
-                if os.path.isdir('data_collection/'+ scenario_name):
+                path = os.path.join('data_collection', self.scenario_type, scenario_name)
+                if os.path.isdir(path):
                     scenario_num +=1
                     while(1):
-                        if os.path.isdir(scenario_name + '_' + str(scenario_num)):
-                            scenario_name += 1
+                        if os.path.isdir(path + '_' + str(scenario_num)):
+                            scenario_num += 1
                         else:
                             scenario_name = scenario_name + '_' + str(scenario_num)
                             break
@@ -1591,78 +1595,84 @@ def extract_actor(actor_dict, control_dict, world):
             control_dict[str(actor.id)] = {'control': []}
     return actor_dict, control_dict
 
-def save_actor(actor_dict, control_dict, scenario_name, timestamp_list):
-    if not os.path.exists('data_collection/'):
-        os.mkdir('data_collection/')
-    if not os.path.exists('data_collection/%s/' % (scenario_name)):
-        os.mkdir('data_collection/%s/' % (scenario_name))
-    if not os.path.exists('data_collection/%s/transform/'% (scenario_name)):
-        os.mkdir('data_collection/%s/transform/'% (scenario_name))
-    if not os.path.exists('data_collection/%s/control/'% (scenario_name)):
-        os.mkdir('data_collection/%s/control'% (scenario_name))
-    if not os.path.exists('data_collection/%s/velocity/'% (scenario_name)):
-        os.mkdir('data_collection/%s/velocity/'% (scenario_name))
-    if not os.path.exists('data_collection/%s/filter/'% (scenario_name)):
-        os.mkdir('data_collection/%s/filter/'% (scenario_name))
-    if not os.path.exists('data_collection/%s/timestamp/'% (scenario_name)):
-        os.mkdir('data_collection/%s/timestamp/'% (scenario_name))
+def save_actor(scenario_type, actor_dict, control_dict, scenario_name, timestamp_list):
+    path = 'data_collection/'
+    if not os.path.exists(path):
+        os.mkdir(path)
+    path = path + scenario_type + '/'
+    if not os.path.exists(path):
+        os.mkdir(path)
+    # path = path + scenario_type + '/'
+    if not os.path.exists(path + '%s/' % (scenario_name)):
+        os.mkdir(path + '%s/' % (scenario_name))
+    if not os.path.exists(path + '%s/transform/'% (scenario_name)):
+        os.mkdir(path + '%s/transform/'% (scenario_name))
+    if not os.path.exists(path + '%s/control/'% (scenario_name)):
+        os.mkdir(path + '%s/control'% (scenario_name))
+    if not os.path.exists(path + '%s/velocity/'% (scenario_name)):
+        os.mkdir(path + '%s/velocity/'% (scenario_name))
+    if not os.path.exists(path + '%s/filter/'% (scenario_name)):
+        os.mkdir(path + '%s/filter/'% (scenario_name))
+    if not os.path.exists(path + '%s/timestamp/'% (scenario_name)):
+        os.mkdir(path + '%s/timestamp/'% (scenario_name))
 
     for actor_id, data in actor_dict.items():
-        np.save('data_collection/%s/transform/%s' % (scenario_name, actor_id), np.array(data['transform']))
-        np.save('data_collection/%s/velocity/%s' % (scenario_name, actor_id), np.array(data['velocity']))   # velocity list np array saved as a .npy file
-        with open("data_collection/%s/filter/%s.txt" % (scenario_name, actor_id), "w") as text_file:
+        np.save(path + '%s/transform/%s' % (scenario_name, actor_id), np.array(data['transform']))
+        np.save(path + '%s/velocity/%s' % (scenario_name, actor_id), np.array(data['velocity']))   # velocity list np array saved as a .npy file
+        with open(path + "%s/filter/%s.txt" % (scenario_name, actor_id), "w") as text_file:
             text_file.write(str(data['filter']))
         data['transform'] = []
         data['velocity'] = []
         data['filter'] = []
 
     for actor_id, data in control_dict.items():
-         np.save('data_collection/%s/control/%s' % (scenario_name, actor_id), np.array(data['control']))
+         np.save(path + '%s/control/%s' % (scenario_name, actor_id), np.array(data['control']))
          data['control'] = []
 
-    time_file = open("data_collection/%s/timestamp.txt"%(scenario_name), "w")
+    time_file = open(path + "%s/timestamp.txt"%(scenario_name), "w")
     for time in timestamp_list:
         time_file.write(str(time[0]) + ',' + str(time[1]) + "\n")
     time_file.close()
     timestamp_list = []
     return actor_dict, control_dict, timestamp_list
 
-def save_description(scenario_name, carla_map):
+def save_description(scenario_type, scenario_name, carla_map):
     description = scenario_name.split('_')
-    # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
-    actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
-    action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-     'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
-    violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 
-    's': 'driving on a sidewalk', 'ss': 'stop sign'}
-    
-    # 1: non-interactive, 2: interactive
-    interaction = {'1': 'True', '2': 'False'}
-    d = dict()
-    topo = description[1].split('-')[0]
-    if 'i' in topo:
-        d['topology'] = '4_way_intersection'
-    elif 't' in topo:
-        if topo[1] == '1':  
-            d['topology'] = '4_way_intersection_1'
-        elif topo[1] == '2':
-            d['topology'] = '4_way_intersection_2'
-        elif topo[1] == '3':
-            d['topology'] = '4_way_intersection_3'
-    elif 'r' in topo:
-        d['topology'] = 'roundabout'
-    elif 's' in topo:
-        d['topology'] = 'straight'
+    if scenario_type == 'interactive':  
+        # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
+        actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
+        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
+         'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+        violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light', 
+        's': 'driving on a sidewalk', 'ss': 'stop sign'}
+        
+        # 1: non-interactive, 2: interactive
+        interaction = {'0': 'False', '1': 'True'}
+        d = dict()
+        topo = description[1].split('-')[0]
+        if 'i' in topo:
+            d['topology'] = '4_way_intersection'
+        elif 't' in topo:
+            if topo[1] == '1':  
+                d['topology'] = '4_way_intersection_1'
+            elif topo[1] == '2':
+                d['topology'] = '4_way_intersection_2'
+            elif topo[1] == '3':
+                d['topology'] = '4_way_intersection_3'
+        elif 'r' in topo:
+            d['topology'] = 'roundabout'
+        elif 's' in topo:
+            d['topology'] = 'straight'
 
-    d['traffic_light'] = 1 if description[2] == '1' else 0
-    d['interaction_actor_type'] = actor[description[3]]
-    d['interaction_action_type'] = action[description[4]]
-    d['my_action'] = action[description[5]]
-    d['interaction'] = interaction[description[6]]
-    d['violation'] = violation[description[7]]
-    d['map'] = carla_map
+        d['traffic_light'] = 1 if description[2] == '1' else 0
+        d['interaction_actor_type'] = actor[description[3]]
+        d['interaction_action_type'] = action[description[4]]
+        d['my_action'] = action[description[5]]
+        d['interaction'] = interaction[description[6]]
+        d['violation'] = violation[description[7]]
+        d['map'] = carla_map
 
-    with open('data_collection/%s/scenario_description.json' % (scenario_name), 'w') as f:
+    with open('data_collection/%s/%s/scenario_description.json' % (scenario_type, scenario_name), 'w') as f:
         json.dump(d, f)
 
 def record_traffic_lights(lights_dict, lights):
@@ -1674,12 +1684,12 @@ def record_traffic_lights(lights_dict, lights):
         lights_dict[l.id].append([str(l.get_state()), 0, 0])
     return lights_dict
 
-def save_traffic_lights(lights_dict, scenario_name):
-    if not os.path.exists('data_collection/%s/traffic_light/'% (scenario_name)):
-        os.mkdir('data_collection/%s/traffic_light/'% (scenario_name))
+def save_traffic_lights(scenario_type, lights_dict, scenario_name):
+    if not os.path.exists('data_collection/%s/%s/traffic_light/'% (scenario_type, scenario_name)):
+        os.mkdir('data_collection/%s/%s/traffic_light/'% (scenario_type, scenario_name))
 
     for l_id, state in lights_dict.items():
-        np.save('data_collection/%s/traffic_light/%s' % (scenario_name, str(l_id)), np.array(lights_dict[l_id]))
+        np.save('data_collection/%s/%s/traffic_light/%s' % (scenario_type, scenario_name, str(l_id)), np.array(lights_dict[l_id]))
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -1743,9 +1753,9 @@ def game_loop(args):
                 end_time = timestamp_list[-1]
                 print('start time: ' + str(start_time))
                 print('end time: ' + str(end_time))
-                actor_dict, control_dict, timestamp_list = save_actor(actor_dict, control_dict, scenario_name, timestamp_list)
-                save_traffic_lights(traffic_light, scenario_name)
-                save_description(scenario_name, args.map)
+                actor_dict, control_dict, timestamp_list = save_actor(args.scenario_type, actor_dict, control_dict, scenario_name, timestamp_list)
+                save_traffic_lights(args.scenario_type, traffic_light, scenario_name)
+                save_description(args.scenario_type, scenario_name, args.map)
                 controller.r = 2
 
                 print('has finished saving')
@@ -1835,6 +1845,11 @@ def main():
         default='keyboard',
         type=str,
         help='controller: keyboard, wheel (default: keyboard)')
+    argparser.add_argument(
+        '--scenario_type',
+        type=str,
+        choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
+        help='enable roaming actors')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
