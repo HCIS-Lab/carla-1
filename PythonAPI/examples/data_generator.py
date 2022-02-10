@@ -2169,10 +2169,16 @@ def game_loop(args):
                     if actor_id == 'player' and ref_light:
                         set_light_state(
                             lights, light_dict, actor_transform_index[actor_id], annotate)
+
                     if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                         if 'vehicle' in filter_dict[actor_id]:
-                            agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
-                                (velocity_dict[actor_id][actor_transform_index[actor_id]])*3600/1000.0, transform_dict[actor_id][actor_transform_index[actor_id]]))
+
+                            target_speed = (velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6
+                            waypoint = transform_dict[actor_id][actor_transform_index[actor_id]]
+
+                            agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(target_speed, waypoint))                            
+                            # agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
+                            #     (velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6, transform_dict[actor_id][actor_transform_index[actor_id]]))
 
                             v = agents_dict[actor_id].get_velocity()
                             v = ((v.x)**2 + (v.y)**2+(v.z)**2)**(0.5)
