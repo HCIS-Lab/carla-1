@@ -2081,7 +2081,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
         d['obstacle type'] = obstacle_type[description[2]]
         d['my_initial_action'] = initial_action[description[3]]
-        d['my_action'] = action[description[3]]
+        d['my_action'] = action[description[4]]
         d['map'] = carla_map
 
         with open(stored_path + '/scenario_description.json', 'w') as f:
