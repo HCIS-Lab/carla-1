@@ -2,6 +2,13 @@ import os
 import math
 import carla
 import numpy as np
+
+
+
+
+# data_generator
+
+
 def read_traffic_lights(path, lights):
     
     path = os.path.join(path, 'traffic_light')

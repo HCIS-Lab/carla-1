@@ -1992,8 +1992,7 @@ def game_loop(args):
     pygame.font.init()
     world = None
 
-    path = os.path.join('data_collection', args.map,
-                        args.scenario_type, args.scenario_id)
+    path = os.path.join('data_collection', args.scenario_type, args.scenario_id)
 
     filter_dict = {}
     try:
@@ -2102,8 +2101,7 @@ def game_loop(args):
         # time.sleep(2)
 
         # dynamic scenario setting
-        root = os.path.join('data_collection', args.map,
-                            args.scenario_type, args.scenario_id)
+        root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
         scenario_name = str(weather) + '_'
         # if args.random_objects:
         #     t = threading.Thread(target = auto_spawn_object,args=(world, 5))

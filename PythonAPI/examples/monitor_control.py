@@ -183,7 +183,6 @@ class World(object):
                 '  Make sure it exists, has the same name of your town, and is correct.')
             sys.exit(1)
         self.scenario_type = args.scenario_type
-        self.town = args.map
         self.hud = hud
         self.player = None
         self.collision_sensor = None
@@ -271,7 +270,7 @@ class World(object):
         self.gnss_sensor = GnssSensor(self.player)
         self.imu_sensor = IMUSensor(self.player)
         self.camera_manager = CameraManager(
-            self.player, self.hud, self._gamma, self.scenario_type, self.town)
+            self.player, self.hud, self._gamma, self.scenario_type)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
@@ -1336,12 +1335,11 @@ class RadarSensor(object):
 
 
 class CameraManager(object):
-    def __init__(self, parent_actor, hud, gamma_correction, scenario_type, town):
+    def __init__(self, parent_actor, hud, gamma_correction, scenario_type):
         self.sensor = None
         self.surface = None
         self._parent = parent_actor
         self.scenario_type = scenario_type
-        self.town = town
         self.hud = hud
         self.recording = False
         self.record_image = []
@@ -1565,7 +1563,7 @@ class CameraManager(object):
                     scenario_name += "_" + input_option
                     scenario_num = 0
                     path = os.path.join(
-                        'data_collection', self.town, self.scenario_type, scenario_name)
+                        'data_collection', self.scenario_type, scenario_name)
                     if os.path.isdir(path):
                         scenario_num += 1
                         while(1):
@@ -1667,7 +1665,7 @@ class CameraManager(object):
                     scenario_name += "_" + input_option
                     scenario_num = 0
                     path = os.path.join(
-                        'data_collection', self.town, self.scenario_type, scenario_name)
+                        'data_collection', self.scenario_type, scenario_name)
                     if os.path.isdir(path):
                         scenario_num += 1
                         while(1):
@@ -2158,11 +2156,7 @@ def game_loop(args):
         stored_path = 'data_collection'
         if not os.path.exists(stored_path):
             os.mkdir(stored_path)
-        stored_path = os.path.join(stored_path, args.map)
-        if not os.path.exists(stored_path):
-            os.mkdir(stored_path)
-        stored_path = os.path.join(
-            'data_collection', args.map, args.scenario_type)
+        stored_path = os.path.join('data_collection', args.scenario_type)
         if not os.path.exists(stored_path):
             os.mkdir(stored_path)
 
@@ -2232,7 +2226,7 @@ def game_loop(args):
                 timestamp_list = []
                 traffic_light = dict()
                 stored_path = os.path.join(
-                    'data_collection', args.map, args.scenario_type)
+                    'data_collection', args.scenario_type)
 
             # not recording
             elif code == 6:
