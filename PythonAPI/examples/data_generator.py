@@ -2020,8 +2020,6 @@ def game_loop(args):
                 os.path.join(path, 'control', actor_id + '.npy'))
     num_files = len(filter_dict)
 
-    print("=========",filter_dict)
-
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(10.0)
