@@ -2122,7 +2122,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['interaction_action_type'] = action[description[4]]
         d['my_action'] = action[description[5]]
         # d['interaction'] = interaction[description[6]]
-        d['violation'] = violation[description[7]]
+        d['violation'] = violation[description[6]]
         d['map'] = carla_map
         with open(stored_path + '/scenario_description.json', 'w') as f:
             json.dump(d, f)
