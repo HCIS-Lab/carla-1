@@ -1571,7 +1571,7 @@ class CameraManager(object):
                         '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.LogarithmicDepth)
                 elif 'dvs' in view:
                     dvs_events = np.frombuffer(img.raw_data, dtype=np.dtype([
-                        ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
+                        ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool_)]))
                     dvs_img = np.zeros(
                         (img.height, img.width, 3), dtype=np.uint8)
                     # Blue is positive, red is negative
