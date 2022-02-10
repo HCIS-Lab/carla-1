@@ -2158,6 +2158,8 @@ def game_loop(args):
         else:
             controller = KeyboardControl(world, args.autopilot)
 
+        obstacle_list = []
+        
         if args.obstacle != 0:
             obstacle_list = generate_obstacle(
                 client.get_world(), args.obstacle)
