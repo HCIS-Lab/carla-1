@@ -1738,6 +1738,114 @@ class CameraManager(object):
                     scenario_name += "_" + input_option
 
                     break
+            else:
+                scenario_name_actor_type = {
+                    'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian','s':'static_object'}
+
+                scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
+                                                   'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward',
+                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking','0':'None'}
+
+                scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
+                                           'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+
+                # scenario_name_interaction = {'0': 'False', '1':  'True'}
+
+                scenario_name_violated_rule = {'0': 'None', 'p': 'parking', 'j': 'jay-walker',
+                                               'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
+
+                while True:
+                    scenario_name = ""
+                    print("Scenario Categorization:")
+                    print("Input map_id:")
+                    for key in scenario_name_map:
+                        print(key + ': ' + scenario_name_map[key] + ' ')
+                    input_option = str(input())
+                    # if record is wrong press 0
+                    if input_option == '0':
+                        print("Cancelling")
+                        restart = 1
+                        break
+                    if input_option not in scenario_name_map:
+                        print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                        continue
+
+                    scenario_name += input_option
+
+                    print("Input road_id:")
+                    input_option = str(input())
+                    scenario_name += "_" + input_option
+
+                    print("Input is_traffic_light:")
+                    for key in scenario_name_is_traffic_light:
+                        print(key + ': ' +
+                              scenario_name_is_traffic_light[key] + ' ')
+                    input_option = str(input())
+                    if input_option not in scenario_name_is_traffic_light:
+                        print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                        continue
+                    scenario_name += "_" + input_option
+
+                    print("Input actor_type:")
+                    for key in scenario_name_actor_type:
+                        print(key + ': ' + scenario_name_actor_type[key] + ' ')
+                    input_option = str(input())
+                    if input_option not in scenario_name_actor_type:
+                        print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                        continue
+                    scenario_name += "_" + input_option
+
+                    print("Input actor_action:")
+                    for key in scenario_name_actor_type_action:
+                        print(key + ': ' +
+                              scenario_name_actor_type_action[key] + ' ')
+                    input_option = str(input())
+                    if input_option not in scenario_name_actor_type_action:
+                        print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                        continue
+                    scenario_name += "_" + input_option
+
+                    print("Input name_my_action:")
+                    for key in scenario_name_my_action:
+                        print(key + ': ' + scenario_name_my_action[key] + ' ')
+                    input_option = str(input())
+                    if input_option not in scenario_name_my_action:
+                        print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                        continue
+                    scenario_name += "_" + input_option
+
+                    # print("Input is_interactive:")
+                    # for key in scenario_name_interaction:
+                    #     print(key + ': ' +
+                    #           scenario_name_interaction[key] + ' ')
+                    # input_option = str(input())
+                    # if input_option not in scenario_name_interaction:
+                    #     print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                    #     continue
+                    # scenario_name += "_" + input_option
+
+                    print("Input name_violated_rule:")
+                    for key in scenario_name_violated_rule:
+                        print(key + ': ' +
+                              scenario_name_violated_rule[key] + ' ')
+                    input_option = str(input())
+                    if input_option not in scenario_name_violated_rule:
+                        print("INVALID INPUT! RESTART NAMING SCENARIO.")
+                        continue
+                    scenario_name += "_" + input_option
+                    scenario_num = 0
+                    path = os.path.join(
+                        'data_collection', self.scenario_type, scenario_name)
+                    if os.path.isdir(path):
+                        scenario_num += 1
+                        while(1):
+                            if os.path.isdir(path + '_' + str(scenario_num)):
+                                scenario_num += 1
+                            else:
+                                scenario_name = scenario_name + \
+                                    '_' + str(scenario_num)
+                                break
+                    break
 
             if not restart:
                 self.scenario_id = scenario_name
@@ -1984,6 +2092,47 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
         with open(stored_path + '/scenario_description.json', 'w') as f:
             json.dump(d, f)
+    if scenario_type == 'collision':
+        # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
+
+        actor = {'c': 'car', 't': 'truck', 'b': 'bike',
+                 'm': 'motor', 'p': 'pedestrian', 's':'static_object'}
+
+        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
+                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
+                  'w': 'walking on sidewalk', 'j': 'jaywalking', '0': 'None'}
+
+        violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
+                     's': 'driving on a sidewalk', 'ss': 'stop sign'}
+
+        # 1: non-interactive, 2: interactive
+        # interaction = {'0': 'False', '1': 'True'}
+        d = dict()
+        topo = description[1].split('-')[0]
+        if 'i' in topo:
+            d['topology'] = '4_way_intersection'
+        elif 't' in topo:
+            if topo[1] == '1':
+                d['topology'] = '4_way_intersection_1'
+            elif topo[1] == '2':
+                d['topology'] = '4_way_intersection_2'
+            elif topo[1] == '3':
+                d['topology'] = '4_way_intersection_3'
+        elif 'r' in topo:
+            d['topology'] = 'roundabout'
+        elif 's' in topo:
+            d['topology'] = 'straight'
+
+        d['traffic_light'] = 1 if description[2] == '1' else 0
+        d['interaction_actor_type'] = actor[description[3]]
+        d['interaction_action_type'] = action[description[4]]
+        d['my_action'] = action[description[5]]
+        # d['interaction'] = interaction[description[6]]
+        d['violation'] = violation[description[7]]
+        d['map'] = carla_map
+        with open(stored_path + '/scenario_description.json', 'w') as f:
+            json.dump(d, f)
+    
 
 
 def record_traffic_lights(lights_dict, lights):
