@@ -1394,20 +1394,20 @@ class CameraManager(object):
             t_flow = threading.Thread(target = self.save_img,args=(self.flow, 8, path, 'flow'))
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
-            t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
-            t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, path, 'seg_front'))
-            t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, path, 'seg_right'))
-            t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
-            t_seg_back = threading.Thread(target = self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
-            t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, path, 'seg_back_right'))
-            t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, path, 'seg_back_left'))
+            # t_seg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
+            # t_seg_front = threading.Thread(target = self.save_img, args=(self.front_seg, 5, path, 'seg_front'))
+            # t_seg_right = threading.Thread(target = self.save_img, args=(self.right_seg, 5, path, 'seg_right'))
+            # t_seg_left = threading.Thread(target = self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
+            # t_seg_back = threading.Thread(target = self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
+            # t_seg_back_right = threading.Thread(target = self.save_img, args=(self.back_right_seg, 5, path, 'seg_back_right'))
+            # t_seg_back_left = threading.Thread(target = self.save_img, args=(self.back_left_seg, 5, path, 'seg_back_left'))
 
-            t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 1, path, 'depth_front'))
-            t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 1, path, 'depth_right'))
-            t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 1, path, 'depth_left'))
-            t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 1, path, 'depth_back'))
-            t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 1, path, 'depth_back_right'))
-            t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 1, path, 'depth_back_left'))
+            # t_depth_front = threading.Thread(target = self.save_img, args=(self.front_depth, 1, path, 'depth_front'))
+            # t_depth_right = threading.Thread(target = self.save_img, args=(self.right_depth, 1, path, 'depth_right'))
+            # t_depth_left = threading.Thread(target = self.save_img, args=(self.left_depth, 1, path, 'depth_left'))
+            # t_depth_back = threading.Thread(target = self.save_img, args=(self.back_depth, 1, path, 'depth_back'))
+            # t_depth_back_right = threading.Thread(target = self.save_img, args=(self.back_right_depth, 1, path, 'depth_back_right'))
+            # t_depth_back_left = threading.Thread(target = self.save_img, args=(self.back_left_depth, 1, path, 'depth_back_left'))
 
 #             t_bbox = threading.Thread(target = self.save_bbox, args=(self.bbox, path))
 
@@ -1424,20 +1424,20 @@ class CameraManager(object):
             t_flow.start()
 
             # t_iseg_top.start()
-            t_seg_top.start()
-            t_seg_front.start()
-            t_seg_right.start()
-            t_seg_left.start()
-            t_seg_back.start()
-            t_seg_back_right.start()
-            t_seg_back_left.start()
+            # t_seg_top.start()
+            # t_seg_front.start()
+            # t_seg_right.start()
+            # t_seg_left.start()
+            # t_seg_back.start()
+            # t_seg_back_right.start()
+            # t_seg_back_left.start()
 
-            t_depth_front.start()
-            t_depth_right.start()
-            t_depth_left.start()
-            t_depth_back.start()
-            t_depth_back_right.start()
-            t_depth_back_left.start()
+            # t_depth_front.start()
+            # t_depth_right.start()
+            # t_depth_left.start()
+            # t_depth_back.start()
+            # t_depth_back_right.start()
+            # t_depth_back_left.start()
 
 #             t_bbox.start()
 
@@ -1454,27 +1454,27 @@ class CameraManager(object):
             self.flow = []
 
             # self.top_iseg = []
-            self.top_seg = []
-            self.front_seg = []
-            self.right_seg = []
-            self.left_seg = []
-            self.back_seg = []
-            self.back_right_seg = []
-            self.back_left_seg = []
+            # self.top_seg = []
+            # self.front_seg = []
+            # self.right_seg = []
+            # self.left_seg = []
+            # self.back_seg = []
+            # self.back_right_seg = []
+            # self.back_left_seg = []
 
-            self.front_depth = []
-            self.right_depth = []
-            self.left_depth = []
-            self.back_depth = []
-            self.back_right_depth = []
-            self.back_left_depth = []
+            # self.front_depth = []
+            # self.right_depth = []
+            # self.left_depth = []
+            # self.back_depth = []
+            # self.back_right_depth = []
+            # self.back_left_depth = []
 
-            t_depth_front.join()
-            self.save_bbox([self.bbox,self.img_dict,self.snap_dict],path)
+            # t_depth_front.join()
+            # self.save_bbox([self.bbox,self.img_dict,self.snap_dict],path)
 
-            self.bbox = []
-            self.img_dict = {}
-            self.snap_dict = {}
+            # self.bbox = []
+            # self.img_dict = {}
+            # self.snap_dict = {}
 
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
@@ -1511,23 +1511,6 @@ class CameraManager(object):
                 else:
                     img.save_to_disk('%s/%s/%s/%08d' % (path, self.sensors[sensor][2], view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
-
-    def save_bbox(self,input_list,path):
-        VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
-        VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
-        VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
-        bbox,img_dict,snap_dict = input_list
-        for index,item in enumerate(bbox):
-            depth_img = item
-            try:
-                vehicles,cam = snap_dict[depth_img.frame]
-            except:
-                continue
-            rgb_img = img_dict[depth_img.frame]
-            depth_meter = cva.extract_depth(depth_img)
-            filtered, removed =  cva.auto_annotate(vehicles, cam, depth_meter,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV)
-            cva.save_output(rgb_img, filtered['bbox'], path,filtered['vehicles'], removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
-    
 
     def render(self, display):
         if self.surface is not None:
@@ -1600,45 +1583,45 @@ class CameraManager(object):
             # elif view == 'iseg_top':
             #     self.top_iseg.append(image)
 
-            elif view == 'seg_top':
-                self.top_seg.append(image)
-            elif view == 'seg_front':
-                self.front_seg.append(image)
-            elif view == 'seg_right':
-                self.right_seg.append(image)
-            elif view == 'seg_left':
-                self.left_seg.append(image)
-            elif view == 'seg_back':
-                self.back_seg.append(image)
-            elif view == 'seg_back_right':
-                self.back_right_seg.append(image)
-            elif view == 'seg_back_left':
-                self.back_left_seg.append(image)
+            # elif view == 'seg_top':
+            #     self.top_seg.append(image)
+            # elif view == 'seg_front':
+            #     self.front_seg.append(image)
+            # elif view == 'seg_right':
+            #     self.right_seg.append(image)
+            # elif view == 'seg_left':
+            #     self.left_seg.append(image)
+            # elif view == 'seg_back':
+            #     self.back_seg.append(image)
+            # elif view == 'seg_back_right':
+            #     self.back_right_seg.append(image)
+            # elif view == 'seg_back_left':
+            #     self.back_left_seg.append(image)
 
-            elif view == 'depth_front':
-                self.front_depth.append(image)
-                if self.sensor_front is not None:#self.img_dict[image.frame] is not None and self.sensor_front is not None:
-                    world = self._parent.get_world()
-                    snapshot = world.get_snapshot()
-                    actors = world.get_actors()
-                    try:
-                        sensor_transform = snapshot.find(self.sensor_front.id).get_transform()
-                        vehicles = cva.snap_processing(actors.filter('vehicle.*'), snapshot)
-                        vehicles+= cva.snap_processing(actors.filter('walker.*'), snapshot)
-                        self.snap_dict[snapshot.frame] = [vehicles,sensor_transform]
-                        self.bbox.append(image)
-                    except:
-                        print("Initial frame.")
-            elif view == 'depth_right':
-                self.right_depth.append(image)
-            elif view == 'depth_left':
-                self.left_depth.append(image)
-            elif view == 'depth_back':
-                self.back_depth.append(image)
-            elif view == 'depth_back_right':
-                self.back_right_depth.append(image)
-            elif view == 'depth_back_left':
-                self.back_left_depth.append(image)   
+            # elif view == 'depth_front':
+            #     self.front_depth.append(image)
+            #     if self.sensor_front is not None:#self.img_dict[image.frame] is not None and self.sensor_front is not None:
+            #         world = self._parent.get_world()
+            #         snapshot = world.get_snapshot()
+            #         actors = world.get_actors()
+            #         try:
+            #             sensor_transform = snapshot.find(self.sensor_front.id).get_transform()
+            #             vehicles = cva.snap_processing(actors.filter('vehicle.*'), snapshot)
+            #             vehicles+= cva.snap_processing(actors.filter('walker.*'), snapshot)
+            #             self.snap_dict[snapshot.frame] = [vehicles,sensor_transform]
+            #             self.bbox.append(image)
+            #         except:
+            #             print("Initial frame.")
+            # elif view == 'depth_right':
+            #     self.right_depth.append(image)
+            # elif view == 'depth_left':
+            #     self.left_depth.append(image)
+            # elif view == 'depth_back':
+            #     self.back_depth.append(image)
+            # elif view == 'depth_back_right':
+            #     self.back_right_depth.append(image)
+            # elif view == 'depth_back_left':
+            #     self.back_left_depth.append(image)   
 
 
 def record_control(control, control_list):
@@ -1965,9 +1948,9 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    path = 'data_collection/'+str(args.scenario_id)
+    path = os.path.join('data_collection', args.scenario_type, args.scenario_id)
     
-    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30,  (1280, 720) )
+    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 20,  (1280, 720) )
 
     filter_dict = {}
     try:
@@ -2310,6 +2293,11 @@ def main():
         type=bool,
         default=False,
         help='apply noise on trajectory')
+    argparser.add_argument(
+        '--scenario_type',
+        type=str,
+        choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
+        help='enable roaming actors')
 
     args = argparser.parse_args()
 
