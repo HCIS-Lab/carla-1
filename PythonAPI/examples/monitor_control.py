@@ -1978,7 +1978,7 @@ def save_actor(stored_path, actor_dict, control_dict, timestamp_list, obstacle_l
             text_file.write(line+"\n")
 
     for actor_id, data in control_dict.items():
-        np.save(stored_path + '/control/%s' %
+        np.save(stored_path + '/ped_control/%s' %
                 (actor_id), np.array(data['control']))
         data['control'] = []
 
