@@ -1948,19 +1948,18 @@ def extract_actor(actor_dict, control_dict, world):
 
 
 def save_actor(stored_path, actor_dict, control_dict, timestamp_list, obstacle_list):
-
-    if not os.path.exists(stored_path + '/transform/'):
-        os.mkdir(stored_path + '/transform/')
-    if not os.path.exists(stored_path + '/control/'):
-        os.mkdir(stored_path + '/control')
-    if not os.path.exists(stored_path + '%s/velocity/'):
-        os.mkdir(stored_path + '/velocity/')
-    if not os.path.exists(stored_path + '%s/filter/'):
-        os.mkdir(stored_path + '/filter/')
-    if not os.path.exists(stored_path + '%s/timestamp/'):
-        os.mkdir(stored_path + '/timestamp/')
-    if not os.path.exists(stored_path + '%s/obstacle/'):
-        os.mkdir(stored_path + '/obstacle/')
+    if not os.path.exists(os.path.join(stored_path, 'transform')):
+        os.mkdir(os.path.join(stored_path, 'transform'))
+    if not os.path.exists(os.path.join(stored_path, 'control')):
+        os.mkdir(os.path.join(stored_path, 'control'))
+    if not os.path.exists(os.path.join(stored_path, 'velocity')):
+        os.mkdir(os.path.join(stored_path, 'velocity'))
+    if not os.path.exists(os.path.join(stored_path, 'filter')):
+        os.mkdir(os.path.join(stored_path, 'filter'))
+    if not os.path.exists(os.path.join(stored_path, 'timestamp/')):
+        os.mkdir(os.path.join(stored_path, 'timestamp'))
+    if not os.path.exists(os.path.join(stored_path, 'obstacle')):
+        os.mkdir(os.path.join(stored_path, 'obstacle'))
 
     for actor_id, data in actor_dict.items():
         np.save(stored_path + '/transform/%s' %
@@ -2094,7 +2093,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['map'] = carla_map
 
 
-    with open(stored_path + '/scenario_description.json', 'w') as f:
+    with open(os.path.join(stored_path, 'scenario_description.json'), 'w') as f:
         json.dump(d, f)
     
 
@@ -2289,8 +2288,6 @@ def game_loop(args):
         if args.parking != 0:
             obstacle_list = generate_parking(client.get_world(), args.parking)
 
-        # lm = world.world.get_lightmanager()
-        # lights = lm.get_all_lights(carla.LightGroup.Street)
         lights = []
         actors = world.world.get_actors()
         for l in actors:
