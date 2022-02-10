@@ -445,12 +445,6 @@ class DualControl(object):
                     world.camera_manager.next_sensor()
                 elif event.key == K_n:
                     world.camera_manager.next_sensor()
-                elif event.key == K_e:
-                    xx = int(input("x: "))
-                    yy = int(input("y: "))
-                    zz = int(input("z: "))
-                    new_location = carla.Location(xx, yy, zz)
-                    world.player.set_location(new_location)
                 elif event.key == K_o:
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
