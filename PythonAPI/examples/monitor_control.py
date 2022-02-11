@@ -1950,8 +1950,8 @@ def extract_actor(actor_dict, control_dict, world):
 def save_actor(stored_path, actor_dict, control_dict, timestamp_list, obstacle_list):
     if not os.path.exists(os.path.join(stored_path, 'transform')):
         os.mkdir(os.path.join(stored_path, 'transform'))
-    if not os.path.exists(os.path.join(stored_path, 'control')):
-        os.mkdir(os.path.join(stored_path, 'control'))
+    if not os.path.exists(os.path.join(stored_path, 'ped_control')):
+        os.mkdir(os.path.join(stored_path, 'ped_control'))
     if not os.path.exists(os.path.join(stored_path, 'velocity')):
         os.mkdir(os.path.join(stored_path, 'velocity'))
     if not os.path.exists(os.path.join(stored_path, 'filter')):
