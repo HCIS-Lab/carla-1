@@ -1983,11 +1983,12 @@ def generate_obstacle(world, bp, path):
     lines = f.readlines()
     f.close()
 
-    for line in lines:
-        obstacle_name = line.split('\t')[0]
-        transform = line.split('\t')[1]
-        # print(obstacle_name, " ", transform)
-        exec("world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
+    if lines[0][:6] == 'static':
+        for line in lines:
+            obstacle_name = line.split('\t')[0]
+            transform = line.split('\t')[1]
+            # print(obstacle_name, " ", transform)
+            exec("world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
