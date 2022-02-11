@@ -2086,7 +2086,6 @@ def game_loop(args):
         # set controller
         try:
             for actor_id, bp in filter_dict.items():
-                print(actor_id)
                 if actor_id != 'player':
 
                     transform_spawn = transform_dict[actor_id][0]
