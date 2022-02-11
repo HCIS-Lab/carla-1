@@ -78,14 +78,14 @@ do
 	x="./data_collection/${scenario_type}/${scenario_name:$len}"
 	f=`ls -d ${x}/*_*_`
 	rm -r "${x}/timestamp"
-	mkdir "${x}/variant scenario"
+	mkdir "${x}/variant_scenario"
 	for name in $f
 	do 
 		FILE=${name}/finish.txt
 		if test -f "$FILE"; 
 		then
 			echo "$FILE exists."
-			mv ${name} "${x}/variant scenario"
+			mv ${name} "${x}/variant_scenario"
 		else
 			echo "$FILE not exist. remove this folder"
 			rm -r ${name}
