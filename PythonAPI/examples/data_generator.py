@@ -175,7 +175,6 @@ class World(object):
         self._gamma = args.gamma
         self.ego_data = {}
         self.save_mode = not args.no_save
-        print('world.save_mode: ' + str(self.save_mode))
         self.restart()
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
@@ -1996,7 +1995,6 @@ def generate_obstacle(world, bp, path):
 import cv2
 
 def game_loop(args):
-    print(args.no_save)
     pygame.init()
     pygame.font.init()
     world = None
@@ -2239,8 +2237,9 @@ def game_loop(args):
             save_description(world, args, stored_path, weather)
 
     finally:
-        # to svae a top view video
+        # to save a top view video
         out.release()
+
         if not args.no_save:
             finish_tag = open(stored_path+'/finish.txt', 'w')
             finish_tag.close()
