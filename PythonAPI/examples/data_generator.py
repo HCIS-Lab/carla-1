@@ -2220,8 +2220,8 @@ def game_loop(args):
         save_description(world, args, stored_path, weather)
 
     finally:
-        # finish_tag = open(stored_path+'/finish.txt', 'w')
-        # finish_tag.close()
+        finish_tag = open(stored_path+'/finish.txt', 'w')
+        finish_tag.close()
 
         if (world and world.recording_enabled):
             client.stop_recorder()
