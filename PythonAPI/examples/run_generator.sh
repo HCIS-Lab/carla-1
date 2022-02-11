@@ -1,19 +1,9 @@
 #!/bin/sh
-num_scenario=0
-
-# features
-num_weather=6
-
-# weather[0] = 'ClearNoon'
-map=('None' 'Town01' 'Town02' 'Town03' 'Town04' 'Town05')
 
 weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'SoftRainNoon'
 	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
 	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainyNight' 'HardRainNight' 'SoftRainNight')
 random_actor=('low' 'mid' 'high')
-#name=('3_t3-8_1_c_u_f_2_0')
-
-#IFS='_' read -ra DES <<< "$name"
 
 function random_range()
 {
@@ -26,9 +16,36 @@ function random_range()
     echo $(($low+$RANDOM % $range))
 }
 
+echo "Input the scenario_type you want to geneate the data"
+echo "Choose from the following options:"
+echo "1 - collision"
+echo "2 - obstacle"
+echo "3 - interactive"
+echo "4 - non-interactive"
+read -p "Enter scenario type ID to create a data video: " ds_id
 
+scenario_type="interactive"
+if [ ${ds_id} == 1 ]
+then
+    scenario_type="collision"
+elif [ ${ds_id} == 2 ]
+then
+    scenario_type="obstacle"
+elif [ ${ds_id} == 3 ]
+then
+    scenario_type="interactive"
+elif [ ${ds_id} == 4 ]
+then
+    scenario_type="non-interactive"
+else
+    echo "Invalid ID!!!"
+    echo "run default setting : interactive"
+fi
+
+len=${#scenario_type}
+len=$((len + 19))
 SERVICE="CarlaUE4"
-folder=`ls -d ./data_collection/*`
+folder=`ls -d ./data_collection/${scenario_type}/*`
 ../../CarlaUE4.sh &
 sleep 15
 for scenario_name in $folder
@@ -53,12 +70,12 @@ do
 					sleep 8
 					echo ${i}
 					echo ${k}
-					echo ${scenario_name:18}
-					time python data_generator.py -map Town0${scenario_name:18:1} -scenario_id ${scenario_name:18}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
+					echo ${scenario_name:$len}
+					python data_generator.py -map Town0${scenario_name:$len:1} -scenario_id ${scenario_name:$len}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]} --scenario_type ${scenario_type}
 					sleep 3
 			done
 	done
-	x="./data_collection/${scenario_name:18}"
+	x="./data_collection/${scenario_type}/${scenario_name:$len}"
 	f=`ls -d ${x}/*_*_`
 	rm -r "${x}/timestamp"
 	mkdir "${x}/variant scenario"
