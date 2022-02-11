@@ -174,7 +174,6 @@ class World(object):
         self._actor_filter = client_bp
         self._gamma = args.gamma
         self.ego_data = {}
-        self.save_mode = not args.no_save
         self.restart()
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
@@ -194,7 +193,6 @@ class World(object):
             carla.MapLayer.Walls,
             carla.MapLayer.All
         ]
-        
 
     def restart(self):
         self.player_max_speed = 1.589
@@ -250,11 +248,10 @@ class World(object):
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.gnss_sensor = GnssSensor(self.player, self.ego_data)
         self.imu_sensor = IMUSensor(self.player, self.ego_data)
-        self.camera_manager = CameraManager(self.player, self.hud, self._gamma, self.save_mode)
+        self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         self.camera_manager.background = True
-        self.camera_manager.save_mode = self.save_mode
 
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
@@ -1107,13 +1104,12 @@ class RadarSensor(object):
 
 
 class CameraManager(object):
-    def __init__(self, parent_actor, hud, gamma_correction, save_mode):
+    def __init__(self, parent_actor, hud, gamma_correction):
         self.sensor_top = None
         self.surface = None
         self._parent = parent_actor
         self.hud = hud
         self.recording = False
-        self.save_mode = save_mode
 
         self.top_img = []
         self.front_img = []
@@ -1243,194 +1239,191 @@ class CameraManager(object):
                 self.sensor_top.destroy()
                 self.surface = None
 
-            # rgb sensor
+                # rgb sensor
             self.sensor_top = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
                 self._camera_transforms[6][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[6][1])
+            self.sensor_front = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.sensor_left = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.sensor_right = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+            self.sensor_back = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[3][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[3][1])
+            self.sensor_back_left = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[4][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[4][1])
+            self.sensor_back_right = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[5][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[5][1])
 
-            if self.save_mode:
-                self.sensor_front = self._parent.get_world().spawn_actor(
-                    self.sensors[0][-1],
-                    self._camera_transforms[0][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-                self.sensor_left = self._parent.get_world().spawn_actor(
-                    self.sensors[0][-1],
-                    self._camera_transforms[1][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[1][1])
-                self.sensor_right = self._parent.get_world().spawn_actor(
-                    self.sensors[0][-1],
-                    self._camera_transforms[2][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[2][1])
-                self.sensor_back = self._parent.get_world().spawn_actor(
-                    self.sensors[0][-1],
-                    self._camera_transforms[3][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[3][1])
-                self.sensor_back_left = self._parent.get_world().spawn_actor(
-                    self.sensors[0][-1],
-                    self._camera_transforms[4][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[4][1])
-                self.sensor_back_right = self._parent.get_world().spawn_actor(
-                    self.sensors[0][-1],
-                    self._camera_transforms[5][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[5][1])
+            # lidar sensor
+            self.sensor_lidar = self._parent.get_world().spawn_actor(
+                self.sensors[6][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
 
-                # lidar sensor
-                self.sensor_lidar = self._parent.get_world().spawn_actor(
-                    self.sensors[6][-1],
-                    self._camera_transforms[0][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
+            self.sensor_dvs = self._parent.get_world().spawn_actor(
+                self.sensors[7][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
 
-                self.sensor_dvs = self._parent.get_world().spawn_actor(
-                    self.sensors[7][-1],
-                    self._camera_transforms[0][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
+            # optical flow
+            self.sensor_flow = self._parent.get_world().spawn_actor(
+                self.sensors[8][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
 
-                # optical flow
-                self.sensor_flow = self._parent.get_world().spawn_actor(
-                    self.sensors[8][-1],
-                    self._camera_transforms[0][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
+            # segmentation sensor
+            # self.iseg_top = self._parent.get_world().spawn_actor(
+            #     self.sensors[-1][-1],
+            #     self._camera_transforms[6][0],
+            #     attach_to=self._parent,
+            #     attachment_type=self._camera_transforms[6][1])
 
-                # segmentation sensor
-                # self.iseg_top = self._parent.get_world().spawn_actor(
-                #     self.sensors[-1][-1],
-                #     self._camera_transforms[6][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[6][1])
+            self.seg_top = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[6][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[6][1])
+            self.seg_front = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.seg_left = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.seg_right = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+            self.seg_back = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[3][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[3][1])
+            self.seg_back_left = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[4][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[4][1])
+            self.seg_back_right = self._parent.get_world().spawn_actor(
+                self.sensors[5][-1],
+                self._camera_transforms[5][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[5][1])
 
-                self.seg_top = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[6][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[6][1])
-                self.seg_front = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[0][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-                self.seg_left = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[1][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[1][1])
-                self.seg_right = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[2][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[2][1])
-                self.seg_back = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[3][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[3][1])
-                self.seg_back_left = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[4][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[4][1])
-                self.seg_back_right = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[5][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[5][1])
-
-                # depth estimation sensor
-                self.depth_front = self._parent.get_world().spawn_actor(
-                    self.sensors[2][-1],
-                    self._camera_transforms[0][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-                self.depth_left = self._parent.get_world().spawn_actor(
-                    self.sensors[2][-1],
-                    self._camera_transforms[1][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[1][1])
-                self.depth_right = self._parent.get_world().spawn_actor(
-                    self.sensors[2][-1],
-                    self._camera_transforms[2][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[2][1])
-                self.depth_back = self._parent.get_world().spawn_actor(
-                    self.sensors[2][-1],
-                    self._camera_transforms[3][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[3][1])
-                self.depth_back_left = self._parent.get_world().spawn_actor(
-                    self.sensors[2][-1],
-                    self._camera_transforms[4][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[4][1])
-                self.depth_back_right = self._parent.get_world().spawn_actor(
-                    self.sensors[2][-1],
-                    self._camera_transforms[5][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[5][1])
+            # depth estimation sensor
+            self.depth_front = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[0][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[0][1])
+            self.depth_left = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[1][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[1][1])
+            self.depth_right = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[2][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[2][1])
+            self.depth_back = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[3][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[3][1])
+            self.depth_back_left = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[4][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[4][1])
+            self.depth_back_right = self._parent.get_world().spawn_actor(
+                self.sensors[2][-1],
+                self._camera_transforms[5][0],
+                attach_to=self._parent,
+                attachment_type=self._camera_transforms[5][1])
 
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
             self.sensor_top.listen(
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
-            if self.save_mode:
-                self.sensor_front.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'front'))
-                self.sensor_right.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'right'))
-                self.sensor_left.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'left'))
-                self.sensor_back.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'back'))
-                self.sensor_back_right.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'back_right'))
-                self.sensor_back_left.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
+            self.sensor_front.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'front'))
+            self.sensor_right.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'right'))
+            self.sensor_left.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'left'))
+            self.sensor_back.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'back'))
+            self.sensor_back_right.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'back_right'))
+            self.sensor_back_left.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'back_left'))
 
-                self.sensor_lidar.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
-                self.sensor_dvs.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
-                self.sensor_flow.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
+            self.sensor_lidar.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+            self.sensor_dvs.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
+            self.sensor_flow.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
-                # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
-                self.seg_top.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_top'))
-                self.seg_front.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_front'))
-                self.seg_right.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_right'))
-                self.seg_left.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_left'))
-                self.seg_back.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_back'))
-                self.seg_back_right.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_back_right'))
-                self.seg_back_left.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_back_left'))
+            # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
+            self.seg_top.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_top'))
+            self.seg_front.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_front'))
+            self.seg_right.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_right'))
+            self.seg_left.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_left'))
+            self.seg_back.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_back'))
+            self.seg_back_right.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_back_right'))
+            self.seg_back_left.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'seg_back_left'))
 
-                self.depth_front.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'depth_front'))
-                self.depth_right.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'depth_right'))
-                self.depth_left.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'depth_left'))
-                self.depth_back.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'depth_back'))
-                self.depth_back_right.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'depth_back_right'))
-                self.depth_back_left.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'depth_back_left'))
+            self.depth_front.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'depth_front'))
+            self.depth_right.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'depth_right'))
+            self.depth_left.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'depth_left'))
+            self.depth_back.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'depth_back'))
+            self.depth_back_right.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'depth_back_right'))
+            self.depth_back_left.listen(lambda image: CameraManager._parse_image(
+                weak_self, image, 'depth_back_left'))
 
         if notify:
             self.hud.notification(self.sensors[index][2])
@@ -1983,16 +1976,17 @@ def generate_obstacle(world, bp, path):
     lines = f.readlines()
     f.close()
 
-    for line in lines:
-        obstacle_name = line.split('\t')[0]
-        transform = line.split('\t')[1]
-        # print(obstacle_name, " ", transform)
-        exec("world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
+    if lines[0][:6] == 'static':
+        for line in lines:
+            obstacle_name = line.split('\t')[0]
+            transform = line.split('\t')[1]
+            # print(obstacle_name, " ", transform)
+            exec("world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
-import cv2
+
 
 def game_loop(args):
     pygame.init()
@@ -2000,8 +1994,6 @@ def game_loop(args):
     world = None
 
     path = os.path.join('data_collection', args.scenario_type, args.scenario_id)
-
-    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 20,  (1280, 720) )
 
     filter_dict = {}
     try:
@@ -2083,30 +2075,25 @@ def game_loop(args):
         agents_dict['player'] = world.player
 
         # set controller
-        try:
-            for actor_id, bp in filter_dict.items():
-                print(actor_id)
-                if actor_id != 'player':
+        for actor_id, bp in filter_dict.items():
+            if actor_id != 'player':
+                transform_spawn = transform_dict[actor_id][0]
+                transform_spawn.location.z += 0.5
+                agents_dict[actor_id] = client.get_world().spawn_actor(
+                    set_bp(blueprint_library.filter(
+                        filter_dict[actor_id]), actor_id),
+                    transform_spawn)
 
-                    transform_spawn = transform_dict[actor_id][0]
-                    transform_spawn.location.z += 1.5
-                    agents_dict[actor_id] = client.get_world().spawn_actor(
-                        set_bp(blueprint_library.filter(
-                            filter_dict[actor_id]), actor_id),
-                        transform_spawn)
+            if 'vehicle' in bp:
+                controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
+                                                                max_throttle=1.0, max_brake=1.0, max_steering=1.0)
 
-                if 'vehicle' in bp:
-                    controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                                     max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-                actor_transform_index[actor_id] = 1
-                finish[actor_id] = False
+            actor_transform_index[actor_id] = 1
+            finish[actor_id] = False
 
-                if 'Night' in weather:
-                    agents_dict[actor_id].set_light_state(carla.VehicleLightState.Position)
-
-        except Exception:
-            pass
-
+            if 'Night' in weather:
+                agents_dict[actor_id].set_light_state(carla.VehicleLightState.Position)
+                
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         # time.sleep(2)
@@ -2131,17 +2118,16 @@ def game_loop(args):
                                    pedestrian=80, transform_dict=transform_dict)
             scenario_name = scenario_name + args.random_actors + '_'
 
-        if not args.no_save:
-            # recording traj
-            id = []
-            moment = []
-            with open(os.path.join(root, 'timestamp.txt')) as f:
-                for line in f.readlines():
-                    s = line.split(',')
-                    id.append(int(s[0]))
-                    moment.append(s[1])
-            period = float(moment[-1]) - float(moment[0])
-            half_period = period / 2
+        # recording traj
+        id = []
+        moment = []
+        with open(os.path.join(root, 'timestamp.txt')) as f:
+            for line in f.readlines():
+                s = line.split(',')
+                id.append(int(s[0]))
+                moment.append(s[1])
+        period = float(moment[-1]) - float(moment[0])
+        half_period = period / 2
 
         # dynamic scenario setting
         stored_path = os.path.join(root, scenario_name)
@@ -2157,17 +2143,15 @@ def game_loop(args):
             frame = world.world.tick()
             iter_tick += 1
             if iter_tick == iter_start + 1:
-                if not args.no_save:
-                    world.camera_manager.toggle_recording(stored_path)
-                    world.imu_sensor.toggle_recording_IMU()
-                    world.gnss_sensor.toggle_recording_Gnss()
-                    traj_col = threading.Thread(target=collect_trajectory, args=(
-                        world, world.player, args.scenario_id, period, stored_path))
-                    traj_col.start()
-                    topo_col = threading.Thread(target=collect_topology, args=(
-                        world, world.player, args.scenario_id, half_period, root, stored_path))
-                    topo_col.start()
-
+                world.camera_manager.toggle_recording(stored_path)
+                world.imu_sensor.toggle_recording_IMU()
+                world.gnss_sensor.toggle_recording_Gnss()
+                traj_col = threading.Thread(target=collect_trajectory, args=(
+                    world, world.player, args.scenario_id, period, stored_path))
+                traj_col.start()
+                topo_col = threading.Thread(target=collect_topology, args=(
+                    world, world.player, args.scenario_id, half_period, root, stored_path))
+                topo_col.start()
                 ref_light = get_next_traffic_light(
                     world.player, world.world, light_transform_dict)
                 annotate = annotate_trafficlight_in_group(
@@ -2204,7 +2188,7 @@ def game_loop(args):
                             else:
                                 actor_transform_index[actor_id] += 1
 
-                            if actor_id == 'player' and not args.no_save:
+                            if actor_id == 'player':
                                 world.record_speed_control_transform(frame)
 
                         elif 'pedestrian' in filter_dict[actor_id]:
@@ -2227,24 +2211,15 @@ def game_loop(args):
             world.render(display)
             pygame.display.flip()
 
-            pygame.image.save(display, "screenshot.jpeg")
-            image = cv2.imread("screenshot.jpeg")
-            out.write(image)
-
-        if not args.no_save:
-            world.imu_sensor.toggle_recording_IMU()
-            world.save_ego_data(stored_path)
-            world.collision_sensor.save_history(stored_path)
-            world.camera_manager.toggle_recording(stored_path)
-            save_description(world, args, stored_path, weather)
+        world.imu_sensor.toggle_recording_IMU()
+        world.save_ego_data(stored_path)
+        world.collision_sensor.save_history(stored_path)
+        world.camera_manager.toggle_recording(stored_path)
+        save_description(world, args, stored_path, weather)
 
     finally:
-        # to save a top view video
-        out.release()
-
-        if not args.no_save:
-            finish_tag = open(stored_path+'/finish.txt', 'w')
-            finish_tag.close()
+        finish_tag = open(stored_path+'/finish.txt', 'w')
+        finish_tag.close()
 
         if (world and world.recording_enabled):
             client.stop_recorder()
@@ -2336,11 +2311,6 @@ def main():
         type=str,
         choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
         help='enable roaming actors')
-    argparser.add_argument(
-        '--no_save',
-        default=False,
-        action='store_true',
-        help='run scenarios only')
     # argparser.add_argument(
     #     '-random_objects',
     #     type=bool,
