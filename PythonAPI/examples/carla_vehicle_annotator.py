@@ -455,7 +455,7 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
     class_labels = ['Pedestrian','Truck','Bike','Motor','Car']
     class_bps = [['walker.*'],
                  ['vehicle.carlamotors.carlacola','vehicle.carlamotors.firetruck','vehicle.ford.ambulance','vehicle.jeep.wrangler_rubicon','vehicle.mercedes.sprinter','vehicle.tesla.cybertruck','vehicle.volkswagen.t2','vehicle.volkswagen.t2_2021'],
-                 ['vehicle.bh.crossbike','vehicle.diamondback.century''vehicle.gazelle.omafiets'],
+                 ['vehicle.bh.crossbike','vehicle.diamondback.century','vehicle.gazelle.omafiets'],
                  ['vehicle.harley-davidson.low_rider','vehicle.kawasaki.ninja','vehicle.vespa.zx125','vehicle.yamaha.yzf']
                  ]
     class_seg = {'Pedestrian':(220,20,60),'vehicles':(0,0,142)}
