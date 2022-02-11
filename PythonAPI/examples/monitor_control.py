@@ -1870,7 +1870,7 @@ class CameraManager(object):
             # Example of converting the raw_data from a carla.DVSEventArray
             # sensor into a NumPy array and using it as an image
             dvs_events = np.frombuffer(image.raw_data, dtype=np.dtype([
-                ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool_)]))
+                ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool)]))
             dvs_img = np.zeros((image.height, image.width, 3), dtype=np.uint8)
             # Blue is positive, red is negative
             dvs_img[dvs_events[:]['y'], dvs_events[:]
@@ -2204,34 +2204,51 @@ def generate_obstacle(world, n):
 
 
 def generate_parking(world, n):
+
     blueprint_library = world.get_blueprint_library()
     parking_list = []
 
+    motor_list = ['bh.crossbike', 'yamaha.yzf', 'vespa.zx125', 'gazelle.omafiets', 'diamondback.century', 'harley-davidson.low_rider']
+    vehicle_list = []
+
+    for i in blueprint_library.filter('vehicle.*'):
+        if (i.id)[8:] not in motor_list:
+            vehicle_list.append(i.id)
+    # print(vehicle_list)
+
     def dist(waypoint, wp_list):
         for wp in wp_list:
-            if waypoint.transform.location.distance(wp.transform.location) < 5:
+            if waypoint.transform.location.distance(wp.transform.location) < 6:
                 return False
         return True
 
     wp_list = []
-    all_wp = world.get_map().generate_waypoints(6)  # all_wp
+    all_wp = world.get_map().generate_waypoints(7)  # all_wp
     print('All waypoints: ', len(all_wp))
 
     num = 0
     for wp in all_wp[:n]:  # random.sample(all_wp, n)
         waypoint = world.get_map().get_waypoint(location=wp.transform.location,
-                                                lane_type=carla.LaneType.Shoulder)
+                                                lane_type=carla.LaneType.Shoulder) # Shoulder Driving
         if not dist(waypoint, wp_list):
             continue
         wp_list.append(waypoint)
 
+        vector = waypoint.transform.get_right_vector()
+        r = random.choice([0, 0.6, 1, 1.5, 1.8, 1.9])
+
         cur_location = carla.Location(
-            x=waypoint.transform.location.x, y=waypoint.transform.location.y, z=waypoint.transform.location.z+1)
+                x=waypoint.transform.location.x-r*vector.x, y=waypoint.transform.location.y-r*vector.y, z=waypoint.transform.location.z+1)
+        # cur_location = carla.Location(
+        #     x=waypoint.transform.location.x, y=waypoint.transform.location.y, z=waypoint.transform.location.z+1)
         cur_trans = carla.Transform(cur_location, carla.Rotation(
             pitch=0, yaw=waypoint.transform.rotation.yaw, roll=0))
 
         try:
-            vehicle = random.choice(blueprint_library.filter('vehicle.*'))
+
+            random_vehicle = random.choice(vehicle_list)
+            vehicle = blueprint_library.filter(random_vehicle)[0]
+            # vehicle = random.choice(blueprint_library.filter('vehicle.*'))
             world.spawn_actor(vehicle, cur_trans)
 
             print(num, vehicle.id)
