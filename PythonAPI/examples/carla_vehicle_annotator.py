@@ -454,8 +454,8 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
     #carla_img.save_to_disk(path + 'out_rgb/%06d.png' % carla_img.frame, cc_rgb)
     class_labels = ['Pedestrian','Truck','Bike','Motor','Car']
     class_bps = [['walker.*'],
-                 ['vehicle.carlamotors.carlacola','vehicle.carlamotors.firetruck','vehicle.ford.ambulance','vehicle.gazelle.omafiets','vehicle.jeep.wrangler_rubicon','vehicle.mercedes.sprinter','vehicle.tesla.cybertruck','vehicle.volkswagen.t2','vehicle.volkswagen.t2_2021'],
-                 ['vehicle.bh.crossbike','vehicle.diamondback.century'],
+                 ['vehicle.carlamotors.carlacola','vehicle.carlamotors.firetruck','vehicle.ford.ambulance','vehicle.jeep.wrangler_rubicon','vehicle.mercedes.sprinter','vehicle.tesla.cybertruck','vehicle.volkswagen.t2','vehicle.volkswagen.t2_2021'],
+                 ['vehicle.bh.crossbike','vehicle.diamondback.century''vehicle.gazelle.omafiets'],
                  ['vehicle.harley-davidson.low_rider','vehicle.kawasaki.ninja','vehicle.vespa.zx125','vehicle.yamaha.yzf']
                  ]
     class_seg = {'Pedestrian':(220,20,60),'vehicles':(0,0,142)}
