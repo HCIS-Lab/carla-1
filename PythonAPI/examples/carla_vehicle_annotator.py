@@ -52,16 +52,19 @@ def auto_annotate_lidar(vehicles, camera, lidar_data, max_dist = 100, min_detect
     return filtered_out, filtered_data
 
 ### Use this function to get 2D bounding boxes of visible vehicle to camera
-def auto_annotate(vehicles, camera, depth_img,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV ,max_dist=100, depth_margin=-1, patch_ratio=0.5, resize_ratio=0.5, json_path=None):
-    depth_show = False
+def auto_annotate(vehicles, camera,VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV ,max_dist=80, json_path=None):
+    # depth_show = False
     vehicles = filter_angle_distance(vehicles, camera,VIEW_FOV, max_dist)
     bounding_boxes_2d = [get_2d_bb(vehicle, VIEW_WIDTH,VIEW_HEIGHT,VIEW_FOV,camera) for vehicle in vehicles]
     if json_path is not None:
         vehicle_class = get_vehicle_class(vehicles, json_path)
     else:
         vehicle_class = []
-    filtered_out, removed_out, _, _ = filter_occlusion_bbox(bounding_boxes_2d, vehicles, camera, depth_img, vehicle_class, depth_show, depth_margin, patch_ratio, resize_ratio)
-    return filtered_out, removed_out 
+    # filtered_out, removed_out, _, _ = filter_occlusion_bbox(bounding_boxes_2d, vehicles, camera, depth_img, vehicle_class, depth_show, depth_margin, patch_ratio, resize_ratio)
+    out = {}
+    out['bbox'] = bounding_boxes_2d
+    out['vehicles'] = vehicles
+    return out
 
 ### Same with auto_annotate(), but with debugging function for the occlusion filter
 def auto_annotate_debug(vehicles, camera, depth_img, depth_show=False, max_dist=100, depth_margin=-1, patch_ratio=0.5, resize_ratio=0.5, json_path=None):
@@ -450,7 +453,7 @@ def get_vehicle_class(vehicles, json_path=None):
 #######################################################
 
 ### Use this function to save the rgb image (with and without bounding box) and bounding boxes data 
-def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bboxes=None, old_vehicle_class=None, cc_rgb=carla.ColorConverter.Raw, path='', save_patched=False, add_data=None, out_format='pickle'):
+def save_output(carla_img, seg_img, bboxes, path, vehicle_class=None, cc_rgb=carla.ColorConverter.Raw, save_patched=False, add_data=None, out_format='pickle', threshold = 0.38):
     #carla_img.save_to_disk(path + 'out_rgb/%06d.png' % carla_img.frame, cc_rgb)
     class_labels = ['Pedestrian','Truck','Bike','Motor','Car']
     class_bps = [['walker.*'],
@@ -461,7 +464,7 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
     class_seg = {'Pedestrian':(220,20,60),'vehicles':(0,0,142)}
     out_dict = {}
     filtered_actor_list = []
-    removed_actor_list = []
+    # removed_actor_list = []
     seg_img.convert(carla.ColorConverter.CityScapesPalette)
     seg_img_bgra = np.array(seg_img.raw_data).reshape((seg_img.height,seg_img.width,4))
     seg_img_rgb = np.zeros((seg_img.height,seg_img.width,3))
@@ -485,24 +488,7 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
                 break
         if not check:
             filtered_actor_list.append(class_labels[-1])
-    for actor in old_vehicle_class:
-        check = False
-        for i,bps in enumerate(class_bps):
-            for bp in bps:
-                if fnmatch.fnmatchcase(actor.type_id,bp):
-                    removed_actor_list.append(class_labels[i])
-                    check = True
-                if check:
-                    break
-            if check :
-                break
-        if not check:
-            removed_actor_list.append(class_labels[-1])
-    filtered_actor_list += removed_actor_list
     bboxes_list = [bbox.tolist() for bbox in bboxes]
-    # out_dict['bboxes'] = bboxes_list
-    old_bboxes_list = [bbox.tolist() for bbox in old_bboxes]
-    bboxes_list += old_bboxes_list
     true_bbox = []
     false_bbox = []
     true_class = []
@@ -512,13 +498,15 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
         # check for bike or motor
         flag = False
         try:
+            # if pedestrian
             color = class_seg[filtered_actor_list[i]]
+            threshold_curr = threshold - 0.1
         except:
             color = class_seg['vehicles']
-        threshold = 0.38
+            threshold_curr = threshold
         if filtered_actor_list[i] in with_ped:
             flag = True
-            # threshold = 0.2
+            threshold_curr = threshold - 0.08
         x,y = bbox[0]
         x = max(int(x),0)
         y = max(int(y),0)
@@ -537,13 +525,10 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
                 else:
                     if tuple(seg_image[yy][xx]) == color:
                         score += 1
-        # print(color)
         if w == 0 or h == 0:
             continue
         score = score/(w*h)
-        # if flag:
-        #     print(score)
-        if score >= threshold:
+        if score >= threshold_curr:
             true_bbox.append(bbox)
             true_class.append(filtered_actor_list[i])
         else:
@@ -558,13 +543,13 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
     if add_data is not None:
         out_dict['others'] = add_data
     if out_format=='json':
-        filename = path + path_2 + '/out_bbox/%06d.json' % carla_img.frame
+        filename = path + '/out_bbox/%06d.json' % carla_img.frame
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
         with open(filename, 'w') as outfile:
             json.dump(out_dict, outfile, indent=4)
     else:
-        filename = path + path_2 + 'out_bbox/%06d.pkl' % carla_img.frame
+        filename = path + 'out_bbox/%06d.pkl' % carla_img.frame
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
         with open(filename, 'w') as outfile:
@@ -600,7 +585,7 @@ def save_output(carla_img, seg_img, bboxes, path_2 ,vehicle_class=None, old_bbox
                 crop_bbox = [(u1,v1),(u2,v2)]
                 img_draw.rectangle(crop_bbox, outline ="red")
         
-        filename = path + path_2+ '/out_rgb_bbox/%06d.png' % carla_img.frame
+        filename = path + '/out_rgb_bbox/%06d.png' % carla_img.frame
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
         image.save(filename)
@@ -679,6 +664,3 @@ def snap_processing(vehiclesActor, worldSnap):
         vsnap.type_id = v.type_id
         vehicles.append(vsnap)
     return vehicles
-
-#######################################################
-#######################################################
