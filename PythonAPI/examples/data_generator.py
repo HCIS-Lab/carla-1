@@ -24,6 +24,7 @@ import sys
 import random
 import csv
 import json
+from turtle import back
 
 try:
     #
@@ -1143,9 +1144,11 @@ class CameraManager(object):
         self.back_left_depth = []
         self.back_right_depth = []
 
-        self.bbox = []
         self.img_dict = {}
         self.snap_dict = {}
+        self.sensor_order = ['top','front','right','left','back','back_right','back_left']
+        for order in self.sensor_order:
+            self.img_dict[order] = {}
 
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
@@ -1493,9 +1496,6 @@ class CameraManager(object):
             t_depth_back_left = threading.Thread(target=self.save_img, args=(
                 self.back_left_depth, 1, path, 'depth_back_left'))
 
-            t_bbox = threading.Thread(
-                target=self.save_bbox, args=(self.bbox, path))
-
             t_top.start()
             t_front.start()
             t_left.start()
@@ -1524,9 +1524,7 @@ class CameraManager(object):
             t_depth_back_right.start()
             t_depth_back_left.start()
 
-#             t_bbox.start()
-
-            self.top_img = []
+            # self.top_img = []
             self.front_img = []
             self.right_img = []
             self.left_img = []
@@ -1538,14 +1536,13 @@ class CameraManager(object):
             self.dvs = []
             self.flow = []
 
-            # self.top_iseg = []
-            self.top_seg = []
+            # self.top_seg = []
             # self.front_seg = []
-            self.right_seg = []
-            self.left_seg = []
-            self.back_seg = []
-            self.back_right_seg = []
-            self.back_left_seg = []
+            # self.right_seg = []
+            # self.left_seg = []
+            # self.back_seg = []
+            # self.back_right_seg = []
+            # self.back_left_seg = []
 
             self.front_depth = []
             self.right_depth = []
@@ -1554,14 +1551,29 @@ class CameraManager(object):
             self.back_right_depth = []
             self.back_left_depth = []
 
-            t_depth_front.join()
-            self.save_bbox([self.bbox, self.img_dict,
-                           self.snap_dict], path, self.front_seg)
-
+            # t_depth_front.join()
+            sensor_list = [self.sensor_top,self.sensor_front,self.sensor_right,self.sensor_left,self.sensor_back,self.sensor_back_right,self.sensor_back_left]
+            width_list = []
+            height_list = []
+            fov_list = []
+            for sensor in sensor_list:
+                width_list.append(int(sensor.attributes['image_size_x']))
+                height_list.append(int(sensor.attributes['image_size_y']))
+                fov_list.append(int(float(sensor.attributes['fov'])))
+            self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
+            self.top_img = []
+            self.top_seg = []
             self.front_seg = []
-            self.bbox = []
-            self.img_dict = {}
+            self.right_seg = []
+            self.left_seg = []
+            self.back_seg = []
+            self.back_right_seg = []
+            self.back_left_seg = []
+
             self.snap_dict = {}
+            self.img_dict = {}
+            for order in self.sensor_order:
+                self.img_dict[order] = {}
 
         self.hud.notification('Recording %s' %
                               ('On' if self.recording else 'Off'))
@@ -1606,27 +1618,31 @@ class CameraManager(object):
                                      (path, modality, view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
-    def save_bbox(self, input_list, path, seg_list):
-        VIEW_WIDTH = int(self.sensor_front.attributes['image_size_x'])
-        VIEW_HEIGHT = int(self.sensor_front.attributes['image_size_y'])
-        VIEW_FOV = int(float(self.sensor_front.attributes['fov']))
-        # change seg to dict, key: frame_num
+    def save_bbox(self, path, seg_list,width_list,height_list,fov_list):
+        # change seg to dict, key: view, frame_num
+        path += '/bbox'
         seg_dict = {}
-        for seg_img in seg_list:
-            seg_dict[seg_img.frame] = seg_img
-        bbox, img_dict, snap_dict = input_list
-        for index, item in enumerate(bbox):
-            depth_img = item
+        for view in self.sensor_order:
+            seg_dict[view] = {}
+        for i,seg_l in enumerate(seg_list):
+            for seg_img in seg_l:
+                seg_dict[self.sensor_order[i]][seg_img.frame] = seg_img
+        for top_img in self.top_img:
             try:
-                vehicles, cam = snap_dict[depth_img.frame]
+                vehicles, cam = self.snap_dict[top_img.frame]
+                filtered = cva.auto_annotate(
+                    vehicles, cam[0], width_list[0], height_list[0], fov_list[0])
+                path_temp = path + '/' +self.sensor_order[0]
+                cva.save_output(top_img, seg_dict[self.sensor_order[0]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
+                                save_patched=True, out_format='json',threshold = 0.35)
             except:
                 continue
-            rgb_img = img_dict[depth_img.frame]
-            depth_meter = cva.extract_depth(depth_img)
-            filtered, removed = cva.auto_annotate(
-                vehicles, cam, depth_meter, VIEW_WIDTH, VIEW_HEIGHT, VIEW_FOV)
-            cva.save_output(rgb_img, seg_dict[depth_img.frame], filtered['bbox'], path, filtered['vehicles'],
-                            removed['bbox'], removed['vehicles'], save_patched=True, out_format='json')
+            for i in range(1,7):
+                filtered = cva.auto_annotate(
+                vehicles, cam[i], width_list[i], height_list[i], fov_list[i])
+                path_temp = path + '/' + self.sensor_order[i]
+                cva.save_output(self.img_dict[self.sensor_order[i]][top_img.frame], seg_dict[self.sensor_order[i]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
+                                save_patched=True, out_format='json')
 
     def render(self, display):
         if self.surface is not None:
@@ -1675,19 +1691,50 @@ class CameraManager(object):
         if self.recording and image.frame % 1 == 0:
             if view == 'top':
                 self.top_img.append(image)
+                world = self._parent.get_world()
+                snapshot = world.get_snapshot()
+                actors = world.get_actors()
+                try:
+                    top_transform = snapshot.find(
+                        self.sensor_top.id).get_transform()
+                    front_transform = snapshot.find(
+                        self.sensor_front.id).get_transform()
+                    right_transform = snapshot.find(
+                        self.sensor_right.id).get_transform()
+                    left_transform = snapshot.find(
+                        self.sensor_left.id).get_transform()
+                    back_transform = snapshot.find(
+                        self.sensor_back.id).get_transform()
+                    back_right_transform = snapshot.find(
+                        self.sensor_back_right.id).get_transform()
+                    back_left_transform = snapshot.find(
+                        self.sensor_back_left.id).get_transform()
+                    vehicles = cva.snap_processing(
+                        actors.filter('vehicle.*'), snapshot)
+                    vehicles += cva.snap_processing(
+                        actors.filter('walker.*'), snapshot)
+                    self.snap_dict[snapshot.frame] = [
+                        vehicles, [top_transform,front_transform,right_transform,left_transform,back_transform,back_right_transform,back_left_transform]]
+                except:
+                    print("Initial frame.")
             elif view == 'front':
                 self.front_img.append(image)
-                self.img_dict[image.frame] = image
+                self.img_dict[view][image.frame] = image
             elif view == 'left':
                 self.left_img.append(image)
+                self.img_dict[view][image.frame] = image
             elif view == 'right':
                 self.right_img.append(image)
+                self.img_dict[view][image.frame] = image
             elif view == 'back':
                 self.back_img.append(image)
+                self.img_dict[view][image.frame] = image
             elif view == 'back_left':
                 self.back_left_img.append(image)
+                self.img_dict[view][image.frame] = image
             elif view == 'back_right':
                 self.back_right_img.append(image)
+                self.img_dict[view][image.frame] = image
 
             elif view == 'lidar':
                 self.lidar.append(image)
@@ -1717,22 +1764,6 @@ class CameraManager(object):
             elif view == 'depth_front':
                 self.front_depth.append(image)
                 # self.img_dict[image.frame] is not None and self.sensor_front is not None:
-                if self.sensor_front is not None:
-                    world = self._parent.get_world()
-                    snapshot = world.get_snapshot()
-                    actors = world.get_actors()
-                    try:
-                        sensor_transform = snapshot.find(
-                            self.sensor_front.id).get_transform()
-                        vehicles = cva.snap_processing(
-                            actors.filter('vehicle.*'), snapshot)
-                        vehicles += cva.snap_processing(
-                            actors.filter('walker.*'), snapshot)
-                        self.snap_dict[snapshot.frame] = [
-                            vehicles, sensor_transform]
-                        self.bbox.append(image)
-                    except:
-                        print("Initial frame.")
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
