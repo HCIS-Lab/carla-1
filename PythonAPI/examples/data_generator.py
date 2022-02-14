@@ -1853,7 +1853,7 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
     try:
         while True:
             time_end = time.time()
-            if (time_end - time_start) > t:         # may need change
+            if (time_end - time_start) > t:         # t may need change
                 waypoint = town_map.get_waypoint(agent.get_location())
                 waypoint_list = town_map.generate_waypoints(2.0)
                 nearby_waypoint = []
@@ -1888,8 +1888,10 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
                 for i, j in d:
                     halluc_lane_1, halluc_lane_2 = np.empty(
                         (0, 3*2)), np.empty((0, 3*2))
+                    center_lane = np.empty((0, 3*2))
                     is_traffic_control = False
                     is_junction = False
+                    turn_direction = None
                     for k in range(len(all)-1):
                         if (i, j) == all[k][0] and (i, j) == all[k+1][0]:
                             # may change & need traffic light
@@ -1902,6 +1904,17 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
                                       all[k][1].transform.location.y]
                             after = [all[k+1][1].transform.location.x,
                                      all[k+1][1].transform.location.y]
+                            # transform.rotation.yaw can not be overwritten
+                            before_yaw = all[k][1].transform.rotation.yaw
+                            after_yaw = all[k+1][1].transform.rotation.yaw
+                            if (before_yaw < -360.0):
+                                before_yaw = before_yaw + 360.0
+                            if (after_yaw < -360.0):
+                                after_yaw = after_yaw + 360.0
+                            if (after_yaw > before_yaw):
+                                turn_direction = "right" # right
+                            elif (after_yaw < before_yaw):
+                                turn_direction = "left" # left
                             distance = []
                             for t in range(len(before)):
                                 distance.append(after[t] - before[t])
@@ -1912,12 +1925,15 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
                                                after + e1 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
                             lane_2 = np.hstack((before + e2 * all[k][1].lane_width/2, all[k][1].transform.location.z,
                                                after + e2 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
+                            lane_c = np.hstack((before, all[k][1].transform.location.z,
+                                               after, all[k+1][1].transform.location.z))
                             halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
                             halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
+                            center_lane = np.vstack((center_lane, lane_c))
                     if data['traffic_light']:
                         is_junction = True
                     lane_feature_ls.append(
-                        [halluc_lane_1, halluc_lane_2, is_traffic_control, is_junction, (i, j)])
+                        [halluc_lane_1, halluc_lane_2, center_lane, turn_direction, is_traffic_control, is_junction, (i, j)])
                 np.save(stored_path + '/topology/' + str(scenario_id),
                         np.array(lane_feature_ls))
 
@@ -1928,16 +1944,18 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
                 for features in lane_feature_ls:
                     xs, ys = np.vstack((features[0][:, :2], features[0][-1, 3:5]))[
                         :, 0], np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 1]
-                    plt.plot(xs, ys, '--', color='red')
+                    plt.plot(xs, ys, '--', color='blue')
                     x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[
                         :, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
                     plt.plot(x_s, y_s, '--', color='blue')
+                    #x_c, y_c = np.vstack((features[2][:, :2], features[2][-1, 3:5]))[
+                    #    :, 0], np.vstack((features[2][:, :2], features[2][-1, 3:5]))[:, 1]
+                    #plt.plot(x_c, y_c, '--', color='gray')
                 plt.savefig(stored_path + '/topology/topology.png')
                 break
         return False
     except:
         print("topology_collection finished")
-
 
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
