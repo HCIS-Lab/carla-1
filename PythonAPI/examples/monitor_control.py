@@ -2009,11 +2009,11 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['topology'] = '4_way_intersection'
     elif 't' in topo:
         if topo[1] == '1':
-            d['topology'] = '4_way_intersection_1'
+            d['topology'] = '3_way_intersection_1'
         elif topo[1] == '2':
-            d['topology'] = '4_way_intersection_2'
+            d['topology'] = '3_way_intersection_2'
         elif topo[1] == '3':
-            d['topology'] = '4_way_intersection_3'
+            d['topology'] = '3_way_intersection_3'
     elif 'r' in topo:
         d['topology'] = 'roundabout'
     elif 's' in topo:
