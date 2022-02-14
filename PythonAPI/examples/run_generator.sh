@@ -50,6 +50,7 @@ folder=`ls -d ./data_collection/${scenario_type}/*`
 sleep 15
 for scenario_name in $folder
 do
+	mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/smaple.mp4 
 	for((i=0; i<3; i++))
 	do
 			for((j=0; j<${#random_actor[@]}; j++))
@@ -61,6 +62,7 @@ do
 						echo "$SERVICE is  stopped"
 						../../CarlaUE4.sh & sleep 15	
 					fi
+
 					a=$(random_range 0 6)
 					b=$(random_range 7 13)
 					c=$(random_range 14 20)
@@ -73,11 +75,14 @@ do
 					echo ${scenario_name:$len}
 					python data_generator.py -map Town0${scenario_name:$len:1} -scenario_id ${scenario_name:$len}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]} --scenario_type ${scenario_type}
 					sleep 3
+					mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
 			done
 	done
+
 	x="./data_collection/${scenario_type}/${scenario_name:$len}"
 	f=`ls -d ${x}/*_*_`
 	rm -r "${x}/timestamp"
+
 	mkdir "${x}/variant_scenario"
 	for name in $f
 	do 
@@ -92,7 +97,9 @@ do
 		fi
 
 	done
+	./zip_data.sh ${scenario_type} ${scenario_name:$len} &
 done
+
 
 
 
