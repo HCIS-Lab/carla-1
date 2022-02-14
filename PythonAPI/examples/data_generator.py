@@ -2089,17 +2089,15 @@ def game_loop(args):
 
                 transform_spawn = transform_dict[actor_id][0]
                 
-                try:
-                    agents_dict[actor_id] = client.get_world().spawn_actor(
-                        set_bp(blueprint_library.filter(
-                            filter_dict[actor_id]), actor_id),
-                        transform_spawn)
-                except Exception:
-                    transform_spawn.location.z += 1.5
-                    agents_dict[actor_id] = client.get_world().spawn_actor(
-                        set_bp(blueprint_library.filter(
-                            filter_dict[actor_id]), actor_id),
-                        transform_spawn)
+                while True:
+                    try:
+                        agents_dict[actor_id] = client.get_world().spawn_actor(
+                            set_bp(blueprint_library.filter(
+                                filter_dict[actor_id]), actor_id),
+                            transform_spawn)
+                        break
+                    except Exception:
+                        transform_spawn.location.z += 1.5
 
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
