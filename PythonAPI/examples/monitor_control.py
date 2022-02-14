@@ -34,7 +34,9 @@ Use ARROWS or WASD keys for control.
     V            : Select next map layer (Shift+V reverse)
     B            : Load current selected map layer (Shift+B to unload)
     R            : toggle recording images to disk
-    O            : set coordinate
+    O            : Set coordinate
+    E            : Save every vehicles' coordinate.
+    K            : Teleport all vehicles to save coordinate
     CTRL + R     : toggle recording of simulation (replacing any previous)
     CTRL + P     : start replaying last recorded simulation
     CTRL + +     : increments the start time of the replay by 1 second (+SHIFT = 10 seconds)
@@ -134,6 +136,7 @@ try:
     from pygame.locals import K_w
     from pygame.locals import K_x
     from pygame.locals import K_z
+    from pygame.locals import K_k
     from pygame.locals import K_MINUS
     from pygame.locals import K_EQUALS
 except ImportError:
@@ -672,6 +675,7 @@ class KeyboardControl(object):
         self._steer_cache = 0.0
         self.r = 2
         world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
+        self.save_act_transform = None
 
     def parse_events(self, client, world, clock):
 
@@ -715,11 +719,17 @@ class KeyboardControl(object):
                 elif event.key == K_n:
                     world.camera_manager.next_sensor()
                 elif event.key == K_e:
-                    xx = int(input("x: "))
-                    yy = int(input("y: "))
-                    zz = int(input("z: "))
-                    new_location = carla.Location(xx, yy, zz)
-                    world.player.set_location(new_location)
+                    self.save_act_transform = []
+                    actors = world.world.get_actors().filter('vehicle.*')
+                    for actor in actors:
+                        self.save_act_transform.append(actor.get_transform())
+                    print("save finish")
+                elif event.key == K_k:
+                    if self.save_act_transform is not None:
+                        actors = world.world.get_actors().filter('vehicle.*')
+                        for i,actor in enumerate(actors):
+                            actor.set_transform(self.save_act_transform[i])
+                        print("set finish")
                 elif event.key == K_o:
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
@@ -1654,10 +1664,10 @@ class CameraManager(object):
 
             elif self.scenario_type == 'obstacle':
                 scenario_name_my_initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn',}
+                                    'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing'}
 
-                scenario_name_my_action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn'}
+                scenario_name_my_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
+                                    'u': 'u-turn', 's': 'stop', 'c': 'crossing'}
 
                 obstacle_type = {'0': 'traffic cone',
                                  '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
@@ -1703,7 +1713,7 @@ class CameraManager(object):
                         continue
                     scenario_name += "_" + input_option
 
-                    print("Input name_my_reaction:")
+                    print("Input name_my_action:")
                     for key in scenario_name_my_action:
                         print(key + ': ' + scenario_name_my_action[key] + ' ')
                     input_option = str(input())
@@ -2057,10 +2067,10 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
     elif scenario_type == 'obstacle':
         initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                            'u': 'u-turn'}
+                            'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing'}
 
-        action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn'}
+        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
+                                    'u': 'u-turn', 's': 'stop', 'c': 'crossing'}
 
         obstacle_type = {'0': 'traffic cone',
                          '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
