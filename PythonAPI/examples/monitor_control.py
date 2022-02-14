@@ -1654,10 +1654,10 @@ class CameraManager(object):
 
             elif self.scenario_type == 'obstacle':
                 scenario_name_my_initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing'}
+                                    'u': 'u-turn',}
 
-                scenario_name_my_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn', 's': 'stop', 'c': 'crossing'}
+                scenario_name_my_action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
+                                    'u': 'u-turn'}
 
                 obstacle_type = {'0': 'traffic cone',
                                  '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
@@ -1703,7 +1703,7 @@ class CameraManager(object):
                         continue
                     scenario_name += "_" + input_option
 
-                    print("Input name_my_action:")
+                    print("Input name_my_reaction:")
                     for key in scenario_name_my_action:
                         print(key + ': ' + scenario_name_my_action[key] + ' ')
                     input_option = str(input())
@@ -2057,10 +2057,10 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
     elif scenario_type == 'obstacle':
         initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                            'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing'}
+                            'u': 'u-turn'}
 
-        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn', 's': 'stop', 'c': 'crossing'}
+        action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
+                                    'u': 'u-turn'}
 
         obstacle_type = {'0': 'traffic cone',
                          '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
