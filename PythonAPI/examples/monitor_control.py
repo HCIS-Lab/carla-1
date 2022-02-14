@@ -1483,7 +1483,7 @@ class CameraManager(object):
 
                 scenario_name_interaction = {'0': 'False', '1':  'True'}
 
-                scenario_name_violated_rule = {'0': 'None', 'p': 'parking', 'j': 'jay-walker',
+                scenario_name_violated_rule = {'0': 'None', 'j': 'jay-walker',
                                                'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
 
                 while True:
@@ -1580,7 +1580,7 @@ class CameraManager(object):
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                                            'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
                 scenario_name_interaction = {'0': 'False'}
-                scenario_name_violated_rule = {'0': 'None', 'p': 'parking', 'j': 'jay-walker',
+                scenario_name_violated_rule = {'0': 'None', 'j': 'jay-walker',
                                                'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
 
                 while True:
