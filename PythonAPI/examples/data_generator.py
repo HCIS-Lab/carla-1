@@ -1445,56 +1445,66 @@ class CameraManager(object):
     def toggle_recording(self, path):
         self.recording = not self.recording
         if not self.recording:
+            self.top_img.pop(0)
+            self.front_img.pop(0)
+            self.left_img.pop(0)
+            self.right_img.pop(0)
+            self.back_img.pop(0)
+            self.back_right_img.pop(0)
+            self.back_left_img.pop(0)
+            self.dvs.pop(0)
+            first_frame = self.top_img[0].frame
+
             t_top = threading.Thread(
-                target=self.save_img, args=(self.top_img, 0, path, 'top'))
+                target=self.save_img, args=(self.top_img, 0, path, 'top', first_frame-1))
             t_front = threading.Thread(target=self.save_img, args=(
-                self.front_img, 0, path, 'front'))
+                self.front_img, 0, path, 'front', first_frame-1))
             t_right = threading.Thread(target=self.save_img, args=(
-                self.right_img, 0, path, 'right'))
+                self.right_img, 0, path, 'right', first_frame-1))
             t_left = threading.Thread(
-                target=self.save_img, args=(self.left_img, 0, path, 'left'))
+                target=self.save_img, args=(self.left_img, 0, path, 'left', first_frame-1))
             t_back = threading.Thread(
-                target=self.save_img, args=(self.back_img, 0, path, 'back'))
+                target=self.save_img, args=(self.back_img, 0, path, 'back', first_frame-1))
             t_back_right = threading.Thread(target=self.save_img, args=(
-                self.back_right_img, 0, path, 'back_right'))
+                self.back_right_img, 0, path, 'back_right', first_frame-1))
             t_back_left = threading.Thread(target=self.save_img, args=(
-                self.back_left_img, 0, path, 'back_left'))
+                self.back_left_img, 0, path, 'back_left', first_frame-1))
 
             t_lidar = threading.Thread(
-                target=self.save_img, args=(self.lidar, 6, path, 'lidar'))
+                target=self.save_img, args=(self.lidar, 6, path, 'lidar', first_frame-1))
             t_dvs = threading.Thread(
-                target=self.save_img, args=(self.dvs, 7, path, 'dvs'))
+                target=self.save_img, args=(self.dvs, 7, path, 'dvs', first_frame-1))
             t_flow = threading.Thread(
-                target=self.save_img, args=(self.flow, 8, path, 'flow'))
+                target=self.save_img, args=(self.flow, 8, path, 'flow', first_frame-1))
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
             t_seg_top = threading.Thread(
-                target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
+                target=self.save_img, args=(self.top_seg, 5, path, 'seg_top', first_frame-1))
             t_seg_front = threading.Thread(target=self.save_img, args=(
-                self.front_seg, 5, path, 'seg_front'))
+                self.front_seg, 5, path, 'seg_front', first_frame-1))
             t_seg_right = threading.Thread(target=self.save_img, args=(
-                self.right_seg, 5, path, 'seg_right'))
+                self.right_seg, 5, path, 'seg_right', first_frame-1))
             t_seg_left = threading.Thread(
-                target=self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
+                target=self.save_img, args=(self.left_seg, 5, path, 'seg_left', first_frame-1))
             t_seg_back = threading.Thread(
-                target=self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
+                target=self.save_img, args=(self.back_seg, 5, path, 'seg_back', first_frame-1))
             t_seg_back_right = threading.Thread(target=self.save_img, args=(
-                self.back_right_seg, 5, path, 'seg_back_right'))
+                self.back_right_seg, 5, path, 'seg_back_right', first_frame-1))
             t_seg_back_left = threading.Thread(target=self.save_img, args=(
-                self.back_left_seg, 5, path, 'seg_back_left'))
+                self.back_left_seg, 5, path, 'seg_back_left', first_frame-1))
 
             t_depth_front = threading.Thread(target=self.save_img, args=(
-                self.front_depth, 1, path, 'depth_front'))
+                self.front_depth, 1, path, 'depth_front', first_frame-1))
             t_depth_right = threading.Thread(target=self.save_img, args=(
-                self.right_depth, 1, path, 'depth_right'))
+                self.right_depth, 1, path, 'depth_right', first_frame-1))
             t_depth_left = threading.Thread(target=self.save_img, args=(
-                self.left_depth, 1, path, 'depth_left'))
+                self.left_depth, 1, path, 'depth_left', first_frame-1))
             t_depth_back = threading.Thread(target=self.save_img, args=(
-                self.back_depth, 1, path, 'depth_back'))
+                self.back_depth, 1, path, 'depth_back', first_frame-1))
             t_depth_back_right = threading.Thread(target=self.save_img, args=(
-                self.back_right_depth, 1, path, 'depth_back_right'))
+                self.back_right_depth, 1, path, 'depth_back_right', first_frame-1))
             t_depth_back_left = threading.Thread(target=self.save_img, args=(
-                self.back_left_depth, 1, path, 'depth_back_left'))
+                self.back_left_depth, 1, path, 'depth_back_left', first_frame-1))
 
             t_top.start()
             t_front.start()
@@ -1536,14 +1546,6 @@ class CameraManager(object):
             self.dvs = []
             self.flow = []
 
-            # self.top_seg = []
-            # self.front_seg = []
-            # self.right_seg = []
-            # self.left_seg = []
-            # self.back_seg = []
-            # self.back_right_seg = []
-            # self.back_left_seg = []
-
             self.front_depth = []
             self.right_depth = []
             self.left_depth = []
@@ -1578,16 +1580,16 @@ class CameraManager(object):
         self.hud.notification('Recording %s' %
                               ('On' if self.recording else 'Off'))
 
-    def save_img(self, img_list, sensor, path, view='top'):
+    def save_img(self, img_list, sensor, path, view='top', first_frame=0):
         modality = self.sensors[sensor][0].split('.')[-1]
         for img in img_list:
             if img.frame % 1 == 0:
                 if 'seg' in view:
                     img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.CityScapesPalette)
+                        '%s/%s/%s/%08d' % (path, modality, view, img.frame-first_frame), cc.CityScapesPalette)
                 elif 'depth' in view:
                     img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.LogarithmicDepth)
+                        '%s/%s/%s/%08d' % (path, modality, view, img.frame-first_frame), cc.LogarithmicDepth)
                 elif 'dvs' in view:
                     dvs_events = np.frombuffer(img.raw_data, dtype=np.dtype([
                         ('x', np.uint16), ('y', np.uint16), ('t', np.int64), ('pol', np.bool_)]))
@@ -1600,7 +1602,7 @@ class CameraManager(object):
                     stored_path = os.path.join(path, modality, view)
                     if not os.path.exists(stored_path):
                         os.makedirs(stored_path)
-                    np.save('%s/%08d' % (stored_path, img.frame), dvs_img)
+                    np.save('%s/%08d' % (stored_path, img.frame-first_frame), dvs_img)
                 elif 'flow' in view:
                     frame = img.frame
                     img = img.get_color_coded_flow()
@@ -1612,10 +1614,10 @@ class CameraManager(object):
                     stored_path = os.path.join(path, modality, view)
                     if not os.path.exists(stored_path):
                         os.makedirs(stored_path)
-                    np.save('%s/%08d' % (stored_path, frame), array)
+                    np.save('%s/%08d' % (stored_path, frame-first_frame), array)
                 else:
                     img.save_to_disk('%s/%s/%s/%08d' %
-                                     (path, modality, view, img.frame))
+                                     (path, modality, view, img.frame-first_frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
     def save_bbox(self, path, seg_list,width_list,height_list,fov_list):
