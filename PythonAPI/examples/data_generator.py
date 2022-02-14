@@ -2045,7 +2045,7 @@ def game_loop(args):
             os.path.join(path, 'velocity', actor_id + '.npy'))
         if 'pedestrian' in filter:
             ped_control_dict[actor_id] = read_ped_control(
-                os.path.join(path, 'control', actor_id + '.npy'))
+                os.path.join(path, 'ped_control', actor_id + '.npy'))
     num_files = len(filter_dict)
 
     try:
