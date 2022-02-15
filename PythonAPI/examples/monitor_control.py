@@ -2237,7 +2237,8 @@ def generate_parking(world, n):
     print('All waypoints: ', len(all_wp))
 
     num = 0
-    for wp in all_wp[:n]:  # random.sample(all_wp, n)
+    # for wp in all_wp[:n]:
+    for wp in random.sample(all_wp, n):
         waypoint = world.get_map().get_waypoint(location=wp.transform.location,
                                                 lane_type=carla.LaneType.Shoulder) # Shoulder Driving
         if not dist(waypoint, wp_list):
