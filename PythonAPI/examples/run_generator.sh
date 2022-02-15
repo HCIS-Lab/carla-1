@@ -73,7 +73,12 @@ do
 					echo ${i}
 					echo ${k}
 					echo ${scenario_name:$len}
-					python data_generator.py -map Town0${scenario_name:$len:1} -scenario_id ${scenario_name:$len}  -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]} --scenario_type ${scenario_type}
+
+					if [ ${scenario_name:$len:2} -eq 10 ]; then
+						python data_generator.py --scenario_type ${scenario_type} -scenario_id ${scenario_name:$len} -map Town10HD -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
+					else
+						python data_generator.py --scenario_type ${scenario_type} -scenario_id ${scenario_name:$len} -map Town0${scenario_name:$len:1} -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
+					fi
 					sleep 3
 					mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
 			done
