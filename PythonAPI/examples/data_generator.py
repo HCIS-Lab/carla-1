@@ -65,6 +65,8 @@ import time
 import threading
 import xml.etree.ElementTree as ET
 import carla_vehicle_annotator as cva
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -1574,7 +1576,32 @@ class CameraManager(object):
             self.img_dict = {}
             for order in self.sensor_order:
                 self.img_dict[order] = {}
+            t_top.join()
+            t_front.join()
+            t_left.join()
+            t_right.join()
+            t_back.join()
+            t_back_left.join()
+            t_back_right.join()
 
+            t_lidar.join()
+            t_dvs.join()
+            t_flow.join()
+
+            t_seg_top.join()
+            t_seg_front.join()
+            t_seg_right.join()
+            t_seg_left.join()
+            t_seg_back.join()
+            t_seg_back_right.join()
+            t_seg_back_left.join()
+
+            t_depth_front.join()
+            t_depth_right.join()
+            t_depth_left.join()
+            t_depth_back.join()
+            t_depth_back_right.join()
+            t_depth_back_left.join()
         self.hud.notification('Recording %s' %
                               ('On' if self.recording else 'Off'))
 
