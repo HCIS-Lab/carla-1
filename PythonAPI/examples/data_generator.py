@@ -2196,7 +2196,7 @@ def game_loop(args):
         # dynamic scenario setting
         stored_path = os.path.join(root, scenario_name)
         print(stored_path)
-        if not os.path.exists(stored_path):
+        if not os.path.exists(stored_path) and not args.no_save:
             os.makedirs(stored_path)
 
         scenario_finished = False
