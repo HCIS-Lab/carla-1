@@ -1853,7 +1853,7 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path):
         os.mkdir(stored_path + '/trajectory/')
     filepath = stored_path + '/trajectory/' + str(scenario_id) + '.csv'
     is_exist = os.path.isfile(filepath)
-    f = open(filepath, 'a+')
+    f = open(filepath, 'w')
     w = csv.writer(f)
 
     actors = get_world.world.get_actors()
@@ -2002,10 +2002,10 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
                 for features in lane_feature_ls:
                     xs, ys = np.vstack((features[0][:, :2], features[0][-1, 3:5]))[
                         :, 0], np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 1]
-                    plt.plot(xs, ys, '--', color='blue')
+                    plt.plot(xs, ys, '--', color='gray')
                     x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[
                         :, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
-                    plt.plot(x_s, y_s, '--', color='blue')
+                    plt.plot(x_s, y_s, '--', color='gray')
                     #x_c, y_c = np.vstack((features[2][:, :2], features[2][-1, 3:5]))[
                     #    :, 0], np.vstack((features[2][:, :2], features[2][-1, 3:5]))[:, 1]
                     #plt.plot(x_c, y_c, '--', color='gray')

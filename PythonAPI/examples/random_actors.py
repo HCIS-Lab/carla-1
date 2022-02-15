@@ -61,14 +61,16 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
             
             for actor_id, traj in transform_dict.items():
                 for pt in traj:
-                    if waypoint.location.distance(pt.location) < 1:
+                    if waypoint.location.distance(pt.location) < 3:
                         flag = True
                         break
                 if flag:
                     break
-        
+
+        if (waypoint.location.distance(transform_dict['player'][0].location)) < 5:
+            flag = True
+
         if not flag:
-            
             for i in range(50):
                 next_pt = point.next(5)
                 point = next_pt[0]
@@ -150,7 +152,7 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
         else:
             vehicles_list.append(response.actor_id)
 
-
+    print(f"Spawn {len(waypoint_list)} Vehicle")
     """
     Apply local planner to all vehicle
     Random choose destination and behavior type
@@ -219,8 +221,10 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
         
         flag = False
         
-        while True:
-        #for j in range(50):
+        # Number of try to find spawn points
+        num_try = 100000
+        # while True:
+        for j in range(num_try):
             loc = world.get_random_location_from_navigation()
             temp = carla.Location(int(loc.x), int(loc.y), int(loc.z))
             if (loc.distance(transform_dict['player'][mid].location) < distance) and (loc_dict.get(temp) == None):
@@ -304,5 +308,6 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
 
     # example of how to use parameters
     traffic_manager.global_percentage_speed_difference(10.0)
+
 
 
