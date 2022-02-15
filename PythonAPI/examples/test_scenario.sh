@@ -33,11 +33,19 @@ folder=`ls -d ./data_collection/${scenario_type}/*`
 
 ../../CarlaUE4.sh &
 sleep 15
-
+SERVICE="CarlaUE4"
 for eachfile in $folder
 do
+    if pgrep "$SERVICE" >/dev/null
+    then
+        echo "$SERVICE is running"
+    else
+        echo "$SERVICE is  stopped"
+        ../../CarlaUE4.sh & sleep 15	
+    fi
     #echo ${scenario_type}
     echo ${eachfile:$len} 
     python data_generator.py --scenario_type ${scenario_type} -scenario_id ${eachfile:$len} -map Town0${eachfile:$len:1} --no_save
     sleep 3
+    rm -r ./data_collection/${scenario_type}/${eachfile:$len}/ClearNoon_
 done
