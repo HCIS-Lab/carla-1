@@ -1457,9 +1457,9 @@ class CameraManager(object):
 
             # scenario_name_actor_type = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', '0': 'None'}
             # scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
-            #  'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'b': 'backward', 'c': 'crossing', '0': 'None'}
+            #  'sr': 'slide_right', 'u': 'u-turn', 's':'stop', 'c': 'crossing', '0': 'None'}
             # scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',\
-            #  'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+            #  'sr': 'slide_right', 'u': 'u-turn'}
             # scenario_name_interaction = {'0': 'False', '1':  'True'}
             # scenario_name_violated_rule = {'0': 'None','p': 'parking', 'j': 'jay-walker',
             # 'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
@@ -1475,11 +1475,11 @@ class CameraManager(object):
                     'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
-                                                   'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward',
+                                                   'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
                                                    'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+                                           'sr': 'slide_right', 'u': 'u-turn'}
 
                 scenario_name_interaction = {'0': 'False', '1':  'True'}
 
@@ -1578,7 +1578,7 @@ class CameraManager(object):
                 scenario_name_actor_type = {'0': 'None'}
                 scenario_name_actor_type_action = {'0': 'None'}
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+                                           'sr': 'slide_right', 'u': 'u-turn'}
                 scenario_name_interaction = {'0': 'False'}
                 scenario_name_violated_rule = {'0': 'None', 'j': 'jay-walker',
                                                'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
@@ -1728,11 +1728,11 @@ class CameraManager(object):
                     'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian','s':'static_object'}
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
-                                                   'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward',
+                                                   'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
                                                    'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking','0':'None'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward'}
+                                           'sr': 'slide_right', 'u': 'u-turn'}
 
                 # scenario_name_interaction = {'0': 'False', '1':  'True'}
 
@@ -2025,7 +2025,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
+                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'c': 'crossing',
                   'w': 'walking on sidewalk', 'j': 'jaywalking'}
 
         violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
