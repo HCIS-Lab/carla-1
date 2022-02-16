@@ -2228,12 +2228,12 @@ def generate_parking(world, n):
 
     def dist(waypoint, wp_list):
         for wp in wp_list:
-            if waypoint.transform.location.distance(wp.transform.location) < 6:
+            if waypoint.transform.location.distance(wp.transform.location) < 7:
                 return False
         return True
 
     wp_list = []
-    all_wp = world.get_map().generate_waypoints(7)  # all_wp
+    all_wp = world.get_map().generate_waypoints(8)  # all_wp
     print('All waypoints: ', len(all_wp))
 
     num = 0
