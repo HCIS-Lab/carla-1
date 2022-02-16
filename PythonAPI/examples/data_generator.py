@@ -337,39 +337,51 @@ class World(object):
     def destroy(self):
         if self.radar_sensor is not None:
             self.toggle_radar()
-        sensors = [
+        if self.save_mode:
+            sensors = [
+                self.camera_manager.sensor_top,
+                self.camera_manager.sensor_front,
+                self.camera_manager.sensor_left,
+                self.camera_manager.sensor_right,
+                self.camera_manager.sensor_back,
+                self.camera_manager.sensor_back_left,
+                self.camera_manager.sensor_back_right,
+                self.camera_manager.sensor_lidar,
+                self.camera_manager.sensor_dvs,
+                self.camera_manager.sensor_flow,
+                self.camera_manager.seg_top,
+                self.camera_manager.seg_front,
+                self.camera_manager.seg_back,
+                self.camera_manager.seg_right,
+                self.camera_manager.seg_left,
+                self.camera_manager.seg_back_right,
+                self.camera_manager.seg_back_left,
+                self.camera_manager.depth_front,
+                self.camera_manager.depth_right,
+                self.camera_manager.depth_left,
+                self.camera_manager.depth_back,
+                self.camera_manager.depth_back_right,
+                self.camera_manager.depth_back_left,
+                self.collision_sensor.sensor,
+                self.lane_invasion_sensor.sensor,
+                self.gnss_sensor.sensor,
+                self.imu_sensor.sensor]
+
+            self.camera_manager.sensor_front = None
+        else:
+            sensors = [
             self.camera_manager.sensor_top,
-            self.camera_manager.sensor_front,
-            self.camera_manager.sensor_left,
-            self.camera_manager.sensor_right,
-            self.camera_manager.sensor_back,
-            self.camera_manager.sensor_back_left,
-            self.camera_manager.sensor_back_right,
-            self.camera_manager.sensor_lidar,
-            self.camera_manager.sensor_dvs,
-            self.camera_manager.sensor_flow,
-            self.camera_manager.seg_top,
-            self.camera_manager.seg_front,
-            self.camera_manager.seg_back,
-            self.camera_manager.seg_right,
-            self.camera_manager.seg_left,
-            self.camera_manager.seg_back_right,
-            self.camera_manager.seg_back_left,
-            self.camera_manager.depth_front,
-            self.camera_manager.depth_right,
-            self.camera_manager.depth_left,
-            self.camera_manager.depth_back,
-            self.camera_manager.depth_back_right,
-            self.camera_manager.depth_back_left,
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
             self.imu_sensor.sensor]
-        self.camera_manager.sensor_front = None
-        for sensor in sensors:
+
+
+        for i, sensor in enumerate(sensors):
             if sensor is not None:
                 sensor.stop()
                 sensor.destroy()
+
 
         if self.player is not None:
             self.player.destroy()
