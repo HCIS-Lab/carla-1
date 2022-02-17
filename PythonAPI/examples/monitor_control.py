@@ -735,9 +735,11 @@ class KeyboardControl(object):
                     if world.player.is_at_traffic_light():
                         traffic_light = world.player.get_traffic_light()
                         if traffic_light.get_state() == carla.TrafficLightState.Red:
-                        # world.hud.notification("Traffic light changed! Good to go!")
                             print("Set traffic light to green.")
                             traffic_light.set_state(carla.TrafficLightState.Green)
+                        elif traffic_light.get_state() == carla.TrafficLightState.Green:
+                            print("Set traffic light to red.")
+                            traffic_light.set_state(carla.TrafficLightState.Red)
                 elif event.key == K_o:
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
