@@ -121,13 +121,15 @@ try:
     from pygame.locals import K_c
     from pygame.locals import K_d
     from pygame.locals import K_e
-    from pygame.locals import K_o
+    from pygame.locals import K_f
     from pygame.locals import K_g
     from pygame.locals import K_h
     from pygame.locals import K_i
+    from pygame.locals import K_k
     from pygame.locals import K_l
     from pygame.locals import K_m
     from pygame.locals import K_n
+    from pygame.locals import K_o
     from pygame.locals import K_p
     from pygame.locals import K_q
     from pygame.locals import K_r
@@ -136,7 +138,6 @@ try:
     from pygame.locals import K_w
     from pygame.locals import K_x
     from pygame.locals import K_z
-    from pygame.locals import K_k
     from pygame.locals import K_MINUS
     from pygame.locals import K_EQUALS
 except ImportError:
@@ -730,6 +731,13 @@ class KeyboardControl(object):
                         for i,actor in enumerate(actors):
                             actor.set_transform(self.save_act_transform[i])
                         print("set finish")
+                elif event.key == K_f:
+                    if world.player.is_at_traffic_light():
+                        traffic_light = world.player.get_traffic_light()
+                        if traffic_light.get_state() == carla.TrafficLightState.Red:
+                        # world.hud.notification("Traffic light changed! Good to go!")
+                            print("Set traffic light to green.")
+                            traffic_light.set_state(carla.TrafficLightState.Green)
                 elif event.key == K_o:
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
