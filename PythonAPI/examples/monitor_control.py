@@ -37,6 +37,7 @@ Use ARROWS or WASD keys for control.
     O            : Set coordinate
     E            : Save every vehicles' coordinate.
     K            : Teleport all vehicles to save coordinate
+    F            : Changing traffic light state.
     CTRL + R     : toggle recording of simulation (replacing any previous)
     CTRL + P     : start replaying last recorded simulation
     CTRL + +     : increments the start time of the replay by 1 second (+SHIFT = 10 seconds)
