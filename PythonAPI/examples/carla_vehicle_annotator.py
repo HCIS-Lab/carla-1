@@ -544,9 +544,7 @@ def save_output(carla_img, seg_img, bboxes, path, vehicle_class=None, cc_rgb=car
     out_dict['id'] =  true_actor_id_list
     if len(false_bbox)>0:
         out_dict['removed_bboxes'] = false_bbox
-    if len(false_class)>0:
         out_dict['removed_vehicle_class'] = false_class
-    if len(false_bbox)>0:
         out_dict['removed_id'] = false_actor_id_list
     if add_data is not None:
         out_dict['others'] = add_data
