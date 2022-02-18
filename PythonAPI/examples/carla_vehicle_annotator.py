@@ -464,7 +464,9 @@ def save_output(carla_img, seg_img, bboxes, path, vehicle_class=None, cc_rgb=car
     class_seg = {'Pedestrian':(220,20,60),'vehicles':(0,0,142)}
     out_dict = {}
     filtered_actor_list = []
-    # removed_actor_list = []
+    actor_id_list = []
+    true_actor_id_list = []
+    false_actor_id_list = []
     seg_img.convert(carla.ColorConverter.CityScapesPalette)
     seg_img_bgra = np.array(seg_img.raw_data).reshape((seg_img.height,seg_img.width,4))
     seg_img_rgb = np.zeros((seg_img.height,seg_img.width,3))
@@ -477,6 +479,7 @@ def save_output(carla_img, seg_img, bboxes, path, vehicle_class=None, cc_rgb=car
 
     for actor in vehicle_class:
         check = False
+        actor_id_list.append(actor.id)
         for i,bps in enumerate(class_bps):
             for bp in bps:
                 if fnmatch.fnmatchcase(actor.type_id,bp):
@@ -531,15 +534,20 @@ def save_output(carla_img, seg_img, bboxes, path, vehicle_class=None, cc_rgb=car
         if score >= threshold_curr:
             true_bbox.append(bbox)
             true_class.append(filtered_actor_list[i])
+            true_actor_id_list.append(actor_id_list[i])
         else:
             false_bbox.append(bbox)
             false_class.append(filtered_actor_list[i])
+            false_actor_id_list.append(actor_id_list[i])
     out_dict['bboxes'] = true_bbox
     out_dict['vehicle_class'] = true_class
+    out_dict['id'] =  true_actor_id_list
     if len(false_bbox)>0:
         out_dict['removed_bboxes'] = false_bbox
     if len(false_class)>0:
         out_dict['removed_vehicle_class'] = false_class
+    if len(false_bbox)>0:
+        out_dict['removed_id'] = false_actor_id_list
     if add_data is not None:
         out_dict['others'] = add_data
     if out_format=='json':
