@@ -1673,7 +1673,7 @@ class CameraManager(object):
                     vehicles, cam[0], width_list[0], height_list[0], fov_list[0])
                 path_temp = path + '/' +self.sensor_order[0]
                 cva.save_output(top_img, seg_dict[self.sensor_order[0]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
-                                save_patched=True, out_format='json',threshold = 0.35)
+                                save_patched=False, out_format='json',threshold = 0.35)
             except:
                 continue
             for i in range(1,7):
@@ -1681,7 +1681,7 @@ class CameraManager(object):
                 vehicles, cam[i], width_list[i], height_list[i], fov_list[i])
                 path_temp = path + '/' + self.sensor_order[i]
                 cva.save_output(self.img_dict[self.sensor_order[i]][top_img.frame], seg_dict[self.sensor_order[i]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
-                                save_patched=True, out_format='json')
+                                save_patched=False, out_format='json')
 
     def render(self, display):
         if self.surface is not None:
