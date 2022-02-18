@@ -74,7 +74,8 @@ do
 					echo ${k}
 					echo ${scenario_name:$len}
 
-					if [ ${scenario_name:$len:2} -eq 10 ]; then
+					if [ `echo ${scenario_name:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+					then
 						python data_generator.py --scenario_type ${scenario_type} -scenario_id ${scenario_name:$len} -map Town10HD -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
 					else
 						python data_generator.py --scenario_type ${scenario_type} -scenario_id ${scenario_name:$len} -map Town0${scenario_name:$len:1} -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
@@ -100,7 +101,15 @@ do
 			echo "$FILE not exist. remove this folder"
 			rm -r ${name}
 		fi
-
+		FILE=${name}/collision_history.npy
+		if test -f "$FILE"; 
+		then
+			echo "$FILE exists."
+			mv ${name} "${x}/variant_scenario"
+		else
+			echo "$FILE not exist. remove this folder"
+			rm -r ${name}
+		fi
 	done
 	./zip_data.sh ${scenario_type} ${scenario_name:$len} &
 done
