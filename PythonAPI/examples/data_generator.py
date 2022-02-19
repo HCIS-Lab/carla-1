@@ -1860,7 +1860,7 @@ def control_with_trasform_controller(controller, transform):
     #         new_obj.destroy()
 
 
-def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path):
+def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path, clock):
     if not os.path.exists(stored_path + '/trajectory/'):
         os.mkdir(stored_path + '/trajectory/')
     filepath = stored_path + '/trajectory/' + str(scenario_id) + '.csv'
@@ -1868,24 +1868,35 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path):
     f = open(filepath, 'w')
     w = csv.writer(f)
 
-    actors = get_world.world.get_actors()
-    town_map = get_world.world.get_map()
+    filepath_all = stored_path + '/trajectory/' + str(scenario_id) + '_all.csv'
+    is_exist_all = os.path.isfile(filepath_all)
+    f_all = open(filepath_all, 'w')
+    w_all = csv.writer(f_all)
 
     if not is_exist:
         w.writerow(['TIMESTAMP', 'TRACK_ID',
                    'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
+
+    if not is_exist_all:
+        w_all.writerow(['TIMESTAMP', 'TRACK_ID',
+                   'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
+
+    actors = get_world.world.get_actors()
+    town_map = get_world.world.get_map()
     agent_id = agent.id
-
     period_start = 0
-
+    fps = clock.get_fps()
+    record_time = 0
     time_start = time.time()
     try:
         while True:
             time_end = time.time()
-            if period_start < period_end:
-                if (time_end - time_start) > 0.1:
-                    period_start += 0.1
-                    #print(period_start, period_end)
+            # 25: the landing iter
+            if period_start < (period_end * fps + 25/fps):
+                # 0.1s = 0.05000000074505806s * 2
+                if (time_end - time_start) > 2/fps:
+                    period_start += 0.1 * fps
+                    record_time += 0.1
                     time_start = time.time()
                     for actor in actors:
                         if agent_id == actor.id:
@@ -1898,32 +1909,38 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path):
                             id = actor.id
                             if x == agent.get_location().x and y == agent.get_location().y:
                                 w.writerow(
-                                    [time_start-10**9, id, 'AGENT', str(x), str(y), town_map.name])
+                                    [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
+                                w_all.writerow(
+                                    [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
                             else:
+                                if actor.type_id[0:7] == 'vehicle':
+                                    w_all.writerow(
+                                        [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
                                 if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
                                     if actor.type_id[0:7] == 'vehicle':
                                         w.writerow(
-                                            [time_start-10**9, id, 'vehicle', str(x), str(y), town_map.name])
+                                            [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
                                     elif actor.type_id[0:6] == 'walker':
                                         w.writerow(
-                                            [time_start-10**9, id, 'walker', str(x), str(y), town_map.name])
+                                            [record_time - 0.1, id, 'walker', str(x), str(y), town_map.name.split('/')[2]])
             else:
                 return False
     except:
         print("trajectory_collection finished")
 
 
-def collect_topology(get_world, agent, scenario_id, t, root, stored_path):
+def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock):
     town_map = get_world.world.get_map()
     if not os.path.exists(stored_path + '/topology/'):
         os.mkdir(stored_path + '/topology/')
     with open(root + '/scenario_description.json') as f:
         data = json.load(f)
     time_start = time.time()
+    fps = clock.get_fps()
     try:
         while True:
             time_end = time.time()
-            if (time_end - time_start) > t:         # t may need change
+            if (time_end - time_start) > t * fps:         # t may need change
                 waypoint = town_map.get_waypoint(agent.get_location())
                 waypoint_list = town_map.generate_waypoints(2.0)
                 nearby_waypoint = []
@@ -2251,10 +2268,10 @@ def game_loop(args):
                     world.imu_sensor.toggle_recording_IMU()
                     world.gnss_sensor.toggle_recording_Gnss()
                     traj_col = threading.Thread(target=collect_trajectory, args=(
-                        world, world.player, args.scenario_id, period, stored_path))
+                        world, world.player, args.scenario_id, period, stored_path, clock))
                     traj_col.start()
                     topo_col = threading.Thread(target=collect_topology, args=(
-                        world, world.player, args.scenario_id, half_period, root, stored_path))
+                        world, world.player, args.scenario_id, half_period, root, stored_path, clock))
                     topo_col.start()
 
                 ref_light = get_next_traffic_light(
