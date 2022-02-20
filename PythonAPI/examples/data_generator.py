@@ -1933,8 +1933,8 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
     town_map = get_world.world.get_map()
     if not os.path.exists(stored_path + '/topology/'):
         os.mkdir(stored_path + '/topology/')
-    with open(root + '/scenario_description.json') as f:
-        data = json.load(f)
+    #with open(root + '/scenario_description.json') as f:
+    #    data = json.load(f)
     time_start = time.time()
     fps = clock.get_fps()
     try:
@@ -2017,8 +2017,8 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
                             halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
                             halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
                             center_lane = np.vstack((center_lane, lane_c))
-                    if data['traffic_light']:
-                        is_junction = True
+                    #if data['traffic_light']:
+                    #    is_junction = True
                     lane_feature_ls.append(
                         [halluc_lane_1, halluc_lane_2, center_lane, turn_direction, is_traffic_control, is_junction, (i, j)])
                 np.save(stored_path + '/topology/' + str(scenario_id),
