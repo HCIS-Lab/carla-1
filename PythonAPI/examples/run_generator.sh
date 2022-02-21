@@ -81,7 +81,7 @@ do
 					else
 						python data_generator.py --scenario_type ${scenario_type} -scenario_id ${scenario_name:$len} -map Town0${scenario_name:$len:1} -weather ${weather[${w[${i}]}]} -random_actors ${random_actor[j]}
 					fi
-					sleep 3
+					
 					mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
 			done
 	done
@@ -97,20 +97,22 @@ do
 		if test -f "$FILE"; 
 		then
 			echo "$FILE exists."
-			mv ${name} "${x}/variant_scenario"
+
+			col=${name}/collision_history.npy
+			if test -f "$col"; 
+			then
+				echo "$col exists."
+				rm -r ${name}
+			else
+				mv ${name} "${x}/variant_scenario"
+			fi
+
 		else
 			echo "$FILE not exist. remove this folder"
 			rm -r ${name}
 		fi
-		FILE=${name}/collision_history.npy
-		if test -f "$FILE"; 
-		then
-			echo "$FILE exists."
-			mv ${name} "${x}/variant_scenario"
-		else
-			echo "$FILE not exist. remove this folder"
-			rm -r ${name}
-		fi
+
+		
 	done
 	./zip_data.sh ${scenario_type} ${scenario_name:$len} &
 	
