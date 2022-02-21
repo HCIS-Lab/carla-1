@@ -50,15 +50,35 @@ do
         zip -r ${eachfile}/optical_flow/${file_name}.zip ${eachfile}/optical_flow/${file_name}
         rm -r ${eachfile}/optical_flow/${file_name}
 
-        # --- out_bbox   -- x1
-        file_name="out_bbox"
-        zip -r ${eachfile}/${file_name}.zip ${eachfile}/${file_name}
-        rm -r ${eachfile}/${file_name}
 
-        # -- out_rgb_bbox -- x1
-        file_name="out_rgb_bbox"
-        zip -r ${eachfile}/${file_name}.zip ${eachfile}/${file_name}
-        rm -r ${eachfile}/${file_name}
+        # --- bbox 
+        file_name="back"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
+
+        file_name="back_left"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
+
+        file_name="back_right"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
+
+        file_name="front"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
+
+        file_name="left"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
+
+        file_name="right"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
+
+        file_name="top"
+        zip -r ${eachfile}/bbox/${file_name}.zip ${eachfile}/bbox/${file_name}
+        rm -r ${eachfile}/bbox/${file_name}
 
         # -- ray_cast
         file_name="lidar"
@@ -135,9 +155,6 @@ do
 
     done
 
-    #unzip ${eachfile}/depth/depth_front.zip 
-
-    #sleep 3
+    echo "finishing zip file"
 done
 
-#./data_collection/non-interactive/3_r-1_0_0_0_f_0_0/variant_scenario/ClearNoon_mid_/depth

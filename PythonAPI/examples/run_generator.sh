@@ -47,7 +47,7 @@ len=$((len + 19))
 SERVICE="CarlaUE4"
 folder=`ls -d ./data_collection/${scenario_type}/*`
 ../../CarlaUE4.sh &
-sleep 15
+sleep 10
 for scenario_name in $folder
 do
 	mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/smaple.mp4 
@@ -55,6 +55,7 @@ do
 	do
 			for((j=0; j<${#random_actor[@]}; j++))
 			do
+					sleep 4
 					if pgrep "$SERVICE" >/dev/null
 					then
 						echo "$SERVICE is running"
@@ -69,7 +70,7 @@ do
 					w=($a $b $c)
 
 					python ../util/config.py --reload
-					sleep 8
+					sleep 4
 					echo ${i}
 					echo ${k}
 					echo ${scenario_name:$len}
@@ -112,6 +113,7 @@ do
 		fi
 	done
 	./zip_data.sh ${scenario_type} ${scenario_name:$len} &
+	
 done
 
 
