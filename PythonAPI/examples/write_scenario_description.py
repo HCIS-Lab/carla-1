@@ -93,10 +93,10 @@ def write_description(scenario_type, scenario_name ):
         actor = {'c': 'car', 't': 'truck', 'b': 'bike',
                     'm': 'motor', 'p': 'pedestrian', 's':'static_object'}
 
-        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                    'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
-                    'w': 'walking on sidewalk', 'j': 'jaywalking', '0': 'None'}
-
+         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
+                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
+                  'w': 'walking on sidewalk', 'j': 'jaywalking','ri':'Crash into refuge island' ,'0': 'None'}
+            
         violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
                         's': 'driving on a sidewalk', 'ss': 'stop sign'}
         carla_map = {'1':'Town01', '2':'Town02', '3':'Town03', '5':'Town05','6':'Town06', '7':'Town07', '10':'Town10HD' }
