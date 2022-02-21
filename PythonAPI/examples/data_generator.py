@@ -2349,6 +2349,7 @@ def game_loop(args):
         out.release()
 
         if not args.no_save:
+            stored_path = os.path.join(root, scenario_name)
             finish_tag = open(stored_path+'/finish.txt', 'w')
             finish_tag.close()
 
