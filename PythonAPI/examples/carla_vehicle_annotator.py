@@ -520,14 +520,25 @@ def save_output(carla_img, seg_img, bboxes, path, vehicle_class=None, cc_rgb=car
         w -= x
         h -= y
         score = 0.0
+        box_size = w*h
+        is_class = False
         for yy in range(y,y+h):
             for xx in range(x,x+w):
                 if flag:
                     if tuple(seg_image[yy][xx]) == color or tuple(seg_image[yy][xx]) == (220,20,60):
                         score += 1
+                        if score/box_size >= threshold_curr:
+                            is_class = True
+                            break
                 else:
                     if tuple(seg_image[yy][xx]) == color:
                         score += 1
+                        if score/box_size >= threshold_curr:
+                            is_class = True
+                            break
+            if is_class:
+                break
+
         if w == 0 or h == 0:
             continue
         score = score/(w*h)
