@@ -2145,8 +2145,11 @@ def generate_obstacle(world, n):
     all_default_spawn = world.get_map().get_spawn_points()
 
     obstacle_list = []
+    trans_list = []
     stat_prop = ["static.prop.trafficcone01", "static.prop.trafficcone02",
                  "static.prop.trafficwarning", "static.prop.streetbarrier"]
+
+    all_wp = world.get_map().generate_waypoints(6)
 
     def dist(t, L):
         for trans in L:
@@ -2154,7 +2157,37 @@ def generate_obstacle(world, n):
                 return False
         return True
 
-    trans_list = []
+    def spawn_junction(vec, trans, id):
+        new_trans = carla.Transform(trans.location, trans.rotation)
+
+        r = 2.5
+        new_trans.location += (vec)*r
+
+        world.spawn_actor(
+            blueprint_library.filter(stat_prop[id])[0], new_trans)
+
+        obstacle_list.append(
+            stat_prop[id]+'\t'+f'{new_trans}')
+
+        trans_list.append(new_trans)
+
+    if n < 0:
+        for k, wp in enumerate(all_wp):
+            if wp.is_junction and dist(wp.transform, trans_list) and random.randint(0,3) == 0:
+
+                    trans = wp.transform    
+                    vec_0 = carla.Vector3D(0, 0, 0)
+                    vec_f = trans.get_forward_vector()
+                    vec_r = trans.get_right_vector()
+                
+                    trans.location += vec_f*5
+
+                    spawn_junction(vec_0, trans, 0)
+                    spawn_junction(vec_r, trans, 0)
+                    spawn_junction(vec_f, trans, 0)
+                    spawn_junction(vec_f+vec_r, trans, 0)
+
+    
     for _ in range(n):
         trans = None
         while True:
@@ -2169,8 +2202,10 @@ def generate_obstacle(world, n):
         if _ % 2:
             wp_list.extend(wp.next_until_lane_end(4))
 
+
         wp_list = list(filter(lambda wp: (
             wp.lane_type == carla.LaneType.Driving and not wp.is_junction), wp_list))
+        
 
         if len(wp_list) < 2:
             continue
