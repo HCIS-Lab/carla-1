@@ -63,6 +63,8 @@ import re
 import weakref
 import time
 import threading
+from multiprocessing import Process
+
 import xml.etree.ElementTree as ET
 import carla_vehicle_annotator as cva
 import matplotlib
@@ -1459,57 +1461,57 @@ class CameraManager(object):
     def toggle_recording(self, path):
         self.recording = not self.recording
         if not self.recording:
-            t_top = threading.Thread(
+            t_top = Process(
                 target=self.save_img, args=(self.top_img, 0, path, 'top'))
-            t_front = threading.Thread(target=self.save_img, args=(
+            t_front = Process(target=self.save_img, args=(
                 self.front_img, 0, path, 'front'))
-            t_right = threading.Thread(target=self.save_img, args=(
+            t_right = Process(target=self.save_img, args=(
                 self.right_img, 0, path, 'right'))
-            t_left = threading.Thread(
+            t_left = Process(
                 target=self.save_img, args=(self.left_img, 0, path, 'left'))
-            t_back = threading.Thread(
+            t_back = Process(
                 target=self.save_img, args=(self.back_img, 0, path, 'back'))
-            t_back_right = threading.Thread(target=self.save_img, args=(
+            t_back_right = Process(target=self.save_img, args=(
                 self.back_right_img, 0, path, 'back_right'))
-            t_back_left = threading.Thread(target=self.save_img, args=(
+            t_back_left = Process(target=self.save_img, args=(
                 self.back_left_img, 0, path, 'back_left'))
 
-            t_lidar = threading.Thread(
+            t_lidar = Process(
                 target=self.save_img, args=(self.lidar, 6, path, 'lidar'))
-            t_dvs = threading.Thread(
+            t_dvs = Process(
                 target=self.save_img, args=(self.dvs, 7, path, 'dvs'))
-            t_flow = threading.Thread(
+            t_flow = Process(
                 target=self.save_img, args=(self.flow, 8, path, 'flow'))
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
-            t_seg_top = threading.Thread(
+            t_seg_top = Process(
                 target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
-            t_seg_front = threading.Thread(target=self.save_img, args=(
+            t_seg_front = Process(target=self.save_img, args=(
                 self.front_seg, 5, path, 'seg_front'))
-            t_seg_right = threading.Thread(target=self.save_img, args=(
+            t_seg_right = Process(target=self.save_img, args=(
                 self.right_seg, 5, path, 'seg_right'))
-            t_seg_left = threading.Thread(
+            t_seg_left = Process(
                 target=self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
-            t_seg_back = threading.Thread(
+            t_seg_back = Process(
                 target=self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
-            t_seg_back_right = threading.Thread(target=self.save_img, args=(
+            t_seg_back_right = Process(target=self.save_img, args=(
                 self.back_right_seg, 5, path, 'seg_back_right'))
-            t_seg_back_left = threading.Thread(target=self.save_img, args=(
+            t_seg_back_left = Process(target=self.save_img, args=(
                 self.back_left_seg, 5, path, 'seg_back_left'))
 
-            t_depth_front = threading.Thread(target=self.save_img, args=(
+            t_depth_front = Process(target=self.save_img, args=(
                 self.front_depth, 1, path, 'depth_front'))
-            t_depth_right = threading.Thread(target=self.save_img, args=(
+            t_depth_right = Process(target=self.save_img, args=(
                 self.right_depth, 1, path, 'depth_right'))
-            t_depth_left = threading.Thread(target=self.save_img, args=(
+            t_depth_left = Process(target=self.save_img, args=(
                 self.left_depth, 1, path, 'depth_left'))
-            t_depth_back = threading.Thread(target=self.save_img, args=(
+            t_depth_back = Process(target=self.save_img, args=(
                 self.back_depth, 1, path, 'depth_back'))
-            t_depth_back_right = threading.Thread(target=self.save_img, args=(
+            t_depth_back_right = Process(target=self.save_img, args=(
                 self.back_right_depth, 1, path, 'depth_back_right'))
-            t_depth_back_left = threading.Thread(target=self.save_img, args=(
+            t_depth_back_left = Process(target=self.save_img, args=(
                 self.back_left_depth, 1, path, 'depth_back_left'))
-
+            start_time = time.time()
             t_top.start()
             t_front.start()
             t_left.start()
@@ -1614,6 +1616,8 @@ class CameraManager(object):
             t_depth_back.join()
             t_depth_back_right.join()
             t_depth_back_left.join()
+            end_time = time.time()
+            print('sensor data save done in %s' % (end_time-start_time))
         self.hud.notification('Recording %s' %
                               ('On' if self.recording else 'Off'))
 
@@ -1657,8 +1661,9 @@ class CameraManager(object):
                                      (path, modality, view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
-    def save_bbox(self, path, seg_list,width_list,height_list,fov_list):
+    def save_bbox(self, path, seg_list, width_list, height_list, fov_list):
         # change seg to dict, key: view, frame_num
+        start_time = time.time()
         path += '/bbox'
         seg_dict = {}
         for view in self.sensor_order:
@@ -1682,6 +1687,8 @@ class CameraManager(object):
                 path_temp = path + '/' + self.sensor_order[i]
                 cva.save_output(self.img_dict[self.sensor_order[i]][top_img.frame], seg_dict[self.sensor_order[i]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
                                 save_patched=False, out_format='json')
+        end_time = time.time()
+        print('bbox save done in %s' % (end_time-start_time))
 
     def render(self, display):
         if self.surface is not None:
