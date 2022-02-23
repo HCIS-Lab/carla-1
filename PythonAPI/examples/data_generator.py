@@ -877,6 +877,8 @@ class CollisionSensor(object):
         self.history = []
         self._parent = parent_actor
         self.hud = hud
+        self.other_actor_id = 0 # init as 0 for static object
+        self.wrong_collision = False
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.collision')
         self.sensor = world.spawn_actor(
@@ -888,11 +890,11 @@ class CollisionSensor(object):
             lambda event: CollisionSensor._on_collision(weak_self, event))
         self.collision = False
 
-    def get_collision_history(self):
-        history = collections.defaultdict(int)
-        for frame, intensity in self.history:
-            history[frame] += intensity
-        return history
+    # def get_collision_history(self):
+    #     history = collections.defaultdict(int)
+    #     for frame, intensity in self.history:
+    #         history[frame] += intensity
+    #     return history
 
     @staticmethod
     def _on_collision(weak_self, event):
@@ -903,18 +905,26 @@ class CollisionSensor(object):
         self.hud.notification('Collision with %r' % actor_type)
         impulse = event.normal_impulse
         intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
-        self.history.append((event.frame, intensity))
+        # dict: {data1, data2}
+        # data = frame: {timestamp, other_actor's id, intensity}
+        self.history.append({'frame': event.frame ,'timestamp': event.timestamp, \
+            'actor_id': event.other_actor.id, 'intensity': intensity})
         # if len(self.history) > 4000:
         #     self.history.pop(0)
         self.collision = True
+        if event.other_actor.id != self.other_actor_id:
+            self.wrong_collision = True
+        
 
     def save_history(self, path):
         if self.collision:
-            for i, collision in enumerate(self.history):
-                self.history[i] = list(self.history[i])
-            history = np.asarray(self.history)
-            if len(history) != 0:
-                np.save('%s/collision_history' % (path), history)
+            # for i, collision in enumerate(self.history):
+            #     self.history[i] = list(self.history[i])
+            # history = np.asarray(self.history)
+            # if len(history) != 0:
+            #     np.save('%s/collision_history' % (path), history)
+            with open(os.path.join(path, 'collision_history.json'), 'w') as f:
+                json.dump(self.history, f, indent=4)
 
 # ==============================================================================
 # -- LaneInvasionSensor --------------------------------------------------------
@@ -2140,7 +2150,8 @@ def game_loop(args):
         if 'pedestrian' in filter:
             ped_control_dict[actor_id] = read_ped_control(
                 os.path.join(path, 'ped_control', actor_id + '.npy'))
-    num_files = len(filter_dict)
+    # num_files = len(filter_dict)
+    abandon_scenario = False
 
     try:
         client = carla.Client(args.host, args.port)
@@ -2194,11 +2205,11 @@ def game_loop(args):
         ego_transform.location.z += 3
         world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
+        
 
         # set controller
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
-
                 transform_spawn = transform_dict[actor_id][0]
                 
                 while True:
@@ -2210,6 +2221,10 @@ def game_loop(args):
                         break
                     except Exception:
                         transform_spawn.location.z += 1.5
+
+                # set other actor id for checking collision object's identity
+                world.collision_sensor.other_actor_id = agents_dict[actor_id].id
+
 
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
@@ -2261,8 +2276,7 @@ def game_loop(args):
         print(stored_path)
         if not os.path.exists(stored_path) and not args.no_save:
             os.makedirs(stored_path)
-
-        scenario_finished = False
+                
         iter_tick = 0
         iter_start = 25
         while (1):
@@ -2285,10 +2299,15 @@ def game_loop(args):
                     world.player, world.world, light_transform_dict)
                 annotate = annotate_trafficlight_in_group(
                     ref_light, lights, world.world)
-            elif iter_tick > iter_start:
+
+                # start recording .log file
+                if not args.no_save:
+                    print("Recording on file: %s" % client.start_recorder(os.path.join(os.path.abspath(os.getcwd()), stored_path, 'recording.log'),True))
+            elif iter_tick > iter_start:                
                 # iterate actors
                 for actor_id, _ in filter_dict.items():
                     # apply recorded location and velocity on the controller
+                    
 
                     # reproduce traffic light state
                     if actor_id == 'player' and ref_light:
@@ -2336,6 +2355,15 @@ def game_loop(args):
                 if controller.parse_events(client, world, clock) == 1:
                     return
 
+                if world.collision_sensor.collision and args.scenario_type != 'collision':
+                    print('unintentional collision, abandon scenario')
+                    abandon_scenario = True
+                    break
+                if world.collision_sensor.wrong_collision:
+                    print('collided with wrong object, abandon scenario')
+                    abandon_scenario = True
+                    break
+
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
@@ -2344,7 +2372,7 @@ def game_loop(args):
             image = cv2.imread("screenshot.jpeg")
             out.write(image)
 
-        if not args.no_save:
+        if not args.no_save and not abandon_scenario:
             world.imu_sensor.toggle_recording_IMU()
             world.save_ego_data(stored_path)
             world.collision_sensor.save_history(stored_path)
@@ -2356,9 +2384,13 @@ def game_loop(args):
         out.release()
 
         if not args.no_save:
+            client.stop_recorder() # end recording
+
+        if not args.no_save and not abandon_scenario:
             stored_path = os.path.join(root, scenario_name)
             finish_tag = open(stored_path+'/finish.txt', 'w')
             finish_tag.close()
+            
 
         if (world and world.recording_enabled):
             client.stop_recorder()
