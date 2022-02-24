@@ -16,10 +16,22 @@ from numpy import random
 from carla import VehicleLightState as vls
 from agents.navigation.basic_agent import BasicAgent
 from agents.navigation.behavior_agent import BehaviorAgent
+import json
+
+
+def write_json(filename, index, seed ):
+    with open(filename,'r+') as file:
+          # First we load existing data into a dict.
+        file_data = json.load(file)
+        y = {str(index):seed}
+        file_data.update(y)
+        file.seek(0)
+        json.dump(file_data, file, indent = 4)
+
 
 client = carla.Client('localhost', 2000)
 # client.set_timeout(5.0)
-def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
+def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
     # get world and spawn points
     world = client.get_world()
     map = world.get_map()
@@ -97,7 +109,12 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
 
         if not flag:
             waypoint_list.append(waypoint)
+            
+    seed_4 = int(time.time()) 
+    write_json(store_path + "/random_seeds.json", 4, seed_4 )
+    random.seed(seed_4)
     random.shuffle(waypoint_list)
+    
     print(len(waypoint_list))
 
     # --------------
@@ -106,7 +123,6 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
     num_of_vehicles = 0
     blueprints = world.get_blueprint_library().filter('vehicle.*')
     blueprintsWalkers = world.get_blueprint_library().filter('walker.pedestrian.*')
-    random.seed(int(time.time()))
     SpawnActor = carla.command.SpawnActor
     SetAutopilot = carla.command.SetAutopilot
     SetVehicleLightState = carla.command.SetVehicleLightState
@@ -127,11 +143,36 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
         if n >= vehicle:
             break
         num_of_vehicles += 1
+        
+        seed_5 = int(time.time()) 
+        if num_of_vehicles == 1:
+            write_json(store_path + "/random_seeds.json", 5, seed_5 )
+        seed_5 += 5*num_of_vehicles
+        random.seed(seed_5)
+        #print(seed_5)
+        print(num_of_vehicles)
+        print("********************")
         blueprint = random.choice(blueprints)
+        
+        #print(blueprint)
+        
         if blueprint.has_attribute('color'):
+            seed_6 = int(time.time())
+            if num_of_vehicles == 1:
+                write_json(store_path + "/random_seeds.json", 6, seed_6 )
+            seed_6 += 6*num_of_vehicles
+            random.seed(seed_6)
+            
             color = random.choice(blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
         if blueprint.has_attribute('driver_id'):
+            
+            seed_7 = int(time.time())
+            if num_of_vehicles == 1:
+                write_json(store_path + "/random_seeds.json", 7, seed_7 )
+            seed_7 += 7*num_of_vehicles
+            random.seed(seed_7)
+            
             driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
             blueprint.set_attribute('driver_id', driver_id)
         blueprint.set_attribute('role_name', 'autopilot')
@@ -241,13 +282,29 @@ def spawn_actor_nearby(distance=100, v_ratio=0.8, pedestrian=10, transform_dict=
     # 2. we spawn the walker object
     batch = []
     walker_speed = []
+    n=0
     for spawn_point in spawn_points:
+        print("+++++++++++++++++")
+        print(n)
+        
+        n+=1
+        seed_8 = int(time.time())
+        if n == 1:
+            write_json(store_path + "/random_seeds.json", 8, seed_8 )
+        seed_8 += 8*n
+        random.seed(seed_8)
+        
         walker_bp = random.choice(blueprintsWalkers)
         # set as not invincible
         if walker_bp.has_attribute('is_invincible'):
             walker_bp.set_attribute('is_invincible', 'false')
         # set the max speed
         if walker_bp.has_attribute('speed'):
+            seed_9 = int(time.time())
+            if n == 1:
+                write_json(store_path + "/random_seeds.json", 9, seed_9 )
+            seed_9 += 9*n
+            random.seed(seed_9)
             if (random.random() > percentagePedestriansRunning):
                 # walking
                 walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])

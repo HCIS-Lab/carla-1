@@ -434,7 +434,7 @@ def run_simulation(args, client):
                 v_spawn=0
                 if new_v!=None:
                     new_v.set_autopilot()
-                   vehicle_list.append(new_v)
+                    vehicle_list.append(new_v)
             if control(vehicle):
                 return
             if call_exit:
