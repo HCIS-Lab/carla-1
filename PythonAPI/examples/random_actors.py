@@ -284,8 +284,6 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
     walker_speed = []
     n=0
     for spawn_point in spawn_points:
-        print("+++++++++++++++++")
-        print(n)
         
         n+=1
         seed_8 = int(time.time())
