@@ -145,19 +145,30 @@ def get_actor_display_name(actor, truncate=250):
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
 
+def write_json(filename, index, seed ):
+    with open(filename,'r+') as file:
+          # First we load existing data into a dict.
+        file_data = json.load(file)
+        y = {str(index):seed}
+        file_data.update(y)
+        file.seek(0)
+        json.dump(file_data, file, indent = 4)
+
 # ==============================================================================
 # -- World ---------------------------------------------------------------------
 # ==============================================================================
 
 
 class World(object):
-    def __init__(self, carla_world, client_bp, hud, args):
+    def __init__(self, carla_world, client_bp, hud, args, store_path):
         self.world = carla_world
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = True  # Enables synchronous mode
         self.world.apply_settings(settings)
         self.actor_role_name = args.rolename
+        self.store_path = store_path
+        
         try:
             self.map = self.world.get_map()
         except RuntimeError as error:
@@ -208,14 +219,31 @@ class World(object):
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
         # Get a random blueprint.
+        
+        seed_1 = int(time.time())
+        
+        d = {"1": seed_1}
+        random.seed(seed_1)
+        with open(self.store_path + "/random_seeds.json", "w+") as outfile:
+            json.dump(d, outfile)
+        
         blueprint = random.choice(
             self.world.get_blueprint_library().filter(self._actor_filter))
         blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
+            seed_2 = int(time.time()) 
+            write_json(self.store_path + "/random_seeds.json", 2, seed_2 )
+            random.seed(seed_2)
+                    
             color = random.choice(
                 blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
         if blueprint.has_attribute('driver_id'):
+            
+            seed_3 = int(time.time()) + int( random.random())
+            write_json(self.store_path + "/random_seeds.json", 3, seed_3 )
+            random.seed(seed_3)
+            
             driver_id = random.choice(
                 blueprint.get_attribute('driver_id').recommended_values)
             blueprint.set_attribute('driver_id', driver_id)
@@ -2166,8 +2194,14 @@ def game_loop(args):
 
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
+        
+        stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id, weather + "_" + args.random_actors + "_")
+
+        if not os.path.exists(stored_path) :
+            os.makedirs(stored_path)
+        
         world = World(client.load_world(args.map),
-                      filter_dict['player'], hud, args)
+                      filter_dict['player'], hud, args, stored_path)
         client.get_world().set_weather(args.weather)
 
         # sync mode
@@ -2249,13 +2283,13 @@ def game_loop(args):
 
         if args.random_actors != 'None':
             if args.random_actors == 'low':
-                spawn_actor_nearby(distance=100, v_ratio=0.3,
-                                   pedestrian=20, transform_dict=transform_dict)
+                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.3,
+                                   pedestrian=20 , transform_dict=transform_dict)
             elif args.random_actors == 'mid':
-                spawn_actor_nearby(distance=100, v_ratio=0.6,
+                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.6,
                                    pedestrian=40, transform_dict=transform_dict)
             elif args.random_actors == 'high':
-                spawn_actor_nearby(distance=100, v_ratio=0.8,
+                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.8,
                                    pedestrian=80, transform_dict=transform_dict)
             scenario_name = scenario_name + args.random_actors + '_'
 
