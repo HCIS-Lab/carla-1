@@ -231,7 +231,7 @@ class World(object):
             self.world.get_blueprint_library().filter(self._actor_filter))
         blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
-            seed_2 = int(time.time()) 
+            seed_2 = int(time.time()) + 20
             write_json(self.store_path + "/random_seeds.json", 2, seed_2 )
             random.seed(seed_2)
                     
