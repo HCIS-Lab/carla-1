@@ -347,7 +347,6 @@ class World(object):
                                            'gear': c.gear}
         self.ego_data[frame]['transform'] = {'x': t.location.x, 'y': t.location.y, 'z': t.location.z,
                                              'pitch': t.rotation.pitch, 'yaw': t.rotation.yaw, 'roll': t.rotation.roll}
-
     def save_ego_data(self, path):
         self.imu_sensor.toggle_recording_IMU()
         self.gnss_sensor.toggle_recording_Gnss()
@@ -1081,7 +1080,7 @@ class IMUSensor(object):
             if not sensor_data.frame in self.ego_dict:
                 self.ego_dict[sensor_data.frame] = {}
             self.ego_dict[sensor_data.frame]['imu'] = imu
-
+            self.ego_dict[sensor_data.frame]['timestamp'] = sensor_data.timestamp
     def toggle_recording_IMU(self):
         self.recording = not self.recording
     #     if not self.recording:
@@ -2332,7 +2331,6 @@ def game_loop(args):
                 for actor_id, _ in filter_dict.items():
                     # apply recorded location and velocity on the controller
                     
-
                     # reproduce traffic light state
                     if actor_id == 'player' and ref_light:
                         set_light_state(
