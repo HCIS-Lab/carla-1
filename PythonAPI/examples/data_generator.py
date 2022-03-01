@@ -2281,8 +2281,8 @@ def game_loop(args):
         #     t.start()
         #     scenario_name = scenario_name + 'random_objects_'
 
-        if args.random_actors != 'None':
-            if args.random_actors == 'none':
+        if args.random_actors != 'none':
+            if args.random_actors == 'pedestrian':
                 spawn_actor_nearby(stored_path, distance=100, v_ratio=0.0,
                                    pedestrian=0 , transform_dict=transform_dict)
             elif args.random_actors == 'low':
@@ -2316,30 +2316,17 @@ def game_loop(args):
                 
         iter_tick = 0
         iter_start = 25
+        iter_toggle = 80
         while (1):
             clock.tick_busy_loop(40)
             frame = world.world.tick()
             iter_tick += 1
             if iter_tick == iter_start + 1:
-                if not args.no_save:
-                    world.camera_manager.toggle_recording(stored_path)
-                    world.imu_sensor.toggle_recording_IMU()
-                    world.gnss_sensor.toggle_recording_Gnss()
-                    traj_col = threading.Thread(target=collect_trajectory, args=(
-                        world, world.player, args.scenario_id, period, stored_path, clock))
-                    traj_col.start()
-                    topo_col = threading.Thread(target=collect_topology, args=(
-                        world, world.player, args.scenario_id, half_period, root, stored_path, clock))
-                    topo_col.start()
-
                 ref_light = get_next_traffic_light(
                     world.player, world.world, light_transform_dict)
                 annotate = annotate_trafficlight_in_group(
                     ref_light, lights, world.world)
-
-                # start recording .log file
-                if not args.no_save:
-                    print("Recording on file: %s" % client.start_recorder(os.path.join(os.path.abspath(os.getcwd()), stored_path, 'recording.log'),True))
+            
             elif iter_tick > iter_start:                
                 # iterate actors
                 for actor_id, _ in filter_dict.items():
@@ -2401,13 +2388,31 @@ def game_loop(args):
                     abandon_scenario = True
                     break
 
+            if iter_tick == iter_toggle:
+                if not args.no_save:
+                    world.camera_manager.toggle_recording(stored_path)
+                    world.imu_sensor.toggle_recording_IMU()
+                    world.gnss_sensor.toggle_recording_Gnss()
+                    traj_col = threading.Thread(target=collect_trajectory, args=(
+                        world, world.player, args.scenario_id, period, stored_path, clock))
+                    traj_col.start()
+                    topo_col = threading.Thread(target=collect_topology, args=(
+                        world, world.player, args.scenario_id, half_period, root, stored_path, clock))
+                    topo_col.start()
+                    # start recording .log file
+                    print("Recording on file: %s" % client.start_recorder(os.path.join(os.path.abspath(os.getcwd()), stored_path, 'recording.log'),True))
+
+                    pygame.image.save(display, "screenshot.jpeg")
+                    image = cv2.imread("screenshot.jpeg")
+                    out.write(image)
+                    
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
 
-            pygame.image.save(display, "screenshot.jpeg")
-            image = cv2.imread("screenshot.jpeg")
-            out.write(image)
+            # pygame.image.save(display, "screenshot.jpeg")
+            # image = cv2.imread("screenshot.jpeg")
+            # out.write(image)
 
         if not args.no_save and not abandon_scenario:
             world.imu_sensor.toggle_recording_IMU()
@@ -2511,8 +2516,8 @@ def main():
     argparser.add_argument(
         '-random_actors',
         type=str,
-        default='None',
-        choices=['None', 'low', 'mid', 'high'],
+        default='none',
+        choices=['none', 'pedestrian', 'low', 'mid', 'high'],
         help='enable roaming actors')
     argparser.add_argument(
         '--scenario_type',
