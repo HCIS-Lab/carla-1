@@ -2037,7 +2037,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'c': 'crossing',
+                  'sr': 'slide_right', 'u': 'u-turn', 'c': 'crossing',
                   'w': 'walking on sidewalk', 'j': 'jaywalking'}
 
         violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
@@ -2060,7 +2060,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         actor = {'0': 'None'}
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'j': 'jaywalking', '0': 'None'}
+                  'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward', 'j': 'jaywalking', '0': 'None'}
 
         violation = {'0': 'None', 'rl': 'running traffic light',
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
