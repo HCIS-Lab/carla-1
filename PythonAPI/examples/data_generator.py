@@ -2402,9 +2402,10 @@ def game_loop(args):
                     # start recording .log file
                     print("Recording on file: %s" % client.start_recorder(os.path.join(os.path.abspath(os.getcwd()), stored_path, 'recording.log'),True))
 
-                    pygame.image.save(display, "screenshot.jpeg")
-                    image = cv2.imread("screenshot.jpeg")
-                    out.write(image)
+            elif iter_tick > iter_toggle:
+                pygame.image.save(display, "screenshot.jpeg")
+                image = cv2.imread("screenshot.jpeg")
+                out.write(image)
                     
             world.tick(clock)
             world.render(display)
