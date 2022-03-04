@@ -37,6 +37,7 @@ try:
     sys.path.append('../carla/agents')
     sys.path.append('../carla/')
     sys.path.append('../../HDMaps')
+    sys.path.append('rss/') # rss
 
 except IndexError:
     pass
@@ -75,6 +76,9 @@ import matplotlib.pyplot as plt
 from random_actors import spawn_actor_nearby
 from get_and_control_trafficlight import *
 from read_input import *
+# rss
+from rss_sensor_benchmark import RssSensor # pylint: disable=relative-import
+from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer # pylint: disable=relative-import
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -168,6 +172,7 @@ class World(object):
         self.world.apply_settings(settings)
         self.actor_role_name = args.rolename
         self.store_path = store_path
+        self.args = args
         
         try:
             self.map = self.world.get_map()
@@ -211,6 +216,12 @@ class World(object):
             carla.MapLayer.All
         ]
         
+        # # rss
+        # self.dim = (args.width, args.height)
+        # self.rss_sensor = None
+        # self.rss_unstructured_scene_visualizer = None
+        # self.rss_bounding_box_visualizer = None
+        # # rss end
 
     def restart(self):
         self.player_max_speed = 1.589
@@ -291,6 +302,14 @@ class World(object):
 
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+
+        # rss
+        if self.args.save_rss:
+            self.rss_unstructured_scene_visualizer = RssUnstructuredSceneVisualizer(self.player, self.world, self.hud.dim)
+            self.rss_bounding_box_visualizer = RssBoundingBoxVisualizer(self.hud.dim, self.world, self.camera_manager.sensor_top)
+            self.rss_sensor = RssSensor(self.player, self.world,
+                                        self.rss_unstructured_scene_visualizer, self.rss_bounding_box_visualizer, self.hud.rss_state_visualizer)
+        # rss end
 
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
@@ -397,6 +416,8 @@ class World(object):
                 self.imu_sensor.sensor]
 
             self.camera_manager.sensor_front = None
+
+
         else:
             sensors = [
             self.camera_manager.sensor_top,
@@ -404,6 +425,13 @@ class World(object):
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
             self.imu_sensor.sensor]
+
+        if self.args.save_rss and self.save_mode:
+            # rss
+            if self.rss_sensor:
+                self.rss_sensor.destroy()
+            if self.rss_unstructured_scene_visualizer:
+                self.rss_unstructured_scene_visualizer.destroy()
 
 
         for i, sensor in enumerate(sensors):
@@ -683,7 +711,7 @@ class KeyboardControl(object):
 
 
 class HUD(object):
-    def __init__(self, width, height):
+    def __init__(self, width, height, world, args):
         self.dim = (width, height)
         font = pygame.font.Font(pygame.font.get_default_font(), 20)
         font_name = 'courier' if os.name == 'nt' else 'mono'
@@ -700,6 +728,11 @@ class HUD(object):
         self._show_info = True
         self._info_text = []
         self._server_clock = pygame.time.Clock()
+        self._world = world
+        self.args = args
+        if self.args.save_rss: # rss
+            self._world = world 
+            self.rss_state_visualizer = RssStateVisualizer(self.dim, self._font_mono, self._world)
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -828,6 +861,8 @@ class HUD(object):
                         item, True, (255, 255, 255))
                     display.blit(surface, (8, v_offset))
                 v_offset += 18
+            if self.args.save_rss:
+                self.rss_state_visualizer.render(display, v_offset) # rss
         self._notifications.render(display)
         # self.help.render(display)
 
@@ -2189,7 +2224,7 @@ def game_loop(args):
         display.fill((0, 0, 0))
         pygame.display.flip()
 
-        hud = HUD(args.width, args.height)
+        hud = HUD(args.width, args.height, client.get_world(), args)
 
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
@@ -2312,7 +2347,10 @@ def game_loop(args):
         print(stored_path)
         if not os.path.exists(stored_path) and not args.no_save:
             os.makedirs(stored_path)
-                
+        if args.save_rss:
+            print(world.rss_sensor)
+            world.rss_sensor.stored_path = stored_path
+
         iter_tick = 0
         iter_start = 25
         iter_toggle = 80
@@ -2528,6 +2566,11 @@ def main():
         default=False,
         action='store_true',
         help='run scenarios only')
+    argparser.add_argument(
+        '--save_rss',
+        default=False,
+        action='store_true',
+        help='save rss predictinos')
     # argparser.add_argument(
     #     '-random_objects',
     #     type=bool,
