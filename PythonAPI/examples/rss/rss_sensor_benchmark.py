@@ -102,8 +102,8 @@ class RssSensor(object):
         self.change_to_unstructured_position_map = dict()
         # for saving benchmark data
         self.stored_path = ''
-        self.predictions = [] 
-        print('here')
+        self.predictions = {}
+        # print('here')
         # element: {frame: [timestamp(float), prediction(bool), actors(list of int)]}
 
         # get max steering angle
@@ -449,30 +449,30 @@ class RssSensor(object):
             
             situations = response.situation_snapshot.situations
             
+            # print(situations)
             
 
             # append each prediction
             # element: {frame: [timestamp(float), prediction(bool), actors(list of int)]}
             dangerous_id = []
+            situs = {}
             situ = {}
-
-            if not self.proper_response.isSafe:
-                danger_ids = self.proper_response.dangerousObjects
-                for id in danger_ids:
-                    dangerous_id.append(id)
-                    for situation in situations:
-                        if situation.objectId == id:
-                            situ['SituationType'] = SituationType[situation.situationType]
-                            situ['LongitudinalRelativePosition'] = LongitudinalRelativePosition[situation.relativePosition.longitudinalPosition]
-                            situ['LongitudinalDistance'] = float(situation.relativePosition.longitudinalDistance)
-                            situ['LateralRelativePosition'] = LateralRelativePosition[situation.relativePosition.lateralPosition]
-                            situ['LateralDistance'] = float(situation.relativePosition.lateralDistance)
-                            # print(SituationType[situation.situationType])
-                            # print(LongitudinalRelativePosition[situation.relativePosition.longitudinalPosition])
-                            # print(situation.relativePosition.longitudinalDistance)
-                            # print(LateralRelativePosition[situation.relativePosition.lateralPosition])
-                            # print(situation.relativePosition.lateralDistance)
-            self.predictions.append({response.frame: [response.timestamp, not self.proper_response.isSafe, dangerous_id, situ]})
+            EgoVehicleState = {}
+            for situation in situations:
+                situ = {}
+                situ['VehicleState'] = {'SpeedLon': float(situation.otherVehicleState.velocity.speedLon.maximum), 'SpeedLat': float(situation.otherVehicleState.velocity.speedLat.maximum)}
+                situ['SituationType'] = SituationType[situation.situationType]
+                situ['LongitudinalRelativePosition'] = LongitudinalRelativePosition[situation.relativePosition.longitudinalPosition]
+                situ['LongitudinalDistance'] = float(situation.relativePosition.longitudinalDistance)
+                situ['LateralRelativePosition'] = LateralRelativePosition[situation.relativePosition.lateralPosition]
+                situ['LateralDistance'] = float(situation.relativePosition.lateralDistance)
+                situs[situation.objectId] = situ
+                EgoVehicleState = {'SpeedLon': float(situation.egoVehicleState.velocity.speedLon.maximum), 'SpeedLat': float(situation.egoVehicleState.velocity.speedLat.maximum)}
+            danger_ids = self.proper_response.dangerousObjects
+            for id in danger_ids:
+                dangerous_id.append(id)
+            
+            self.predictions[response.frame] = {"EgoCarIsSafe": self.proper_response.isSafe, 'EgoVehicleState': EgoVehicleState, "DangerousIds": dangerous_id, "Situations":situs}
 
             # calculate the allowed heading ranges:
             if response.proper_response.headingRanges:

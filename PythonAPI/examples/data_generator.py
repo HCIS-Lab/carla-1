@@ -965,12 +965,11 @@ class CollisionSensor(object):
             return
         actor_type = get_actor_display_name(event.other_actor)
         self.hud.notification('Collision with %r' % actor_type)
-        impulse = event.normal_impulse
-        intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
+        # impulse = event.normal_impulse
+        # intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
         # dict: {data1, data2}
         # data = frame: {timestamp, other_actor's id, intensity}
-        self.history.append({'frame': event.frame ,'timestamp': event.timestamp, \
-            'actor_id': event.other_actor.id, 'intensity': intensity})
+        self.history.append({'frame': event.frame, 'actor_id': event.other_actor.id})
         # if len(self.history) > 4000:
         #     self.history.pop(0)
         self.collision = True
@@ -2197,6 +2196,7 @@ def game_loop(args):
                 name = name.strip('.txt')
                 f.close()
                 filter_dict[name] = bp
+        print(filter_dict)
     except:
         print("檔案夾不存在。")
 
