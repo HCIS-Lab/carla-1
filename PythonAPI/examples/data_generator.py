@@ -2316,9 +2316,9 @@ def game_loop(args):
         #     scenario_name = scenario_name + 'random_objects_'
 
         if args.random_actors != 'none':
-            if args.random_actors == 'pedestrian':
+            if args.random_actors == 'pedestrian':  #only pedestrian
                 spawn_actor_nearby(stored_path, distance=100, v_ratio=0.0,
-                                   pedestrian=0 , transform_dict=transform_dict)
+                                   pedestrian=40 , transform_dict=transform_dict)
             elif args.random_actors == 'low':
                 spawn_actor_nearby(stored_path, distance=100, v_ratio=0.3,
                                    pedestrian=20 , transform_dict=transform_dict)
