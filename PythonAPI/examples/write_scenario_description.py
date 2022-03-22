@@ -93,7 +93,7 @@ def write_description(scenario_type, scenario_name ):
         actor = {'c': 'car', 't': 'truck', 'b': 'bike',
                     'm': 'motor', 'p': 'pedestrian', 's':'static_object'}
 
-         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
+        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                   'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
                   'w': 'walking on sidewalk', 'j': 'jaywalking','ri':'Crash into refuge island' ,'0': 'None'}
             
