@@ -729,7 +729,7 @@ class KeyboardControl(object):
                 elif event.key == K_k:
                     if self.save_act_transform is not None:
                         actors = world.world.get_actors().filter('vehicle.*')
-                        for i,actor in enumerate(actors):
+                        for i, actor in enumerate(actors):
                             actor.set_transform(self.save_act_transform[i])
                         print("set finish")
                 elif event.key == K_f:
@@ -737,10 +737,12 @@ class KeyboardControl(object):
                         traffic_light = world.player.get_traffic_light()
                         if traffic_light.get_state() == carla.TrafficLightState.Red:
                             print("Set traffic light to green.")
-                            traffic_light.set_state(carla.TrafficLightState.Green)
+                            traffic_light.set_state(
+                                carla.TrafficLightState.Green)
                         elif traffic_light.get_state() == carla.TrafficLightState.Green:
                             print("Set traffic light to red.")
-                            traffic_light.set_state(carla.TrafficLightState.Red)
+                            traffic_light.set_state(
+                                carla.TrafficLightState.Red)
                 elif event.key == K_o:
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
@@ -1674,11 +1676,11 @@ class CameraManager(object):
                     break
 
             elif self.scenario_type == 'obstacle':
-                scenario_name_my_initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn'}
+                scenario_name_my_initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
+                                                   'u': 'u-turn'}
 
-                scenario_name_my_action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                                    'u': 'u-turn'}
+                scenario_name_my_action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
+                                           'u': 'u-turn'}
 
                 obstacle_type = {'0': 'traffic cone',
                                  '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
@@ -1716,7 +1718,8 @@ class CameraManager(object):
 
                     print("Input ego's initial action:")
                     for key in scenario_name_my_initial_action:
-                        print(key + ': ' + scenario_name_my_initial_action[key] + ' ')
+                        print(key + ': ' +
+                              scenario_name_my_initial_action[key] + ' ')
 
                     input_option = str(input())
                     if input_option not in scenario_name_my_initial_action:
@@ -1737,14 +1740,14 @@ class CameraManager(object):
             else:
                 # Collision
                 scenario_name_actor_type = {
-                    'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian','s':'static_object'}
+                    'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian', 's': 'static_object'}
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
                                                    'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
-                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking','0':'None'}
+                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking', '0': 'None'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn','ri':'Crash into refuge island'}
+                                           'sr': 'slide_right', 'u': 'u-turn', 'ri': 'Crash into refuge island'}
 
                 # scenario_name_interaction = {'0': 'False', '1':  'True'}
 
@@ -2031,10 +2034,10 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
     elif 's' in topo:
         d['topology'] = 'straight'
 
-
     if scenario_type == 'interactive':
         # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
-        actor = {'c': 'car', 't': 'truck', 'b': 'bike', 'm': 'motor', 'p': 'pedestrian'}
+        actor = {'c': 'car', 't': 'truck', 'b': 'bike',
+                 'm': 'motor', 'p': 'pedestrian'}
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                   'sr': 'slide_right', 'u': 'u-turn', 'c': 'crossing',
@@ -2044,7 +2047,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
 
         interaction = {'1': 'True'}
-        
+
         d['traffic_light'] = 1 if description[2] == '1' else 0
         d['interaction_actor_type'] = actor[description[3]]
         d['interaction_action_type'] = action[description[4]]
@@ -2052,8 +2055,6 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['interaction'] = interaction[description[6]]
         d['violation'] = violation[description[7]]
         d['map'] = carla_map
-
-
 
     elif scenario_type == 'non-interactive':
         # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
@@ -2066,7 +2067,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
 
         interaction = {'0': 'False'}
-        
+
         d['traffic_light'] = 1 if description[2] == '1' else 0
         d['interaction_actor_type'] = actor[description[3]]
         d['interaction_action_type'] = action[description[4]]
@@ -2075,13 +2076,11 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['violation'] = violation[description[7]]
         d['map'] = carla_map
 
-
-
     elif scenario_type == 'obstacle':
-        initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
-                            'u': 'u-turn'}
+        initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
+                          'u': 'u-turn'}
 
-        action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right', 
+        action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
                                     'u': 'u-turn'}
 
         obstacle_type = {'0': 'traffic cone',
@@ -2092,16 +2091,15 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['my_action'] = action[description[4]]
         d['map'] = carla_map
 
-
     elif scenario_type == 'collision':
         # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
 
         actor = {'c': 'car', 't': 'truck', 'b': 'bike',
-                 'm': 'motor', 'p': 'pedestrian', 's':'static_object'}
+                 'm': 'motor', 'p': 'pedestrian', 's': 'static_object'}
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                   'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
-                  'w': 'walking on sidewalk', 'j': 'jaywalking','ri':'Crash into refuge island' ,'0': 'None'}
+                  'w': 'walking on sidewalk', 'j': 'jaywalking', 'ri': 'Crash into refuge island', '0': 'None'}
 
         violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
@@ -2114,10 +2112,8 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['violation'] = violation[description[6]]
         d['map'] = carla_map
 
-
     with open(os.path.join(stored_path, 'scenario_description.json'), 'w') as f:
         json.dump(d, f)
-    
 
 
 def record_traffic_lights(lights_dict, lights):
@@ -2142,18 +2138,16 @@ def save_traffic_lights(stored_path, lights_dict):
 
 def generate_obstacle(world, n):
     blueprint_library = world.get_blueprint_library()
-    all_default_spawn = world.get_map().get_spawn_points()
+    all_wp = world.get_map().generate_waypoints(6)
 
     obstacle_list = []
     trans_list = []
     stat_prop = ["static.prop.trafficcone01", "static.prop.trafficcone02",
                  "static.prop.trafficwarning", "static.prop.streetbarrier"]
 
-    all_wp = world.get_map().generate_waypoints(6)
-
-    def dist(t, L):
+    def dist(t, L, limit):
         for trans in L:
-            if trans.location.distance(t.location) < 30:
+            if trans.location.distance(t.location) < limit:
                 return False
         return True
 
@@ -2171,91 +2165,114 @@ def generate_obstacle(world, n):
 
         trans_list.append(new_trans)
 
-    if n < 0:
+    def spawn_twoWarning(trans, id):
+        new_rotation = carla.Rotation(
+            pitch=0, yaw=trans.rotation.yaw-90, roll=0)
+        new_trans = carla.Transform(trans.location, new_rotation)
+
+        world.spawn_actor(
+            blueprint_library.filter(stat_prop[id])[0], new_trans)
+
+        obstacle_list.append(
+            stat_prop[id]+'\t'+f'{new_trans}')
+
+        trans_list.append(new_trans)
+
+    def spawn_straight(vec, trans, id):
+        new_rotation = carla.Rotation(
+            pitch=0, yaw=trans.rotation.yaw-90, roll=0)
+        new_trans = carla.Transform(trans.location, new_rotation)
+
+        new_trans.location += vec
+
+        world.spawn_actor(
+            blueprint_library.filter(stat_prop[id])[0], new_trans)
+
+        obstacle_list.append(
+            stat_prop[id]+'\t'+f'{new_trans}')
+
+        trans_list.append(new_trans)
+
+    if n == 1:
         for k, wp in enumerate(all_wp):
-            if wp.is_junction and dist(wp.transform, trans_list) and random.randint(0,3) == 0:
+            if wp.is_junction and dist(wp.transform, trans_list, 30) and random.randint(0, 3) == 0:
 
-                    trans = wp.transform    
-                    vec_0 = carla.Vector3D(0, 0, 0)
-                    vec_f = trans.get_forward_vector()
-                    vec_r = trans.get_right_vector()
-                
-                    trans.location += vec_f*5
+                trans = wp.transform
+                vec_0 = carla.Vector3D(0, 0, 0)
+                vec_f = trans.get_forward_vector()
+                vec_r = trans.get_right_vector()
 
-                    spawn_junction(vec_0, trans, 0)
-                    spawn_junction(vec_r, trans, 0)
-                    spawn_junction(vec_f, trans, 0)
-                    spawn_junction(vec_f+vec_r, trans, 0)
+                trans.location += vec_f*5
 
-    
-    for _ in range(n):
-        trans = None
-        while True:
-            trans = random.choice(all_default_spawn)
-            if dist(trans, trans_list):
-                break
+                spawn_junction(vec_0, trans, 0)
+                spawn_junction(vec_r, trans, 0)
+                spawn_junction(vec_f, trans, 0)
+                spawn_junction(vec_f+vec_r, trans, 0)
 
-        wp = world.get_map().get_waypoint(trans.location)
+    elif 2 <= n <= 3:
+        for i in range(50):
+            while True:
+                wp = random.choice(all_wp)
+                if not wp.is_junction and dist(wp.transform, trans_list, 40)    \
+                        and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
+                    break
 
-        wp_list = (wp.previous_until_lane_start(4))[::-1]
-        wp_list.append(wp)
-        if _ % 2:
+            wp_list = []
+            # wp_list = (wp.previous_until_lane_start(4))[::-1]
             wp_list.extend(wp.next_until_lane_end(4))
 
+            if len(wp_list) < 5:
+                continue
 
-        wp_list = list(filter(lambda wp: (
-            wp.lane_type == carla.LaneType.Driving and not wp.is_junction), wp_list))
-        
+            print('###', i, '###', len(wp_list))
 
-        if len(wp_list) < 2:
-            continue
-        if len(wp_list) > 4 and wp_list[-1].transform.location.distance(wp_list[-2].transform.location) < 4:
-            wp_list.pop(-1)
-            wp_list.pop(0)
-        if len(wp_list) > 4 and _ % 2 == 0:
-            wp_list = wp_list[0:4]
+            rand = random.randint(4, len(wp_list)-1)
+            spawn_twoWarning(wp_list[rand].transform, n)
+            spawn_twoWarning(wp_list[rand-4].transform, n)
 
-        print('###', _, '###', len(wp_list))
+    elif n >= 4:
+        n_obstacle = 0
+        while n_obstacle < n:
 
-        vector = (wp_list[0].transform.location.x - wp_list[1].transform.location.x,
-                  wp_list[0].transform.location.y - wp_list[1].transform.location.y)
+            while True:
+                wp = random.choice(all_wp)
+                if not wp.is_junction and dist(wp.transform, trans_list, 30)    \
+                        and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 30):
+                    break
 
-        for (k, waypoint) in enumerate(wp_list, start=1):
-            # if waypoint.lane_type != carla.LaneType.Driving or waypoint.is_junction:
-            #     break
+            wp_list = []
+            # wp_list = (wp.previous_until_lane_start(4))[::-1]
+            wp_list.extend(wp.next_until_lane_end(4))
 
-            if len(wp_list) == 4:
-                if k != 1 and k != len(wp_list)-1:
-                    continue
-                i = 3
-                cur_location = waypoint.transform.location
+            for idx in range(len(wp_list)-2, -1, -1):
+                if wp_list[idx].is_junction or not dist(wp_list[idx].transform, [wp_list[idx+1].transform], 3):
+                    for s in range(idx):
+                        wp_list[::-1].pop(0)
+                    break
+
+            if len(wp_list) < 5:
+                continue
             else:
+                n_obstacle += 1
+                print('###', i, '###', len(wp_list))
+
+            vector = (wp_list[0].transform.location.x - wp_list[1].transform.location.x,
+                      wp_list[0].transform.location.y - wp_list[1].transform.location.y)
+
+            for (k, waypoint) in enumerate(wp_list, start=1):
                 if k == len(wp_list):
-                    i = 2
-                    cur_location = waypoint.transform.location
+                    spawn_straight(carla.Vector3D(0, 0, 0),
+                                   waypoint.transform, 2)
                 else:
-                    i = 0
                     r = (1.0/k-0.55)
-
                     right_wpt = waypoint.get_right_lane()
+
                     if right_wpt and right_wpt.lane_type == carla.LaneType.Driving:
-                        cur_location = carla.Location(
-                            x=waypoint.transform.location.x-vector[1]*r, y=waypoint.transform.location.y+vector[0]*r, z=waypoint.transform.location.z)
+                        vec = carla.Vector3D(-vector[1]*r, vector[0]*r, 0)
                     else:
-                        cur_location = carla.Location(
-                            x=waypoint.transform.location.x+vector[1]*r, y=waypoint.transform.location.y-vector[0]*r, z=waypoint.transform.location.z)
+                        vec = carla.Vector3D(vector[1]*r, -vector[0]*r, 0)
 
-            cur_trans = carla.Transform(cur_location, carla.Rotation(
-                pitch=0, yaw=waypoint.transform.rotation.yaw-90, roll=0))
-            world.spawn_actor(
-                blueprint_library.filter(stat_prop[i])[0], cur_trans)
-
-            obstacle_list.append(
-                stat_prop[i]+'\t'+f'{cur_trans}')
-            trans_list.append(cur_trans)
-
-            if cur_trans in all_default_spawn:
-                all_default_spawn.remove(cur_trans)
+                    spawn_straight(vec, waypoint.transform, 0)
 
     return obstacle_list
 
@@ -2265,7 +2282,8 @@ def generate_parking(world, n):
     blueprint_library = world.get_blueprint_library()
     parking_list = []
 
-    motor_list = ['bh.crossbike', 'yamaha.yzf', 'vespa.zx125', 'gazelle.omafiets', 'diamondback.century', 'harley-davidson.low_rider']
+    motor_list = ['bh.crossbike', 'yamaha.yzf', 'vespa.zx125',
+                  'gazelle.omafiets', 'diamondback.century', 'harley-davidson.low_rider']
     vehicle_list = []
 
     for i in blueprint_library.filter('vehicle.*'):
@@ -2287,7 +2305,7 @@ def generate_parking(world, n):
     # for wp in all_wp[:n]:
     for wp in random.sample(all_wp, n):
         waypoint = world.get_map().get_waypoint(location=wp.transform.location,
-                                                lane_type=carla.LaneType.Shoulder) # Shoulder Driving
+                                                lane_type=carla.LaneType.Shoulder)  # Shoulder Driving
         if not dist(waypoint, wp_list):
             continue
         wp_list.append(waypoint)
@@ -2296,7 +2314,7 @@ def generate_parking(world, n):
         r = random.choice([0, 0.6, 1, 1.5, 1.8, 1.9])
 
         cur_location = carla.Location(
-                x=waypoint.transform.location.x-r*vector.x, y=waypoint.transform.location.y-r*vector.y, z=waypoint.transform.location.z+1)
+            x=waypoint.transform.location.x-r*vector.x, y=waypoint.transform.location.y-r*vector.y, z=waypoint.transform.location.z+1)
         # cur_location = carla.Location(
         #     x=waypoint.transform.location.x, y=waypoint.transform.location.y, z=waypoint.transform.location.z+1)
         cur_trans = carla.Transform(cur_location, carla.Rotation(
@@ -2356,7 +2374,7 @@ def game_loop(args):
             controller = KeyboardControl(world, args.autopilot)
 
         obstacle_list = []
-        
+
         if args.obstacle != 0:
             obstacle_list = generate_obstacle(
                 client.get_world(), args.obstacle)
