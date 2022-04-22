@@ -2254,7 +2254,7 @@ def generate_obstacle(world, n):
                 continue
             else:
                 n_obstacle += 1
-                print('###', i, '###', len(wp_list))
+                print('###', n_obstacle, '###', len(wp_list))
 
             vector = (wp_list[0].transform.location.x - wp_list[1].transform.location.x,
                       wp_list[0].transform.location.y - wp_list[1].transform.location.y)
