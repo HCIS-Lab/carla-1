@@ -29,17 +29,29 @@ else
     echo "run default setting : interactive"
 fi
 
+
 s=`ls -d ${path_to_nas}/${scenario_type}/*`
 n="${path_to_nas}/${scenario_type}/"
 len_of_path=${#n}
 for basic_root in $s
 do
+    #echo $basic_root
     scenario_id=${basic_root:len_of_path}
+    #echo $scenario_id
 
     output="./data_collection/${scenario_type}/${scenario_id}/" # path to store data
     root=$basic_root"/variant_scenario/"
     len=${#root}
-
+    folder=`ls -d ${root}*`
+    
+    for eachfile in $folder
+    do
+        file_name="top"
+        cp ${eachfile}/bbox/${file_name}.zip ./
+        unzip ./${file_name}.zip
+        rm ./${file_name}.zip
+        break
+    done
     cp $basic_root/scenario_description.json ${output}
     cp $basic_root/smaple.mp4 ${output}
     echo "finishing unzip file"
