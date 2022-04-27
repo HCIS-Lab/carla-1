@@ -29,55 +29,6 @@ else
     echo "run default setting : interactive"
 fi
 
-echo " "
-echo "Do you need depth data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_depth
-
-echo " "
-echo "Do you need rgb data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_rgb
-
-echo " "
-echo "Do you need lidar data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_lidar
-
-echo " "
-echo "Do you need semantic segmentation data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_ss
-
-echo " "
-echo "Do you need optical flow data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_of
-
-echo " "
-echo "Do you need bbox data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_bb
-
-echo " "
-echo "Retrive front data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_front
-
-echo " "
-echo "Retrive back data? "
-echo "0 - False"
-echo "1 - True"
-read -p ": " if_back
-
-
 s=`ls -d ${path_to_nas}/${scenario_type}/*`
 n="${path_to_nas}/${scenario_type}/"
 len_of_path=${#n}
