@@ -50,7 +50,7 @@ folder=`ls -d ./data_collection/${scenario_type}/*`
 sleep 15
 for scenario_name in $folder
 do
-	mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/smaple.mp4 
+	mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/sample.mp4 
 	for((i=0; i<3; i++))
 	do
 			for((j=0; j<${#random_actor[@]}; j++))

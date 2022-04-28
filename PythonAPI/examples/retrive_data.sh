@@ -322,7 +322,7 @@ do
     cp -r $basic_root/velocity ${output}
     cp $basic_root/scenario_description.json ${output}
     cp $basic_root/timestamp.txt ${output}
-    cp $basic_root/smaple.mp4 ${output}
+    cp $basic_root/sample.mp4 ${output}
     echo "finishing unzip file"
 done
 
