@@ -2160,8 +2160,7 @@ def generate_obstacle(world, n):
         world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
-        obstacle_list.append(
-            stat_prop[id]+'\t'+f'{new_trans}')
+        obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
 
         trans_list.append(new_trans)
 
@@ -2173,8 +2172,7 @@ def generate_obstacle(world, n):
         world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
-        obstacle_list.append(
-            stat_prop[id]+'\t'+f'{new_trans}')
+        obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
 
         trans_list.append(new_trans)
 
@@ -2188,8 +2186,7 @@ def generate_obstacle(world, n):
         world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
-        obstacle_list.append(
-            stat_prop[id]+'\t'+f'{new_trans}')
+        obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
 
         trans_list.append(new_trans)
 
