@@ -2353,7 +2353,7 @@ def game_loop(args):
 
         iter_tick = 0
         iter_start = 25
-        iter_toggle = 80
+        iter_toggle = 50
         while (1):
             clock.tick_busy_loop(40)
             frame = world.world.tick()
