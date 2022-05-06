@@ -2203,13 +2203,13 @@ def generate_obstacle(world, n, area):
 
                 trans.location += vec_f*5
 
-                obstacle_id = random.randint(0, 2)
+                rand = random.randint(0, 2)
 
-                if obstacle_id < 2:
-                    spawn_junction(vec_0, trans, obstacle_id)
-                    spawn_junction(vec_r, trans, obstacle_id)
-                    spawn_junction(vec_f, trans, obstacle_id)
-                    spawn_junction(vec_f+vec_r, trans, obstacle_id)
+                if rand < 2:
+                    spawn_junction(vec_0, trans, 0)
+                    spawn_junction(vec_r, trans, 0)
+                    spawn_junction(vec_f, trans, 0)
+                    spawn_junction(vec_f+vec_r, trans, 0)
                 else:
                     spawn_junction(vec_0, trans, 3)
                     spawn_junction(vec_r, trans, 3)
