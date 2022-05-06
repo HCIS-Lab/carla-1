@@ -2157,7 +2157,7 @@ def generate_obstacle(world, n):
         r = 2.5
         new_trans.location += (vec)*r
 
-        world.spawn_actor(
+        actor = world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
         obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
@@ -2169,7 +2169,7 @@ def generate_obstacle(world, n):
             pitch=0, yaw=trans.rotation.yaw-90, roll=0)
         new_trans = carla.Transform(trans.location, new_rotation)
 
-        world.spawn_actor(
+        actor = world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
         obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
@@ -2183,7 +2183,7 @@ def generate_obstacle(world, n):
 
         new_trans.location += vec
 
-        world.spawn_actor(
+        actor = world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
         obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
