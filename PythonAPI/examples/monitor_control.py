@@ -2136,7 +2136,7 @@ def save_traffic_lights(stored_path, lights_dict):
                 (str(l_id)), np.array(lights_dict[l_id]))
 
 
-def generate_obstacle(world, n):
+def generate_obstacle(world, n, area):
     blueprint_library = world.get_blueprint_library()
     all_wp = world.get_map().generate_waypoints(6)
 
@@ -2207,7 +2207,7 @@ def generate_obstacle(world, n):
                 spawn_junction(vec_f+vec_r, trans, 0)
 
     elif 2 <= n <= 3:
-        for i in range(50):
+        for i in range(area):
             while True:
                 wp = random.choice(all_wp)
                 if not wp.is_junction and dist(wp.transform, trans_list, 40)    \
@@ -2374,7 +2374,7 @@ def game_loop(args):
 
         if args.obstacle != 0:
             obstacle_list = generate_obstacle(
-                client.get_world(), args.obstacle)
+                client.get_world(), args.obstacle, args.area)
         if args.parking != 0:
             obstacle_list = generate_parking(client.get_world(), args.parking)
 
@@ -2517,6 +2517,11 @@ def main():
         type=int,
         default=0,
         help='add obstacle')
+    argparser.add_argument(
+        '-area',
+        type=int,
+        default=50,
+        help='spawn obstacle area')
     argparser.add_argument(
         '-parking',
         type=int,
