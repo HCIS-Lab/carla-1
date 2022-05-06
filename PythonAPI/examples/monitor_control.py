@@ -2152,6 +2152,8 @@ def generate_obstacle(world, n, area):
         return True
 
     def spawn_junction(vec, trans, id):
+        new_rotation = carla.Rotation(
+            pitch=0, yaw=trans.rotation.yaw-90, roll=0)
         new_trans = carla.Transform(trans.location, trans.rotation)
 
         r = 2.5
@@ -2192,7 +2194,7 @@ def generate_obstacle(world, n, area):
 
     if n == 1:
         for k, wp in enumerate(all_wp):
-            if wp.is_junction and dist(wp.transform, trans_list, 30) and random.randint(0, 3) == 0:
+            if wp.is_junction and dist(wp.transform, trans_list, 30) and random.randint(0, 2) == 0:
 
                 trans = wp.transform
                 vec_0 = carla.Vector3D(0, 0, 0)
@@ -2201,11 +2203,17 @@ def generate_obstacle(world, n, area):
 
                 trans.location += vec_f*5
 
-                spawn_junction(vec_0, trans, 0)
-                spawn_junction(vec_r, trans, 0)
-                spawn_junction(vec_f, trans, 0)
-                spawn_junction(vec_f+vec_r, trans, 0)
+                obstacle_id = random.randint(0, 2)
 
+                if obstacle_id < 2:
+                    spawn_junction(vec_0, trans, obstacle_id)
+                    spawn_junction(vec_r, trans, obstacle_id)
+                    spawn_junction(vec_f, trans, obstacle_id)
+                    spawn_junction(vec_f+vec_r, trans, obstacle_id)
+                else:
+                    spawn_junction(vec_0, trans, 3)
+                    spawn_junction(vec_r, trans, 3)
+                    
     elif 2 <= n <= 3:
         for i in range(area):
             while True:
