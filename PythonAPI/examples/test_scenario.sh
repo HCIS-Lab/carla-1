@@ -48,9 +48,9 @@ do
 
     if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
     then
-        python data_generator.py --scenario_type ${scenario_type} -scenario_id ${eachfile:$len} -map Town10HD --no_save
+        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --no_save
     else
-        python data_generator.py --scenario_type ${scenario_type} -scenario_id ${eachfile:$len} -map Town0${eachfile:$len:1} --no_save
+        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --no_save
     fi
 
     sleep 3

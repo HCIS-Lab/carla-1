@@ -2505,7 +2505,7 @@ def main():
         type=int,
         help='TCP port to listen to (default: 2000)')
     argparser.add_argument(
-        '-scenario_id',
+        '--scenario_id',
         type=str,
         help='name of the scenario')
     argparser.add_argument(
@@ -2538,7 +2538,7 @@ def main():
         type=int,
         help='Random device seed')
     argparser.add_argument(
-        '-weather',
+        '--weather',
         default='ClearNoon',
         type=str,
         choices=['ClearNoon', 'CloudyNoon', 'WetNoon', 'WetCloudyNoon', 'MidRainyNoon', 'HardRainNoon', 'SoftRainNoon',
@@ -2546,12 +2546,12 @@ def main():
                  'ClearNight', 'CloudyNight', 'WetNight', 'WetCloudyNight', 'MidRainyNight', 'HardRainNight', 'SoftRainNight'],
         help='weather name')
     argparser.add_argument(
-        '-map',
+        '--map',
         default='Town03',
         type=str,
         help='map name')
     argparser.add_argument(
-        '-random_actors',
+        '--random_actors',
         type=str,
         default='none',
         choices=['none', 'pedestrian', 'low', 'mid', 'high'],
