@@ -149,9 +149,9 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
             write_json(store_path + "/random_seeds.json", 5, seed_5 )
         seed_5 += 5*num_of_vehicles
         random.seed(seed_5)
-        #print(seed_5)
-        print(num_of_vehicles)
-        print("********************")
+        # print(seed_5)
+        # print(num_of_vehicles)
+        # print("********************")
         blueprint = random.choice(blueprints)
         
         #print(blueprint)
