@@ -2354,6 +2354,15 @@ def game_loop(args):
         iter_tick = 0
         iter_start = 25
         iter_toggle = 50
+        if not os.path.exists(stored_path + '/trajectory_frame/'):
+            os.mkdir(stored_path + '/trajectory_frame/')
+        filepath = stored_path + '/trajectory_frame/' + str(args.scenario_id) + '.csv'
+        is_exist = os.path.isfile(filepath)
+        f = open(filepath, 'w')
+        w = csv.writer(f)
+        #if not is_exist:
+        w.writerow(['FRAME', 'TRACK_ID',
+                                'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
         while (1):
             clock.tick_busy_loop(40)
             frame = world.world.tick()
@@ -2364,17 +2373,20 @@ def game_loop(args):
                 annotate = annotate_trafficlight_in_group(
                     ref_light, lights, world.world)
             
-            elif iter_tick > iter_start:                
+            elif iter_tick > iter_start:
+                                
                 # iterate actors
                 for actor_id, _ in filter_dict.items():
                     # apply recorded location and velocity on the controller
-                    
+                    actors = world.world.get_actors()
                     # reproduce traffic light state
                     if actor_id == 'player' and ref_light:
                         set_light_state(
                             lights, light_dict, actor_transform_index[actor_id], annotate)
 
                     if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
+                        x = transform_dict[actor_id][actor_transform_index[actor_id]].location.x
+                        y = transform_dict[actor_id][actor_transform_index[actor_id]].location.y
                         if 'vehicle' in filter_dict[actor_id]:
 
                             target_speed = (velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6
@@ -2399,16 +2411,39 @@ def game_loop(args):
                             if actor_id == 'player' and not args.no_save:
                                 world.record_speed_control_transform(frame)
 
+                            if actor_id == 'player':
+                                w.writerow(
+                                        [frame, actor_id, 'AGENT', str(x), str(y), args.map])
+                            elif actor_id != 'player':
+                                w.writerow(
+                                        [frame, actor_id, 'actor.vehicle', str(x), str(y), args.map])
+                                
+
                         elif 'pedestrian' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(
                                 ped_control_dict[actor_id][actor_transform_index[actor_id]])
                             actor_transform_index[actor_id] += 2
+
+                            w.writerow(
+                                    [frame, actor_id, 'actor.pedestrian', str(x), str(y), args.map])
                     else:
                         finish[actor_id] = True
 
                         # elif actor_id == 'player':
                         #     scenario_finished = True
                         #     break
+                for actor in actors:
+                    if actor_transform_index['player'] < len(transform_dict[actor_id]):
+                        if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
+                            x = actor.get_location().x
+                            y = actor.get_location().y
+                            id = actor.id
+                            if actor.type_id[0:7] == 'vehicle':
+                                w.writerow(
+                                        [frame, id, 'vehicle', str(x), str(y), args.map])
+                            elif actor.type_id[0:6] == 'walker':
+                                w.writerow(
+                                        [frame, id, 'pedestrian', str(x), str(y), args.map])
                 if not False in finish.values():
                     break
 
