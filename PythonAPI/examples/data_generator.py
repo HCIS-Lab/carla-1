@@ -2328,7 +2328,7 @@ def game_loop(args):
             elif args.random_actors == 'high':
                 spawn_actor_nearby(stored_path, distance=100, v_ratio=0.8,
                                    pedestrian=80, transform_dict=transform_dict)
-            scenario_name = scenario_name + args.random_actors + '_'
+        scenario_name = scenario_name + args.random_actors + '_'
 
         if not args.no_save:
             # recording traj
@@ -2422,7 +2422,7 @@ def game_loop(args):
                         elif 'pedestrian' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(
                                 ped_control_dict[actor_id][actor_transform_index[actor_id]])
-                            actor_transform_index[actor_id] += 2
+                            actor_transform_index[actor_id] += 1
 
                             w.writerow(
                                     [frame, actor_id, 'actor.pedestrian', str(x), str(y), args.map])
