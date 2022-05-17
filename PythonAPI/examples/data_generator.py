@@ -730,6 +730,7 @@ class HUD(object):
         self._server_clock = pygame.time.Clock()
         self._world = world
         self.args = args
+        self.frame = 0
         if self.args.save_rss: # rss
             self._world = world 
             self.rss_state_visualizer = RssStateVisualizer(self.dim, self._font_mono, self._world)
@@ -766,6 +767,7 @@ class HUD(object):
             'Map:     % 20s' % world.map.name,
             'Simulation time: % 12s' % datetime.timedelta(
                 seconds=int(self.simulation_time)),
+            'Frame:   %s' % self.frame,
             '',
             'Speed:   % 15.0f km/h' % (3.6 *
                                        math.sqrt(v.x**2 + v.y**2 + v.z**2)),
@@ -2124,7 +2126,7 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
 
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
-    blueprint.set_attribute('role_name', actor_id)
+    blueprint.set_attribute('role_name', 'tp')
     if blueprint.has_attribute('color'):
         color = random.choice(
             blueprint.get_attribute('color').recommended_values)
@@ -2135,6 +2137,8 @@ def set_bp(blueprint, actor_id):
         blueprint.set_attribute('driver_id', driver_id)
     if blueprint.has_attribute('is_invincible'):
         blueprint.set_attribute('is_invincible', 'true')
+
+
     # set the max speed
     # if blueprint.has_attribute('speed'):
     #     self.player_max_speed = float(
@@ -2366,6 +2370,7 @@ def game_loop(args):
         while (1):
             clock.tick_busy_loop(40)
             frame = world.world.tick()
+            hud.frame = frame
             iter_tick += 1
             if iter_tick == iter_start + 1:
                 ref_light = get_next_traffic_light(
