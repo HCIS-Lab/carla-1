@@ -166,6 +166,8 @@ def write_json(filename, index, seed ):
 class World(object):
     def __init__(self, carla_world, client_bp, hud, args, store_path):
         self.world = carla_world
+        self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
+        
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = True  # Enables synchronous mode
@@ -2238,7 +2240,7 @@ def game_loop(args):
         if not os.path.exists(stored_path) :
             os.makedirs(stored_path)
         
-        world = World(client.load_world(args.map),
+        world = World(client.load_world(args.map+"_Opt"),
                       filter_dict['player'], hud, args, stored_path)
         client.get_world().set_weather(args.weather)
 
