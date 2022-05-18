@@ -399,6 +399,8 @@ class World(object):
                 self.camera_manager.sensor_lidar,
                 self.camera_manager.sensor_dvs,
                 self.camera_manager.sensor_flow,
+                
+                self.camera_manager.bev_seg_top,
                 self.camera_manager.seg_top,
                 self.camera_manager.seg_front,
                 self.camera_manager.seg_back,
@@ -1220,6 +1222,7 @@ class CameraManager(object):
         self.dvs = []
 
         # self.top_iseg = []
+        self.bev_top_seg = []
         self.top_seg = []
         self.front_seg = []
         self.left_seg = []
@@ -1268,7 +1271,10 @@ class CameraManager(object):
                  z=1.3*bound_z), carla.Rotation(yaw=-235)), Attachment.Rigid),
                 # top view
                 (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm)
+                 z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm),
+                # LBC top view
+                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
+                 z=100.0), carla.Rotation(pitch=0.0)), Attachment.SpringArm)
             ]
         else:
             self._camera_transforms = [
@@ -1303,8 +1309,21 @@ class CameraManager(object):
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
         for item in self.sensors:
+            
             bp = bp_library.find(item[0])
-            if item[0].startswith('sensor.camera'):
+            print("--------------------")
+            print(item[0])
+            print("--------------------")
+            if 'top' in item[0]:
+                bp.set_attribute('image_size_x', 512)
+                bp.set_attribute('image_size_y', 512)
+                bp.set_attribute('fov', 50.0)
+
+                if bp.has_attribute('gamma'):
+                    bp.set_attribute('gamma', str(gamma_correction))
+                for attr_name, attr_value in item[3].items():
+                    bp.set_attribute(attr_name, attr_value)
+            elif item[0].startswith('sensor.camera'):
                 bp.set_attribute('image_size_x', str(hud.dim[0]))
                 bp.set_attribute('image_size_y', str(hud.dim[1]))
                 if bp.has_attribute('gamma'):
@@ -1403,6 +1422,13 @@ class CameraManager(object):
                 #     attach_to=self._parent,
                 #     attachment_type=self._camera_transforms[6][1])
 
+                self.bev_seg_top = self._parent.get_world().spawn_actor(
+                    self.sensors[5][-1],
+                    self._camera_transforms[7][0],
+                    attach_to=self._parent,
+                    attachment_type=self._camera_transforms[7][1])
+
+
                 self.seg_top = self._parent.get_world().spawn_actor(
                     self.sensors[5][-1],
                     self._camera_transforms[6][0],
@@ -1498,6 +1524,10 @@ class CameraManager(object):
                     lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
                 # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
+
+                self.bev_seg_top.listen(lambda image: CameraManager._parse_image(
+                                    weak_self, image, 'bev_seg_top'))
+
                 self.seg_top.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'seg_top'))
                 self.seg_front.listen(lambda image: CameraManager._parse_image(
@@ -1559,6 +1589,10 @@ class CameraManager(object):
                 target=self.save_img, args=(self.flow, 8, path, 'flow'))
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
+
+            t_bev_seg_top = Process(
+                target=self.save_img, args=(self.bev_top_seg, 5, path, 'bev_seg_top'))
+            
             t_seg_top = Process(
                 target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
             t_seg_front = Process(target=self.save_img, args=(
@@ -1600,6 +1634,7 @@ class CameraManager(object):
             t_flow.start()
 
             # t_iseg_top.start()
+            t_bev_seg_top.start()
             t_seg_top.start()
             t_seg_front.start()
             t_seg_right.start()
@@ -1653,6 +1688,8 @@ class CameraManager(object):
                 fov_list.append(int(float(sensor.attributes['fov'])))
             self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
             self.top_img = []
+            
+            self.bev_top_seg = []
             self.top_seg = []
             self.front_seg = []
             self.right_seg = []
@@ -1676,7 +1713,9 @@ class CameraManager(object):
             t_lidar.join()
             t_dvs.join()
             t_flow.join()
-
+            
+            
+            t_bev_seg_top.join()
             t_seg_top.join()
             t_seg_front.join()
             t_seg_right.join()
@@ -1866,7 +1905,8 @@ class CameraManager(object):
 
             # elif view == 'iseg_top':
             #     self.top_iseg.append(image)
-
+            elif view == 'bev_seg_top':
+                self.bev_top_seg.append(image)
             elif view == 'seg_top':
                 self.top_seg.append(image)
             elif view == 'seg_front':
@@ -2220,6 +2260,8 @@ def game_loop(args):
                 os.path.join(path, 'ped_control', actor_id + '.npy'))
     # num_files = len(filter_dict)
     abandon_scenario = False
+    # stored_path = None
+    scenario_name = None
 
     try:
         client = carla.Client(args.host, args.port)
@@ -2488,10 +2530,6 @@ def game_loop(args):
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
-
-            # pygame.image.save(display, "screenshot.jpeg")
-            # image = cv2.imread("screenshot.jpeg")
-            # out.write(image)
 
         if not args.no_save and not abandon_scenario:
             world.imu_sensor.toggle_recording_IMU()
