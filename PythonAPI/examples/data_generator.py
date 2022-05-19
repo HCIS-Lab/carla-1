@@ -166,7 +166,7 @@ def write_json(filename, index, seed ):
 class World(object):
     def __init__(self, carla_world, client_bp, hud, args, store_path):
         self.world = carla_world
-        self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
+        # self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
         
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = 0.05
@@ -400,7 +400,6 @@ class World(object):
                 self.camera_manager.sensor_dvs,
                 self.camera_manager.sensor_flow,
                 
-                self.camera_manager.bev_seg_top,
                 self.camera_manager.seg_top,
                 self.camera_manager.seg_front,
                 self.camera_manager.seg_back,
@@ -1222,7 +1221,6 @@ class CameraManager(object):
         self.dvs = []
 
         # self.top_iseg = []
-        self.bev_top_seg = []
         self.top_seg = []
         self.front_seg = []
         self.left_seg = []
@@ -1308,22 +1306,16 @@ class CameraManager(object):
         ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
+
+        self.bev_bp = bp_library.find('sensor.camera.semantic_segmentation')
+        self.bev_bp.set_attribute('image_size_x', str(512))
+        self.bev_bp.set_attribute('image_size_y', str(512))
+        self.bev_bp.set_attribute('fov', str(50.0))
+
         for item in self.sensors:
             
             bp = bp_library.find(item[0])
-            print("--------------------")
-            print(item[0])
-            print("--------------------")
-            if 'top' in item[0]:
-                bp.set_attribute('image_size_x', 512)
-                bp.set_attribute('image_size_y', 512)
-                bp.set_attribute('fov', 50.0)
-
-                if bp.has_attribute('gamma'):
-                    bp.set_attribute('gamma', str(gamma_correction))
-                for attr_name, attr_value in item[3].items():
-                    bp.set_attribute(attr_name, attr_value)
-            elif item[0].startswith('sensor.camera'):
+            if item[0].startswith('sensor.camera'):
                 bp.set_attribute('image_size_x', str(hud.dim[0]))
                 bp.set_attribute('image_size_y', str(hud.dim[1]))
                 if bp.has_attribute('gamma'):
@@ -1422,18 +1414,10 @@ class CameraManager(object):
                 #     attach_to=self._parent,
                 #     attachment_type=self._camera_transforms[6][1])
 
-                self.bev_seg_top = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[7][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[7][1])
-
-
                 self.seg_top = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[6][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[6][1])
+                    self.bev_bp,
+                    self._camera_transforms[7][0],
+                    attach_to=self._parent)
                 self.seg_front = self._parent.get_world().spawn_actor(
                     self.sensors[5][-1],
                     self._camera_transforms[0][0],
@@ -1525,9 +1509,6 @@ class CameraManager(object):
 
                 # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
 
-                self.bev_seg_top.listen(lambda image: CameraManager._parse_image(
-                                    weak_self, image, 'bev_seg_top'))
-
                 self.seg_top.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'seg_top'))
                 self.seg_front.listen(lambda image: CameraManager._parse_image(
@@ -1590,9 +1571,6 @@ class CameraManager(object):
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
 
-            t_bev_seg_top = Process(
-                target=self.save_img, args=(self.bev_top_seg, 5, path, 'bev_seg_top'))
-            
             t_seg_top = Process(
                 target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
             t_seg_front = Process(target=self.save_img, args=(
@@ -1634,7 +1612,6 @@ class CameraManager(object):
             t_flow.start()
 
             # t_iseg_top.start()
-            t_bev_seg_top.start()
             t_seg_top.start()
             t_seg_front.start()
             t_seg_right.start()
@@ -1689,7 +1666,6 @@ class CameraManager(object):
             self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
             self.top_img = []
             
-            self.bev_top_seg = []
             self.top_seg = []
             self.front_seg = []
             self.right_seg = []
@@ -1715,7 +1691,6 @@ class CameraManager(object):
             t_flow.join()
             
             
-            t_bev_seg_top.join()
             t_seg_top.join()
             t_seg_front.join()
             t_seg_right.join()
@@ -1903,10 +1878,6 @@ class CameraManager(object):
             elif view == 'flow':
                 self.flow.append(image)
 
-            # elif view == 'iseg_top':
-            #     self.top_iseg.append(image)
-            elif view == 'bev_seg_top':
-                self.bev_top_seg.append(image)
             elif view == 'seg_top':
                 self.top_seg.append(image)
             elif view == 'seg_front':
@@ -2276,22 +2247,17 @@ def game_loop(args):
 
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
-        
         stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id, weather + "_" + args.random_actors + "_")
-
         if not os.path.exists(stored_path) :
             os.makedirs(stored_path)
-        
-        world = World(client.load_world(args.map+"_Opt"),
+        world = World(client.load_world(args.map),
                       filter_dict['player'], hud, args, stored_path)
         client.get_world().set_weather(args.weather)
-
         # sync mode
         settings = world.world.get_settings()
         settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = True  # Enables synchronous mode
         world.world.apply_settings(settings)
-
         # other setting
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
@@ -2322,7 +2288,6 @@ def game_loop(args):
         world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
         
-
         # set controller
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
@@ -2354,7 +2319,6 @@ def game_loop(args):
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
         # time.sleep(2)
-
         # dynamic scenario setting
         root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
         scenario_name = str(weather) + '_'
@@ -2389,7 +2353,6 @@ def game_loop(args):
                     moment.append(s[1])
             period = float(moment[-1]) - float(moment[0])
             half_period = period / 2
-
         # dynamic scenario setting
         stored_path = os.path.join(root, scenario_name)
         print(stored_path)
