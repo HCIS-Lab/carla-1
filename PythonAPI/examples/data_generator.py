@@ -389,6 +389,7 @@ class World(object):
             self.toggle_radar()
         if self.save_mode:
             sensors = [
+                self.camera_manager.lbc_img,
                 self.camera_manager.sensor_top,
                 self.camera_manager.sensor_front,
                 self.camera_manager.sensor_left,
@@ -400,6 +401,7 @@ class World(object):
                 self.camera_manager.sensor_dvs,
                 self.camera_manager.sensor_flow,
                 
+                self.camera_manager.lbc_seg,
                 self.camera_manager.seg_top,
                 self.camera_manager.seg_front,
                 self.camera_manager.seg_back,
@@ -423,6 +425,8 @@ class World(object):
 
         else:
             sensors = [
+            self.camera_manager.lbc_img,
+            self.camera_manager.lbc_seg,
             self.camera_manager.sensor_top,
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
@@ -1208,6 +1212,7 @@ class CameraManager(object):
         self.recording = False
         self.save_mode = save_mode
 
+        self.lbc_img = []
         self.top_img = []
         self.front_img = []
         self.left_img = []
@@ -1221,6 +1226,7 @@ class CameraManager(object):
         self.dvs = []
 
         # self.top_iseg = []
+        self.lbc_seg = []
         self.top_seg = []
         self.front_seg = []
         self.left_seg = []
@@ -1349,11 +1355,18 @@ class CameraManager(object):
                 self.surface = None
 
             # rgb sensor
+            self.lbc_img = self._parent.get_world().spawn_actor(
+                self.sensors[0][-1],
+                self._camera_transforms[7][0],
+                attach_to=self._parent)
+
+
             self.sensor_top = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
                 self._camera_transforms[6][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[6][1])
+
 
             if self.save_mode:
                 self.sensor_front = self._parent.get_world().spawn_actor(
@@ -1414,10 +1427,16 @@ class CameraManager(object):
                 #     attach_to=self._parent,
                 #     attachment_type=self._camera_transforms[6][1])
 
-                self.seg_top = self._parent.get_world().spawn_actor(
+                self.lbc_seg = self._parent.get_world().spawn_actor(
                     self.bev_bp,
                     self._camera_transforms[7][0],
                     attach_to=self._parent)
+
+                self.seg_top = self._parent.get_world().spawn_actor(
+                    self.sensors[5][-1],
+                    self._camera_transforms[6][0],
+                    attach_to=self._parent,
+                    attachment_type=self._camera_transforms[1][1])
                 self.seg_front = self._parent.get_world().spawn_actor(
                     self.sensors[5][-1],
                     self._camera_transforms[0][0],
@@ -1484,6 +1503,8 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
+            self.lbc_img.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'top'))
             self.sensor_top.listen(
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
             if self.save_mode:
@@ -1509,6 +1530,8 @@ class CameraManager(object):
 
                 # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
 
+                self.lbc_seg.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'seg_top'))
                 self.seg_top.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'seg_top'))
                 self.seg_front.listen(lambda image: CameraManager._parse_image(
@@ -1547,6 +1570,8 @@ class CameraManager(object):
     def toggle_recording(self, path):
         self.recording = not self.recording
         if not self.recording:
+            t_lbc_img = Process(
+                target=self.save_img, args=(self.lbc_img, 0, path, 'lbc_img'))
             t_top = Process(
                 target=self.save_img, args=(self.top_img, 0, path, 'top'))
             t_front = Process(target=self.save_img, args=(
@@ -1570,7 +1595,8 @@ class CameraManager(object):
                 target=self.save_img, args=(self.flow, 8, path, 'flow'))
 
             # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
-
+            t_lbc_seg = Process(
+                target=self.save_img, args=(self.lbc_seg, 5, path, 'lbc_seg'))
             t_seg_top = Process(
                 target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
             t_seg_front = Process(target=self.save_img, args=(
@@ -1599,6 +1625,7 @@ class CameraManager(object):
             t_depth_back_left = Process(target=self.save_img, args=(
                 self.back_left_depth, 1, path, 'depth_back_left'))
             start_time = time.time()
+            t_lbc_img.start()
             t_top.start()
             t_front.start()
             t_left.start()
@@ -1612,6 +1639,7 @@ class CameraManager(object):
             t_flow.start()
 
             # t_iseg_top.start()
+            t_lbc_seg.start()
             t_seg_top.start()
             t_seg_front.start()
             t_seg_right.start()
@@ -1628,6 +1656,9 @@ class CameraManager(object):
             t_depth_back_left.start()
 
             # self.top_img = []
+            self.lbc_img = []
+            self.lbc_seg = []
+
             self.front_img = []
             self.right_img = []
             self.left_img = []
@@ -1639,13 +1670,6 @@ class CameraManager(object):
             self.dvs = []
             self.flow = []
 
-            # self.top_seg = []
-            # self.front_seg = []
-            # self.right_seg = []
-            # self.left_seg = []
-            # self.back_seg = []
-            # self.back_right_seg = []
-            # self.back_left_seg = []
 
             self.front_depth = []
             self.right_depth = []
@@ -1678,6 +1702,7 @@ class CameraManager(object):
             self.img_dict = {}
             for order in self.sensor_order:
                 self.img_dict[order] = {}
+            t_lbc_img.join()
             t_top.join()
             t_front.join()
             t_left.join()
@@ -1690,7 +1715,7 @@ class CameraManager(object):
             t_dvs.join()
             t_flow.join()
             
-            
+            t_lbc_seg.join()
             t_seg_top.join()
             t_seg_front.join()
             t_seg_right.join()
@@ -1852,6 +1877,8 @@ class CameraManager(object):
                         vehicles, [top_transform,front_transform,right_transform,left_transform,back_transform,back_right_transform,back_left_transform]]
                 except:
                     print("Initial frame.")
+            elif view == 'lbc_img':
+                self.lbc_img.append(image)
             elif view == 'front':
                 self.front_img.append(image)
                 self.img_dict[view][image.frame] = image
@@ -1878,6 +1905,8 @@ class CameraManager(object):
             elif view == 'flow':
                 self.flow.append(image)
 
+            elif view == 'lbc_seg':
+                self.lbc_seg.append(image)
             elif view == 'seg_top':
                 self.top_seg.append(image)
             elif view == 'seg_front':
