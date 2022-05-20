@@ -1317,6 +1317,9 @@ class CameraManager(object):
         self.bev_bp.set_attribute('image_size_x', str(512))
         self.bev_bp.set_attribute('image_size_y', str(512))
         self.bev_bp.set_attribute('fov', str(50.0))
+        if self.bev_bp.has_attribute('gamma'):
+            self.bev_bp.set_attribute('gamma', str(gamma_correction))
+
 
         self.bev_seg_bp = bp_library.find('sensor.camera.semantic_segmentation')
         self.bev_seg_bp.set_attribute('image_size_x', str(512))
