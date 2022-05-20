@@ -1277,8 +1277,8 @@ class CameraManager(object):
                 (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
                  z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm),
                 # LBC top view
-                (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=100.0), carla.Rotation(pitch=20.0)), Attachment.SpringArm)
+                (carla.Transform(carla.Location(x=0, y=0,
+                 z=100.0), carla.Rotation(pitch=-90.0)), Attachment.SpringArm)
             ]
         else:
             self._camera_transforms = [
@@ -1317,8 +1317,8 @@ class CameraManager(object):
         self.bev_bp.set_attribute('image_size_x', str(512))
         self.bev_bp.set_attribute('image_size_y', str(512))
         self.bev_bp.set_attribute('fov', str(50.0))
-        if self.bev_bp.has_attribute('gamma'):
-            self.bev_bp.set_attribute('gamma', str(gamma_correction))
+        # if self.bev_bp.has_attribute('gamma'):
+        #     self.bev_bp.set_attribute('gamma', str(gamma_correction))
 
 
         self.bev_seg_bp = bp_library.find('sensor.camera.semantic_segmentation')
@@ -1439,12 +1439,13 @@ class CameraManager(object):
                     self.bev_seg_bp,
                     self._camera_transforms[7][0],
                     attach_to=self._parent)
+                    
 
                 self.seg_top = self._parent.get_world().spawn_actor(
                     self.sensors[5][-1],
                     self._camera_transforms[6][0],
                     attach_to=self._parent,
-                    attachment_type=self._camera_transforms[1][1])
+                    attachment_type=self._camera_transforms[6][1])
                 self.seg_front = self._parent.get_world().spawn_actor(
                     self.sensors[5][-1],
                     self._camera_transforms[0][0],
