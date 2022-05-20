@@ -1313,10 +1313,15 @@ class CameraManager(object):
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
 
-        self.bev_bp = bp_library.find('sensor.camera.semantic_segmentation')
+        self.bev_bp = bp_library.find('sensor.camera.rgb')
         self.bev_bp.set_attribute('image_size_x', str(512))
         self.bev_bp.set_attribute('image_size_y', str(512))
         self.bev_bp.set_attribute('fov', str(50.0))
+
+        self.bev_seg_bp = bp_library.find('sensor.camera.semantic_segmentation')
+        self.bev_seg_bp.set_attribute('image_size_x', str(512))
+        self.bev_seg_bp.set_attribute('image_size_y', str(512))
+        self.bev_seg_bp.set_attribute('fov', str(50.0))
 
         for item in self.sensors:
             
@@ -1356,7 +1361,7 @@ class CameraManager(object):
 
             # rgb sensor
             self.sensor_lbc_img = self._parent.get_world().spawn_actor(
-                self.sensors[0][-1],
+                self.bev_bp,
                 self._camera_transforms[7][0],
                 attach_to=self._parent)
 
@@ -1428,7 +1433,7 @@ class CameraManager(object):
                 #     attachment_type=self._camera_transforms[6][1])
 
                 self.sensor_lbc_seg = self._parent.get_world().spawn_actor(
-                    self.bev_bp,
+                    self.bev_seg_bp,
                     self._camera_transforms[7][0],
                     attach_to=self._parent)
 
