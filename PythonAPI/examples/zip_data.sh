@@ -114,6 +114,10 @@ do
         zip -r ${eachfile}/rgb/${file_name}.zip ${eachfile}/rgb/${file_name}
         rm -r ${eachfile}/rgb/${file_name}
 
+        file_name="lbc_img"
+        zip -r ${eachfile}/rgb/${file_name}.zip ${eachfile}/rgb/${file_name}
+        rm -r ${eachfile}/rgb/${file_name}
+
         # --- semantic_segmentation 
         file_name="seg_back"
         zip -r ${eachfile}/semantic_segmentation/${file_name}.zip ${eachfile}/semantic_segmentation/${file_name}
@@ -140,6 +144,10 @@ do
         rm -r ${eachfile}/semantic_segmentation/${file_name}
 
         file_name="seg_top"
+        zip -r ${eachfile}/semantic_segmentation/${file_name}.zip ${eachfile}/semantic_segmentation/${file_name}
+        rm -r ${eachfile}/semantic_segmentation/${file_name}
+
+        file_name="lbc_seg"
         zip -r ${eachfile}/semantic_segmentation/${file_name}.zip ${eachfile}/semantic_segmentation/${file_name}
         rm -r ${eachfile}/semantic_segmentation/${file_name}
 
