@@ -1355,7 +1355,7 @@ class CameraManager(object):
                 self.surface = None
 
             # rgb sensor
-            self.lbc_img = self._parent.get_world().spawn_actor(
+            self.sensor_lbc_img = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
                 self._camera_transforms[7][0],
                 attach_to=self._parent)
@@ -1427,7 +1427,7 @@ class CameraManager(object):
                 #     attach_to=self._parent,
                 #     attachment_type=self._camera_transforms[6][1])
 
-                self.lbc_seg = self._parent.get_world().spawn_actor(
+                self.sensor_lbc_seg = self._parent.get_world().spawn_actor(
                     self.bev_bp,
                     self._camera_transforms[7][0],
                     attach_to=self._parent)
@@ -1503,8 +1503,8 @@ class CameraManager(object):
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
-            self.lbc_img.listen(
-                lambda image: CameraManager._parse_image(weak_self, image, 'top'))
+            self.sensor_lbc_img.listen(
+                lambda image: CameraManager._parse_image(weak_self, image, 'lbc_img'))
             self.sensor_top.listen(
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
             if self.save_mode:
@@ -1530,8 +1530,8 @@ class CameraManager(object):
 
                 # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
 
-                self.lbc_seg.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_top'))
+                self.sensor_lbc_seg.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'lbc_seg'))
                 self.seg_top.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'seg_top'))
                 self.seg_front.listen(lambda image: CameraManager._parse_image(
