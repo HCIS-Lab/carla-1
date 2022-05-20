@@ -389,7 +389,7 @@ class World(object):
             self.toggle_radar()
         if self.save_mode:
             sensors = [
-                self.camera_manager.lbc_img,
+                self.camera_manager.sensor_lbc_img,
                 self.camera_manager.sensor_top,
                 self.camera_manager.sensor_front,
                 self.camera_manager.sensor_left,
@@ -401,7 +401,7 @@ class World(object):
                 self.camera_manager.sensor_dvs,
                 self.camera_manager.sensor_flow,
                 
-                self.camera_manager.lbc_seg,
+                self.camera_manager.sensor_lbc_seg,
                 self.camera_manager.seg_top,
                 self.camera_manager.seg_front,
                 self.camera_manager.seg_back,
@@ -1278,7 +1278,7 @@ class CameraManager(object):
                  z=23*bound_z), carla.Rotation(pitch=18.0)), Attachment.SpringArm),
                 # LBC top view
                 (carla.Transform(carla.Location(x=-0.8*bound_x, y=+0.0*bound_y,
-                 z=100.0), carla.Rotation(pitch=0.0)), Attachment.SpringArm)
+                 z=100.0), carla.Rotation(pitch=20.0)), Attachment.SpringArm)
             ]
         else:
             self._camera_transforms = [
