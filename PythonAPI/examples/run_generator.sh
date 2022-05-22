@@ -112,7 +112,7 @@ do
 			rm -r ${name}
 		fi
 	done
-	./zip_data.sh ${scenario_type} ${scenario_name:$len} &	
+	#./zip_data.sh ${scenario_type} ${scenario_name:$len} &	
 done
 
 
