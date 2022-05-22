@@ -31,13 +31,28 @@ len=${#scenario_type}
 len=$((len + 19))
 folder=`ls -d ./data_collection/${scenario_type}/*`
 
-mkdir "./data_collection/${scenario_type}_fail/"
+../../CarlaUE4.sh &
+sleep 15
+SERVICE="CarlaUE4"
 for eachfile in $folder
 do
-    echo "$eachfile/variant_scenario"
-    check=`ls $eachfile/variant_scenario | wc -l`
-	if [ ${check} -lt 4 ]
-	then
-		mv $eachfile ./data_collection/${scenario_type}_fail/
+    if pgrep "$SERVICE" >/dev/null
+    then
+        echo "$SERVICE is running"
+    else
+        echo "$SERVICE is  stopped"
+        ../../CarlaUE4.sh & sleep 15	
     fi
+    #echo ${scenario_type}
+    echo ${eachfile:$len} 
+
+    if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+    then
+        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --no_save
+    else
+        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --no_save
+    fi
+
+    sleep 3
+    #rm -r ./data_collection/${scenario_type}/${eachfile:$len}/ClearNoon_
 done
