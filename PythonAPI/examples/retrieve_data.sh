@@ -312,7 +312,7 @@ do
         cp ${eachfile}/$scenario_id.mp4 ${output}variant_scenario/${eachfile: $len}
         cp ${eachfile}/dynamic_description.json ${output}variant_scenario/${eachfile: $len}
         cp ${eachfile}/ego_data.json ${output}variant_scenario/${eachfile: $len}
-
+        cp ${eachfile}/retrieve_gt.txt ${output}variant_scenario/${eachfile: $len}
     done
     cp -r $basic_root/filter ${output}
     cp -r $basic_root/obstacle ${output}
