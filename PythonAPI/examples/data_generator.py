@@ -2352,7 +2352,7 @@ def game_loop(args):
             finish[actor_id] = False
 
             if 'Night' in weather:
-                agents_dict[actor_id].set_light_state(carla.VehicleLightState.Position)
+                agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
 
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
