@@ -70,18 +70,25 @@ do
 					w=($a $b $c)
 
 					python ../util/config.py --reload
-					echo ${i}
-					echo ${k}
+					#echo ${i}
+					#echo ${k}
 					echo ${scenario_name:$len}
 
-					if [ `echo ${scenario_name:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+					check_name_exist=./data_collection/${scenario_type}/${scenario_name:$len}/variant_scenario/${weather[${w[${i}]}]}_${random_actor[j]}_
+					#echo $check_name_exist
+					if test ! -d $check_name_exist; 
 					then
-						python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town10HD --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
-					else
-						python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town0${scenario_name:$len:1} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+						if [ `echo ${scenario_name:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+						then
+							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town10HD --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+						else
+							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town0${scenario_name:$len:1} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+						fi
+						
+						mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
+					else 
+						echo "skip /variant_scenario/${weather[${w[${i}]}]}_${random_actor[j]}_"
 					fi
-					
-					mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
 			done
 	done
 
