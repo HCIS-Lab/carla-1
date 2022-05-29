@@ -97,16 +97,31 @@ do
 		then
 			echo "$FILE exists."
 
-			col=${name}/collision_history.npy
-			if test -f "$col"; 
-			then
-				echo "$col exists."
-				rm -r ${name}
-			else
-				mv ${name} "${x}/variant_scenario"
-				
-			fi
+			col=${name}/collision_history.json
 
+			if [ ${ds_id} != 1 ]
+			then
+				if test -f "$col"; 
+				then
+					echo "$col exists."
+					rm -r ${name}
+				else
+					mv ${name} "${x}/variant_scenario"
+					
+				fi
+			else
+				if test -f "$col"; 
+				then
+					echo "$col exists."
+					mv ${name} "${x}/variant_scenario"
+					
+				else
+					echo "$col not  exists."
+					
+					rm -r ${name}
+					
+				fi
+			fi
 		else
 			echo "$FILE not exist. remove this folder"
 			rm -r ${name}
