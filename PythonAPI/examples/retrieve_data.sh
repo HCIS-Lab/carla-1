@@ -77,6 +77,18 @@ echo "0 - False"
 echo "1 - True"
 read -p ": " if_back
 
+echo " "
+echo "Retrive DVS? "
+echo "0 - False"
+echo "1 - True"
+read -p ": " if_dvs
+
+echo " "
+echo "Retrive Learning by cheat top view datas? "
+echo "0 - False"
+echo "1 - True"
+read -p ": " if_lbc
+
 
 s=`ls -d ${path_to_nas}/${scenario_type}/*`
 n="${path_to_nas}/${scenario_type}/"
@@ -138,11 +150,14 @@ do
         fi
 
         # --- dvs 
+        if [ ${if_dvs} == 1 ]
+        then 
 
-        file_name="dvs"
-        cp ${eachfile}/dvs/${file_name}.zip ./
-        unzip ./${file_name}.zip
-        rm ./${file_name}.zip
+            file_name="dvs"
+            cp ${eachfile}/dvs/${file_name}.zip ./
+            unzip ./${file_name}.zip
+            rm ./${file_name}.zip
+        fi
 
         # --- optical_flow
 
@@ -252,6 +267,14 @@ do
             cp ${eachfile}/rgb/${file_name}.zip ./
             unzip ./${file_name}.zip
             rm ./${file_name}.zip
+            
+            if [ ${if_lbc} == 1 ]
+            then
+                file_name="lbc_img"
+                cp ${eachfile}/rgb/${file_name}.zip ./
+                unzip ./${file_name}.zip
+                rm ./${file_name}.zip
+            fi
         fi
 
         # --- semantic_segmentation 
@@ -296,6 +319,14 @@ do
             cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
             unzip ./${file_name}.zip
             rm ./${file_name}.zip
+            
+            if [ ${if_lbc} == 1 ]
+            then
+                file_name="lbc_seg"
+                cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
+                unzip ./${file_name}.zip
+                rm ./${file_name}.zip
+            fi
         fi
         # -- topology
         file_name="topology"
