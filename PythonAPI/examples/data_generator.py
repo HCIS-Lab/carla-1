@@ -2348,10 +2348,10 @@ def game_loop(args):
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                                     max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+                agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
+            
             actor_transform_index[actor_id] = 1
             finish[actor_id] = False
-
-            agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
 
         waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
