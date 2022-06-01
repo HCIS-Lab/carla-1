@@ -2344,12 +2344,13 @@ def game_loop(args):
                 # set other actor id for checking collision object's identity
                 world.collision_sensor.other_actor_id = agents_dict[actor_id].id
 
-
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                                     max_throttle=1.0, max_brake=1.0, max_steering=1.0)
-                agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
-            
+                try:
+                    agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
+                except:
+                    print('vehicle has no low beam light')
             actor_transform_index[actor_id] = 1
             finish[actor_id] = False
 
