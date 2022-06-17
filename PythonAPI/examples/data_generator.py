@@ -403,12 +403,20 @@ class World(object):
                 
                 self.camera_manager.sensor_lbc_seg,
                 self.camera_manager.seg_top,
-                self.camera_manager.seg_front,
-                self.camera_manager.seg_back,
-                self.camera_manager.seg_right,
-                self.camera_manager.seg_left,
-                self.camera_manager.seg_back_right,
-                self.camera_manager.seg_back_left,
+                # self.camera_manager.seg_front,
+                # self.camera_manager.seg_back,
+                # self.camera_manager.seg_right,
+                # self.camera_manager.seg_left,
+                # self.camera_manager.seg_back_right,
+                # self.camera_manager.seg_back_left,
+
+                self.camera_manager.ins_front,
+                self.camera_manager.ins_back,
+                self.camera_manager.ins_right,
+                self.camera_manager.ins_left,
+                self.camera_manager.ins_back_right,
+                self.camera_manager.ins_back_left,
+
                 self.camera_manager.depth_front,
                 self.camera_manager.depth_right,
                 self.camera_manager.depth_left,
@@ -1228,12 +1236,19 @@ class CameraManager(object):
         # self.top_iseg = []
         self.lbc_seg = []
         self.top_seg = []
-        self.front_seg = []
-        self.left_seg = []
-        self.right_seg = []
-        self.back_seg = []
-        self.back_left_seg = []
-        self.back_right_seg = []
+        # self.front_seg = []
+        # self.left_seg = []
+        # self.right_seg = []
+        # self.back_seg = []
+        # self.back_left_seg = []
+        # self.back_right_seg = []
+
+        self.front_ins = []
+        self.left_ins = []
+        self.right_ins = []
+        self.back_ins = []
+        self.back_left_ins = []
+        self.back_right_ins = []
 
         self.front_depth = []
         self.left_depth = []
@@ -1428,12 +1443,6 @@ class CameraManager(object):
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
 
-                # segmentation sensor
-                # self.iseg_top = self._parent.get_world().spawn_actor(
-                #     self.sensors[-1][-1],
-                #     self._camera_transforms[6][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[6][1])
 
                 self.sensor_lbc_seg = self._parent.get_world().spawn_actor(
                     self.bev_seg_bp,
@@ -1446,36 +1455,68 @@ class CameraManager(object):
                     self._camera_transforms[6][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[6][1])
-                self.seg_front = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
+                # self.seg_front = self._parent.get_world().spawn_actor(
+                #     self.sensors[5][-1],
+                #     self._camera_transforms[0][0],
+                #     attach_to=self._parent,
+                #     attachment_type=self._camera_transforms[0][1])
+                # self.seg_left = self._parent.get_world().spawn_actor(
+                #     self.sensors[5][-1],
+                #     self._camera_transforms[1][0],
+                #     attach_to=self._parent,
+                #     attachment_type=self._camera_transforms[1][1])
+                # self.seg_right = self._parent.get_world().spawn_actor(
+                #     self.sensors[5][-1],
+                #     self._camera_transforms[2][0],
+                #     attach_to=self._parent,
+                #     attachment_type=self._camera_transforms[2][1])
+                # self.seg_back = self._parent.get_world().spawn_actor(
+                #     self.sensors[5][-1],
+                #     self._camera_transforms[3][0],
+                #     attach_to=self._parent,
+                #     attachment_type=self._camera_transforms[3][1])
+                # self.seg_back_left = self._parent.get_world().spawn_actor(
+                #     self.sensors[5][-1],
+                #     self._camera_transforms[4][0],
+                #     attach_to=self._parent,
+                #     attachment_type=self._camera_transforms[4][1])
+                # self.seg_back_right = self._parent.get_world().spawn_actor(
+                #     self.sensors[5][-1],
+                #     self._camera_transforms[5][0],
+                #     attach_to=self._parent,
+                #     attachment_type=self._camera_transforms[5][1])
+
+                self.ins_front = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
                     self._camera_transforms[0][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
-                self.seg_left = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
+                self.ins_left = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
                     self._camera_transforms[1][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[1][1])
-                self.seg_right = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
+                self.ins_right = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
                     self._camera_transforms[2][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[2][1])
-                self.seg_back = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
+                self.ins_back = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
                     self._camera_transforms[3][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[3][1])
-                self.seg_back_left = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
+                self.ins_back_left = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
                     self._camera_transforms[4][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[4][1])
-                self.seg_back_right = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
+                self.ins_back_right = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
                     self._camera_transforms[5][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[5][1])
+
 
                 # depth estimation sensor
                 self.depth_front = self._parent.get_world().spawn_actor(
@@ -1537,24 +1578,36 @@ class CameraManager(object):
                 self.sensor_flow.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
-                # self.iseg_top.listen(lambda image: CameraManager._parse_image(weak_self, image, 'iseg_top'))
 
                 self.sensor_lbc_seg.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'lbc_seg'))
                 self.seg_top.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'seg_top'))
-                self.seg_front.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_front'))
-                self.seg_right.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_right'))
-                self.seg_left.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_left'))
-                self.seg_back.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_back'))
-                self.seg_back_right.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_back_right'))
-                self.seg_back_left.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_back_left'))
+                # self.seg_front.listen(lambda image: CameraManager._parse_image(
+                #     weak_self, image, 'seg_front'))
+                # self.seg_right.listen(lambda image: CameraManager._parse_image(
+                #     weak_self, image, 'seg_right'))
+                # self.seg_left.listen(lambda image: CameraManager._parse_image(
+                #     weak_self, image, 'seg_left'))
+                # self.seg_back.listen(lambda image: CameraManager._parse_image(
+                #     weak_self, image, 'seg_back'))
+                # self.seg_back_right.listen(lambda image: CameraManager._parse_image(
+                #     weak_self, image, 'seg_back_right'))
+                # self.seg_back_left.listen(lambda image: CameraManager._parse_image(
+                #     weak_self, image, 'seg_back_left'))
+
+                self.ins_front.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_front'))
+                self.ins_right.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_right'))
+                self.ins_left.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_left'))
+                self.ins_back.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_back'))
+                self.ins_back_right.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_back_right'))
+                self.ins_back_left.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_back_left'))
 
                 self.depth_front.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'depth_front'))
@@ -1603,23 +1656,36 @@ class CameraManager(object):
             t_flow = Process(
                 target=self.save_img, args=(self.flow, 8, path, 'flow'))
 
-            # t_iseg_top = threading.Thread(target = self.save_img, args=(self.top_seg, 10, path, 'iseg_top'))
             t_lbc_seg = Process(
                 target=self.save_img, args=(self.lbc_seg, 5, path, 'lbc_seg'))
             t_seg_top = Process(
                 target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
-            t_seg_front = Process(target=self.save_img, args=(
-                self.front_seg, 5, path, 'seg_front'))
-            t_seg_right = Process(target=self.save_img, args=(
-                self.right_seg, 5, path, 'seg_right'))
-            t_seg_left = Process(
-                target=self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
-            t_seg_back = Process(
-                target=self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
-            t_seg_back_right = Process(target=self.save_img, args=(
-                self.back_right_seg, 5, path, 'seg_back_right'))
-            t_seg_back_left = Process(target=self.save_img, args=(
-                self.back_left_seg, 5, path, 'seg_back_left'))
+
+            # t_seg_front = Process(target=self.save_img, args=(
+            #     self.front_seg, 5, path, 'seg_front'))
+            # t_seg_right = Process(target=self.save_img, args=(
+            #     self.right_seg, 5, path, 'seg_right'))
+            # t_seg_left = Process(
+            #     target=self.save_img, args=(self.left_seg, 5, path, 'seg_left'))
+            # t_seg_back = Process(
+            #     target=self.save_img, args=(self.back_seg, 5, path, 'seg_back'))
+            # t_seg_back_right = Process(target=self.save_img, args=(
+            #     self.back_right_seg, 5, path, 'seg_back_right'))
+            # t_seg_back_left = Process(target=self.save_img, args=(
+            #     self.back_left_seg, 5, path, 'seg_back_left'))
+
+            t_ins_front = Process(
+                target=self.save_img, args=(self.front_ins, 10, path, 'ins_front'))
+            t_ins_right = Process(
+                target=self.save_img, args=(self.right_ins, 10, path, 'ins_right'))
+            t_ins_left = Process(
+                target=self.save_img, args=(self.left_ins, 10, path, 'ins_left'))
+            t_ins_back = Process(
+                target=self.save_img, args=(self.back_ins, 10, path, 'ins_back'))
+            t_ins_back_right = Process(
+                target=self.save_img, args=(self.back_right_ins, 10, path, 'ins_back_right'))
+            t_ins_back_left = Process(
+                target=self.save_img, args=(self.back_left_ins, 10, path, 'ins_back_left'))
 
             t_depth_front = Process(target=self.save_img, args=(
                 self.front_depth, 1, path, 'depth_front'))
@@ -1647,15 +1713,21 @@ class CameraManager(object):
             t_dvs.start()
             t_flow.start()
 
-            # t_iseg_top.start()
             t_lbc_seg.start()
             t_seg_top.start()
-            t_seg_front.start()
-            t_seg_right.start()
-            t_seg_left.start()
-            t_seg_back.start()
-            t_seg_back_right.start()
-            t_seg_back_left.start()
+            # t_seg_front.start()
+            # t_seg_right.start()
+            # t_seg_left.start()
+            # t_seg_back.start()
+            # t_seg_back_right.start()
+            # t_seg_back_left.start()
+
+            t_ins_front.start()
+            t_ins_right.start()
+            t_ins_left.start()
+            t_ins_back.start()
+            t_ins_back_right.start()
+            t_ins_back_left.start()
 
             t_depth_front.start()
             t_depth_right.start()
@@ -1664,7 +1736,7 @@ class CameraManager(object):
             t_depth_back_right.start()
             t_depth_back_left.start()
 
-            # self.top_img = []
+            self.top_img = []
             self.lbc_img = []
             self.lbc_seg = []
 
@@ -1687,25 +1759,25 @@ class CameraManager(object):
             self.back_right_depth = []
             self.back_left_depth = []
 
-            # t_depth_front.join()
-            sensor_list = [self.sensor_top,self.sensor_front,self.sensor_right,self.sensor_left,self.sensor_back,self.sensor_back_right,self.sensor_back_left]
-            width_list = []
-            height_list = []
-            fov_list = []
-            for sensor in sensor_list:
-                width_list.append(int(sensor.attributes['image_size_x']))
-                height_list.append(int(sensor.attributes['image_size_y']))
-                fov_list.append(int(float(sensor.attributes['fov'])))
-            self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
+            t_depth_front.join()
+            # sensor_list = [self.sensor_top,self.sensor_front,self.sensor_right,self.sensor_left,self.sensor_back,self.sensor_back_right,self.sensor_back_left]
+            # width_list = []
+            # height_list = []
+            # fov_list = []
+            # for sensor in sensor_list:
+            #     width_list.append(int(sensor.attributes['image_size_x']))
+            #     height_list.append(int(sensor.attributes['image_size_y']))
+            #     fov_list.append(int(float(sensor.attributes['fov'])))
+            # self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
             self.top_img = []
             
             self.top_seg = []
-            self.front_seg = []
-            self.right_seg = []
-            self.left_seg = []
-            self.back_seg = []
-            self.back_right_seg = []
-            self.back_left_seg = []
+            # self.front_seg = []
+            # self.right_seg = []
+            # self.left_seg = []
+            # self.back_seg = []
+            # self.back_right_seg = []
+            # self.back_left_seg = []
 
             self.snap_dict = {}
             self.img_dict = {}
@@ -1726,12 +1798,19 @@ class CameraManager(object):
             
             t_lbc_seg.join()
             t_seg_top.join()
-            t_seg_front.join()
-            t_seg_right.join()
-            t_seg_left.join()
-            t_seg_back.join()
-            t_seg_back_right.join()
-            t_seg_back_left.join()
+            # t_seg_front.join()
+            # t_seg_right.join()
+            # t_seg_left.join()
+            # t_seg_back.join()
+            # t_seg_back_right.join()
+            # t_seg_back_left.join()
+
+            t_ins_front.join()
+            t_ins_right.join()
+            t_ins_left.join()
+            t_ins_back.join()
+            t_ins_back_right.join()
+            t_ins_back_left.join()
 
             t_depth_front.join()
             t_depth_right.join()
@@ -1784,34 +1863,34 @@ class CameraManager(object):
                                      (path, modality, view, img.frame))
         print("%s %s save finished." % (self.sensors[sensor][2], view))
 
-    def save_bbox(self, path, seg_list, width_list, height_list, fov_list):
-        # change seg to dict, key: view, frame_num
-        start_time = time.time()
-        path += '/bbox'
-        seg_dict = {}
-        for view in self.sensor_order:
-            seg_dict[view] = {}
-        for i,seg_l in enumerate(seg_list):
-            for seg_img in seg_l:
-                seg_dict[self.sensor_order[i]][seg_img.frame] = seg_img
-        for top_img in self.top_img:
-            try:
-                vehicles, cam = self.snap_dict[top_img.frame]
-                filtered = cva.auto_annotate(
-                    vehicles, cam[0], width_list[0], height_list[0], fov_list[0])
-                path_temp = path + '/' +self.sensor_order[0]
-                cva.save_output(top_img, seg_dict[self.sensor_order[0]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
-                                save_patched=False, out_format='json',threshold = 0.35)
-            except:
-                continue
-            for i in range(1,7):
-                filtered = cva.auto_annotate(
-                vehicles, cam[i], width_list[i], height_list[i], fov_list[i])
-                path_temp = path + '/' + self.sensor_order[i]
-                cva.save_output(self.img_dict[self.sensor_order[i]][top_img.frame], seg_dict[self.sensor_order[i]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
-                                save_patched=False, out_format='json')
-        end_time = time.time()
-        print('bbox save done in %s' % (end_time-start_time))
+    # def save_bbox(self, path, seg_list, width_list, height_list, fov_list):
+    #     # change seg to dict, key: view, frame_num
+    #     start_time = time.time()
+    #     path += '/bbox'
+    #     seg_dict = {}
+    #     for view in self.sensor_order:
+    #         seg_dict[view] = {}
+    #     for i,seg_l in enumerate(seg_list):
+    #         for seg_img in seg_l:
+    #             seg_dict[self.sensor_order[i]][seg_img.frame] = seg_img
+    #     for top_img in self.top_img:
+    #         try:
+    #             vehicles, cam = self.snap_dict[top_img.frame]
+    #             filtered = cva.auto_annotate(
+    #                 vehicles, cam[0], width_list[0], height_list[0], fov_list[0])
+    #             path_temp = path + '/' +self.sensor_order[0]
+    #             cva.save_output(top_img, seg_dict[self.sensor_order[0]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
+    #                             save_patched=False, out_format='json',threshold = 0.35)
+    #         except:
+    #             continue
+    #         for i in range(1,7):
+    #             filtered = cva.auto_annotate(
+    #             vehicles, cam[i], width_list[i], height_list[i], fov_list[i])
+    #             path_temp = path + '/' + self.sensor_order[i]
+    #             cva.save_output(self.img_dict[self.sensor_order[i]][top_img.frame], seg_dict[self.sensor_order[i]][top_img.frame], filtered['bbox'], path_temp, filtered['vehicles'],
+    #                             save_patched=False, out_format='json')
+    #     end_time = time.time()
+    #     print('bbox save done in %s' % (end_time-start_time))
 
     def render(self, display):
         if self.surface is not None:
@@ -1920,16 +1999,29 @@ class CameraManager(object):
                 self.top_seg.append(image)
             elif view == 'seg_front':
                 self.front_seg.append(image)
-            elif view == 'seg_right':
-                self.right_seg.append(image)
-            elif view == 'seg_left':
-                self.left_seg.append(image)
-            elif view == 'seg_back':
-                self.back_seg.append(image)
-            elif view == 'seg_back_right':
-                self.back_right_seg.append(image)
-            elif view == 'seg_back_left':
-                self.back_left_seg.append(image)
+            # elif view == 'seg_right':
+            #     self.right_seg.append(image)
+            # elif view == 'seg_left':
+            #     self.left_seg.append(image)
+            # elif view == 'seg_back':
+            #     self.back_seg.append(image)
+            # elif view == 'seg_back_right':
+            #     self.back_right_seg.append(image)
+            # elif view == 'seg_back_left':
+            #     self.back_left_seg.append(image)
+
+            elif view == 'ins_front':
+                self.front_ins.append(image)
+            elif view == 'ins_right':
+                self.right_ins.append(image)
+            elif view == 'ins_left':
+                self.left_ins.append(image)
+            elif view == 'ins_back':
+                self.back_ins.append(image)
+            elif view == 'ins_back_right':
+                self.back_right_ins.append(image)
+            elif view == 'ins_back_left':
+                self.back_left_ins.append(image)
 
             elif view == 'depth_front':
                 self.front_depth.append(image)
