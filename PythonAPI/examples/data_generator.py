@@ -2370,6 +2370,7 @@ def game_loop(args):
         world = World(client.load_world(args.map),
                       filter_dict['player'], hud, args, stored_path)
         client.get_world().set_weather(args.weather)
+        time.sleep(10)
         # sync mode
         settings = world.world.get_settings()
         settings.fixed_delta_seconds = 0.05
@@ -2385,13 +2386,19 @@ def game_loop(args):
 
         # lm = world.world.get_lightmanager()
         # lights = lm.get_all_lights()
-        lights = []
-        actors = world.world.get_actors()
-        for l in actors:
-            if 5 in l.semantic_tags and 18 in l.semantic_tags:
-                lights.append(l)
-        light_dict, light_transform_dict = read_traffic_lights(path, lights)
 
+        # lights = []
+        # actors = world.world.get_actors()
+        # for l in actors:
+        #     if 5 in l.semantic_tags and 18 in l.semantic_tags:
+        #         lights.append(l)
+        
+        lights = []
+        actors = world.world.get_actors().filter('traffic.traffic_light*')
+        for l in actors:
+            lights.append(l)
+        light_dict, light_transform_dict = read_traffic_lights(path, lights)
+        
         clock = pygame.time.Clock()
 
         agents_dict = {}
@@ -2472,10 +2479,10 @@ def game_loop(args):
             period = float(moment[-1]) - float(moment[0])
             half_period = period / 2
         # dynamic scenario setting
-        stored_path = os.path.join(root, scenario_name)
-        print(stored_path)
-        if not os.path.exists(stored_path) and not args.no_save:
-            os.makedirs(stored_path)
+        # stored_path = os.path.join(root, scenario_name)
+        # print(stored_path)
+        # if not os.path.exists(stored_path) and not args.no_save:
+        #     os.makedirs(stored_path)
         if args.save_rss:
             print(world.rss_sensor)
             world.rss_sensor.stored_path = stored_path
@@ -2624,8 +2631,12 @@ def game_loop(args):
             world.camera_manager.toggle_recording(stored_path)
             save_description(world, args, stored_path, weather)
             world.finish = True
-        traj_col.join()
-        topo_col.join()
+        if traj_col:
+            traj_col.join()
+            topo_col.join()
+    except Exception as e:
+        print("Exception occured.")
+        print(e)
     finally:
         # to save a top view video
         out.release()
