@@ -33,7 +33,7 @@ try:
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
     #
-    sys.path.append('../carla/agents/navigation')
+    # sys.path.append('../carla/agents/navigation')
     sys.path.append('../carla/agents')
     sys.path.append('../carla/')
     sys.path.append('../../HDMaps')
@@ -77,8 +77,8 @@ from random_actors import spawn_actor_nearby
 from get_and_control_trafficlight import *
 from read_input import *
 # rss
-from rss_sensor_benchmark import RssSensor # pylint: disable=relative-import
-from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer # pylint: disable=relative-import
+# from rss_sensor_benchmark import RssSensor # pylint: disable=relative-import
+# from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer # pylint: disable=relative-import
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -167,7 +167,8 @@ class World(object):
     def __init__(self, carla_world, client_bp, hud, args, store_path):
         self.world = carla_world
         # self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
-        
+        self.abandon_scenario = False
+        self.finish = False
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = 0.05
         settings.synchronous_mode = True  # Enables synchronous mode
@@ -1257,12 +1258,6 @@ class CameraManager(object):
         self.back_left_depth = []
         self.back_right_depth = []
 
-        self.img_dict = {}
-        self.snap_dict = {}
-        self.sensor_order = ['top','front','right','left','back','back_right','back_left']
-        for order in self.sensor_order:
-            self.img_dict[order] = {}
-
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1778,11 +1773,6 @@ class CameraManager(object):
             # self.back_seg = []
             # self.back_right_seg = []
             # self.back_left_seg = []
-
-            self.snap_dict = {}
-            self.img_dict = {}
-            for order in self.sensor_order:
-                self.img_dict[order] = {}
             t_lbc_img.join()
             t_top.join()
             t_front.join()
@@ -1937,62 +1927,29 @@ class CameraManager(object):
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
         if self.recording and image.frame % 1 == 0:
+            # print(view,image.frame)
             if view == 'top':
                 self.top_img.append(image)
-                world = self._parent.get_world()
-                snapshot = world.get_snapshot()
-                actors = world.get_actors()
-                try:
-                    top_transform = snapshot.find(
-                        self.sensor_top.id).get_transform()
-                    front_transform = snapshot.find(
-                        self.sensor_front.id).get_transform()
-                    right_transform = snapshot.find(
-                        self.sensor_right.id).get_transform()
-                    left_transform = snapshot.find(
-                        self.sensor_left.id).get_transform()
-                    back_transform = snapshot.find(
-                        self.sensor_back.id).get_transform()
-                    back_right_transform = snapshot.find(
-                        self.sensor_back_right.id).get_transform()
-                    back_left_transform = snapshot.find(
-                        self.sensor_back_left.id).get_transform()
-                    vehicles = cva.snap_processing(
-                        actors.filter('vehicle.*'), snapshot)
-                    vehicles += cva.snap_processing(
-                        actors.filter('walker.*'), snapshot)
-                    self.snap_dict[snapshot.frame] = [
-                        vehicles, [top_transform,front_transform,right_transform,left_transform,back_transform,back_right_transform,back_left_transform]]
-                except:
-                    print("Initial frame.")
             elif view == 'lbc_img':
                 self.lbc_img.append(image)
             elif view == 'front':
                 self.front_img.append(image)
-                self.img_dict[view][image.frame] = image
             elif view == 'left':
                 self.left_img.append(image)
-                self.img_dict[view][image.frame] = image
             elif view == 'right':
                 self.right_img.append(image)
-                self.img_dict[view][image.frame] = image
             elif view == 'back':
                 self.back_img.append(image)
-                self.img_dict[view][image.frame] = image
             elif view == 'back_left':
                 self.back_left_img.append(image)
-                self.img_dict[view][image.frame] = image
             elif view == 'back_right':
                 self.back_right_img.append(image)
-                self.img_dict[view][image.frame] = image
-
             elif view == 'lidar':
                 self.lidar.append(image)
             elif view == 'dvs':
                 self.dvs.append(image)
             elif view == 'flow':
                 self.flow.append(image)
-
             elif view == 'lbc_seg':
                 self.lbc_seg.append(image)
             elif view == 'seg_top':
@@ -2009,7 +1966,6 @@ class CameraManager(object):
             #     self.back_right_seg.append(image)
             # elif view == 'seg_back_left':
             #     self.back_left_seg.append(image)
-
             elif view == 'ins_front':
                 self.front_ins.append(image)
             elif view == 'ins_right':
@@ -2025,7 +1981,6 @@ class CameraManager(object):
 
             elif view == 'depth_front':
                 self.front_depth.append(image)
-                # self.img_dict[image.frame] is not None and self.sensor_front is not None:
             elif view == 'depth_right':
                 self.right_depth.append(image)
             elif view == 'depth_left':
@@ -2114,42 +2069,45 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path, c
     try:
         while True:
             time_end = time.time()
+            if get_world.abandon_scenario:
+                print('Abandom, killing thread.')
+                return
+            elif get_world.finish:
+                print("trajectory collection finish")
+                return 
             # 25: the landing iter
-            if period_start < (period_end * fps + 25/fps):
-                # 0.1s = 0.05000000074505806s * 2
-                if (time_end - time_start) > 2/fps:
-                    period_start += 0.1 * fps
-                    record_time += 0.1
-                    time_start = time.time()
-                    for actor in actors:
-                        if agent_id == actor.id:
-                            agent = actor
-                        if agent.get_location().x == 0 and agent.get_location().y == 0:
-                            return True
-                        if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
-                            x = actor.get_location().x
-                            y = actor.get_location().y
-                            id = actor.id
-                            if x == agent.get_location().x and y == agent.get_location().y:
-                                w.writerow(
-                                    [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
+            # 0.1s = 0.05000000074505806s * 2
+            if (time_end - time_start) > 2/fps:
+                period_start += 0.1 * fps
+                record_time += 0.1
+                time_start = time.time()
+                for actor in actors:
+                    if agent_id == actor.id:
+                        agent = actor
+                    if agent.get_location().x == 0 and agent.get_location().y == 0:
+                        return True
+                    if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
+                        x = actor.get_location().x
+                        y = actor.get_location().y
+                        id = actor.id
+                        if x == agent.get_location().x and y == agent.get_location().y:
+                            w.writerow(
+                                [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
+                            w_all.writerow(
+                                [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
+                        else:
+                            if actor.type_id[0:7] == 'vehicle':
                                 w_all.writerow(
-                                    [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
-                            else:
+                                    [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
+                            if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
                                 if actor.type_id[0:7] == 'vehicle':
-                                    w_all.writerow(
+                                    w.writerow(
                                         [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
-                                if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
-                                    if actor.type_id[0:7] == 'vehicle':
-                                        w.writerow(
-                                            [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
-                                    elif actor.type_id[0:6] == 'walker':
-                                        w.writerow(
-                                            [record_time - 0.1, id, 'walker', str(x), str(y), town_map.name.split('/')[2]])
-            else:
-                return False
+                                elif actor.type_id[0:6] == 'walker':
+                                    w.writerow(
+                                        [record_time - 0.1, id, 'walker', str(x), str(y), town_map.name.split('/')[2]])
     except:
-        print("trajectory_collection finished")
+        print("trajectory collection error")
 
 
 def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock):
@@ -2162,6 +2120,9 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
     fps = clock.get_fps()
     try:
         while True:
+            if get_world.abandon_scenario:
+                print('Abandom, killing thread.')
+                return
             time_end = time.time()
             if (time_end - time_start) > t * fps:         # t may need change
                 waypoint = town_map.get_waypoint(agent.get_location())
@@ -2263,9 +2224,10 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
                     #plt.plot(x_c, y_c, '--', color='gray')
                 plt.savefig(stored_path + '/topology/topology.png')
                 break
-        return False
+        print("topology collection finished")
+        return 
     except:
-        print("topology_collection finished")
+        print("topology collection error.")
 
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
@@ -2307,6 +2269,30 @@ def save_description(world, args, stored_path, weather):
     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
         json.dump(d, f)
 
+
+def write_actor_list(world,stored_path):
+    actors = world.world.get_actors()
+    with open(stored_path+'/actor_list.csv', 'w') as f:
+        writer = csv.writer(f)
+        # write the header
+        writer.writerow(['Actor_ID','Class'])
+        filter_actors = actors.filter('walker.*')
+        for actor in filter_actors:
+            writer.writerow([actor.id,4])
+        filter_actors = actors.filter('vehicle.*')
+        for actor in filter_actors:
+            writer.writerow([actor.id,10])
+        filter_actors = actors.filter('static.prop.streetbarrier*')
+        for actor in filter_actors:
+            writer.writerow([actor.id,20])
+        filter_actors = actors.filter('static.prop.trafficcone*')
+        for actor in filter_actors:
+            writer.writerow([actor.id,20])
+        filter_actors = actors.filter('static.prop.trafficwarning*')
+        for actor in filter_actors:
+            writer.writerow([actor.id,20])
+        
+        # write the data
 
 def generate_obstacle(world, bp, path):
     f = open(path, 'r')
@@ -2378,6 +2364,7 @@ def game_loop(args):
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
         stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id, weather + "_" + args.random_actors + "_")
+        print(stored_path)
         if not os.path.exists(stored_path) :
             os.makedirs(stored_path)
         world = World(client.load_world(args.map),
@@ -2476,6 +2463,7 @@ def game_loop(args):
             # recording traj
             id = []
             moment = []
+            print(root)
             with open(os.path.join(root, 'timestamp.txt')) as f:
                 for line in f.readlines():
                     s = line.split(',')
@@ -2499,6 +2487,9 @@ def game_loop(args):
             os.mkdir(stored_path + '/trajectory_frame/')
         filepath = stored_path + '/trajectory_frame/' + str(args.scenario_id) + '.csv'
         is_exist = os.path.isfile(filepath)
+        # write actor list
+        write_actor_list(world,stored_path)
+        
         f = open(filepath, 'w')
         w = csv.writer(f)
         #if not is_exist:
@@ -2595,14 +2586,16 @@ def game_loop(args):
                 if world.collision_sensor.collision and args.scenario_type != 'collision':
                     print('unintentional collision, abandon scenario')
                     abandon_scenario = True
-                    break
-                if world.collision_sensor.wrong_collision:
+                elif world.collision_sensor.wrong_collision:
                     print('collided with wrong object, abandon scenario')
                     abandon_scenario = True
-                    break
 
+                if abandon_scenario:
+                    world.abandon_scenario = True
+                    break
             if iter_tick == iter_toggle:
                 if not args.no_save:
+                    time.sleep(10)
                     world.camera_manager.toggle_recording(stored_path)
                     world.imu_sensor.toggle_recording_IMU()
                     world.gnss_sensor.toggle_recording_Gnss()
@@ -2614,7 +2607,6 @@ def game_loop(args):
                     topo_col.start()
                     # start recording .log file
                     print("Recording on file: %s" % client.start_recorder(os.path.join(os.path.abspath(os.getcwd()), stored_path, 'recording.log'),True))
-
             elif iter_tick > iter_toggle:
                 pygame.image.save(display, "screenshot.jpeg")
                 image = cv2.imread("screenshot.jpeg")
@@ -2628,27 +2620,29 @@ def game_loop(args):
             world.imu_sensor.toggle_recording_IMU()
             world.save_ego_data(stored_path)
             world.collision_sensor.save_history(stored_path)
+            time.sleep(10)
             world.camera_manager.toggle_recording(stored_path)
             save_description(world, args, stored_path, weather)
-
+            world.finish = True
+        traj_col.join()
+        topo_col.join()
     finally:
         # to save a top view video
         out.release()
-
+        print('Closing...')
         if not args.no_save:
             client.stop_recorder() # end recording
-
-        if not args.no_save and not abandon_scenario:
-            stored_path = os.path.join(root, scenario_name)
-            finish_tag = open(stored_path+'/finish.txt', 'w')
-            finish_tag.close()
-            
-
+        
         if (world and world.recording_enabled):
             client.stop_recorder()
 
         if world is not None:
             world.destroy()
+        
+        if not args.no_save and not abandon_scenario:
+            stored_path = os.path.join(root, scenario_name)
+            finish_tag = open(stored_path+'/finish.txt', 'w')
+            finish_tag.close()
 
         pygame.quit()
     return
