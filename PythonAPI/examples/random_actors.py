@@ -359,10 +359,7 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         # max speed
         all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
 
-    print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(vehicles_list), len(walkers_list)))
-
+    print('spawned %d vehicles and %d walkers.' % (len(vehicles_list), len(walkers_list)))
     # example of how to use parameters
     traffic_manager.global_percentage_speed_difference(10.0)
-
-
-
+    return vehicles_list, all_actors,all_id
