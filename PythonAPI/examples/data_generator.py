@@ -2369,8 +2369,8 @@ def game_loop(args):
             os.makedirs(stored_path)
         world = World(client.load_world(args.map),
                       filter_dict['player'], hud, args, stored_path)
-        # client.get_world().set_weather(args.weather)
-        client.get_world().set_weather(getattr(carla.WeatherParameters, args.weather))
+        client.get_world().set_weather(args.weather)
+        # client.get_world().set_weather(getattr(carla.WeatherParameters, args.weather))
         # sync mode
         settings = world.world.get_settings()
         settings.fixed_delta_seconds = 0.05
