@@ -2440,29 +2440,23 @@ def game_loop(args):
             actor_transform_index[actor_id] = 1
             finish[actor_id] = False
 
-        waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
+        # waypoints = client.get_world().get_map().generate_waypoints(distance=1.0)
 
-        # time.sleep(2)
-        # dynamic scenario setting
         root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
         scenario_name = str(weather) + '_'
-        # if args.random_objects:
-        #     t = threading.Thread(target = auto_spawn_object,args=(world, 5))
-        #     t.start()
-        #     scenario_name = scenario_name + 'random_objects_'
 
         if args.random_actors != 'none':
             if args.random_actors == 'pedestrian':  #only pedestrian
-                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.0,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.0,
                                    pedestrian=40 , transform_dict=transform_dict)
             elif args.random_actors == 'low':
-                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.3,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.3,
                                    pedestrian=20 , transform_dict=transform_dict)
             elif args.random_actors == 'mid':
-                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.6,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.6,
                                    pedestrian=40, transform_dict=transform_dict)
             elif args.random_actors == 'high':
-                spawn_actor_nearby(stored_path, distance=100, v_ratio=0.8,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.8,
                                    pedestrian=80, transform_dict=transform_dict)
         scenario_name = scenario_name + args.random_actors + '_'
 
@@ -2646,6 +2640,18 @@ def game_loop(args):
         
         if (world and world.recording_enabled):
             client.stop_recorder()
+
+        print('destroying vehicles')
+        client.apply_batch([carla.command.DestroyActor(x) for x in vehicles_list])
+
+        # stop walker controllers (list is [controller, actor, controller, actor ...])
+        for i in range(0, len(all_id), 2):
+            all_actors[i].stop()
+
+        print('destroying walkers')
+        client.apply_batch([carla.command.DestroyActor(x) for x in all_id])
+
+        time.sleep(0.5)
 
         if world is not None:
             world.destroy()
