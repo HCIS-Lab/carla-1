@@ -115,7 +115,7 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
     random.seed(seed_4)
     random.shuffle(waypoint_list)
     
-    print(len(waypoint_list))
+    # print(len(waypoint_list))
 
     # --------------
     # Spawn vehicles
@@ -193,7 +193,7 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         else:
             vehicles_list.append(response.actor_id)
 
-    print(f"Spawn {len(waypoint_list)} Vehicle")
+    # print(f"Spawn {len(waypoint_list)} Vehicle")
     """
     Apply local planner to all vehicle
     Random choose destination and behavior type
