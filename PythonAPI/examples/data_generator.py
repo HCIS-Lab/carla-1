@@ -2275,22 +2275,22 @@ def write_actor_list(world,stored_path):
     with open(stored_path+'/actor_list.csv', 'w') as f:
         writer = csv.writer(f)
         # write the header
-        writer.writerow(['Actor_ID','Class'])
+        writer.writerow(['Actor_ID','Class','Blue_Print'])
         filter_actors = actors.filter('walker.*')
         for actor in filter_actors:
-            writer.writerow([actor.id,4])
+            writer.writerow([actor.id,4,actor.type_id])
         filter_actors = actors.filter('vehicle.*')
         for actor in filter_actors:
-            writer.writerow([actor.id,10])
+            writer.writerow([actor.id,10,actor.type_id])
         filter_actors = actors.filter('static.prop.streetbarrier*')
         for actor in filter_actors:
-            writer.writerow([actor.id,20])
+            writer.writerow([actor.id,20,actor.type_id])
         filter_actors = actors.filter('static.prop.trafficcone*')
         for actor in filter_actors:
-            writer.writerow([actor.id,20])
+            writer.writerow([actor.id,20,actor.type_id])
         filter_actors = actors.filter('static.prop.trafficwarning*')
         for actor in filter_actors:
-            writer.writerow([actor.id,20])
+            writer.writerow([actor.id,20,actor.type_id])
         
         # write the data
 
@@ -2369,8 +2369,8 @@ def game_loop(args):
             os.makedirs(stored_path)
         world = World(client.load_world(args.map),
                       filter_dict['player'], hud, args, stored_path)
-        client.get_world().set_weather(args.weather)
-        time.sleep(10)
+        # client.get_world().set_weather(args.weather)
+        client.get_world().set_weather(getattr(carla.WeatherParameters, args.weather))
         # sync mode
         settings = world.world.get_settings()
         settings.fixed_delta_seconds = 0.05
