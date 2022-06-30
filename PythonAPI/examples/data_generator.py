@@ -2690,6 +2690,7 @@ def main():
     argparser.add_argument(
         '--scenario_id',
         type=str,
+        required=True,
         help='name of the scenario')
     argparser.add_argument(
         '-a', '--autopilot',
@@ -2732,6 +2733,7 @@ def main():
         '--map',
         default='Town03',
         type=str,
+        required=True,
         help='map name')
     argparser.add_argument(
         '--random_actors',
@@ -2743,6 +2745,7 @@ def main():
         '--scenario_type',
         type=str,
         choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
+        required=True,
         help='enable roaming actors')
     argparser.add_argument(
         '--no_save',
