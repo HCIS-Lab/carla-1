@@ -67,7 +67,6 @@ import threading
 from multiprocessing import Process
 
 import xml.etree.ElementTree as ET
-import carla_vehicle_annotator as cva
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
