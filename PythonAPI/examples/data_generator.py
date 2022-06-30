@@ -2254,7 +2254,7 @@ def set_bp(blueprint, actor_id):
     return blueprint
 
 
-def save_description(world, args, stored_path, weather):
+def save_description(world, args, stored_path, weather,agents_dict):
     vehicles = world.world.get_actors().filter('vehicle.*')
     peds = world.world.get_actors().filter('walker.*')
     d = dict()
@@ -2264,7 +2264,8 @@ def save_description(world, args, stored_path, weather):
     # d['random_objects'] = args.random_objects
     d['random_actors'] = args.random_actors
     d['simulation_time'] = int(world.hud.simulation_time)
-
+    for key in agents_dict:
+        d[key] = agents_dict[key].id
     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
         json.dump(d, f)
 
@@ -2274,7 +2275,7 @@ def write_actor_list(world,stored_path):
     with open(stored_path+'/actor_list.csv', 'w') as f:
         writer = csv.writer(f)
         # write the header
-        writer.writerow(['Actor_ID','Class','Blue_Print'])
+        writer.writerow(['Actor_ID','Class','Blueprint'])
         filter_actors = actors.filter('walker.*')
         for actor in filter_actors:
             writer.writerow([actor.id,4,actor.type_id])
@@ -2479,17 +2480,16 @@ def game_loop(args):
         if args.save_rss:
             print(world.rss_sensor)
             world.rss_sensor.stored_path = stored_path
-
+        # write actor list
+        write_actor_list(world,stored_path)
         iter_tick = 0
         iter_start = 25
         iter_toggle = 50
+        # write trajector
         if not os.path.exists(stored_path + '/trajectory_frame/'):
             os.mkdir(stored_path + '/trajectory_frame/')
         filepath = stored_path + '/trajectory_frame/' + str(args.scenario_id) + '.csv'
         is_exist = os.path.isfile(filepath)
-        # write actor list
-        write_actor_list(world,stored_path)
-        
         f = open(filepath, 'w')
         w = csv.writer(f)
         #if not is_exist:
@@ -2622,7 +2622,7 @@ def game_loop(args):
             world.collision_sensor.save_history(stored_path)
             time.sleep(10)
             world.camera_manager.toggle_recording(stored_path)
-            save_description(world, args, stored_path, weather)
+            save_description(world, args, stored_path, weather,agents_dict)
             world.finish = True
         if traj_col:
             traj_col.join()
