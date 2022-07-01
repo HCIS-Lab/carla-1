@@ -2254,7 +2254,7 @@ def set_bp(blueprint, actor_id):
     return blueprint
 
 
-def save_description(world, args, stored_path, weather,agents_dict):
+def save_description(world, args, stored_path, weather,agents_dict, nearest_obstacle):
     vehicles = world.world.get_actors().filter('vehicle.*')
     peds = world.world.get_actors().filter('walker.*')
     d = dict()
@@ -2264,8 +2264,11 @@ def save_description(world, args, stored_path, weather,agents_dict):
     # d['random_objects'] = args.random_objects
     d['random_actors'] = args.random_actors
     d['simulation_time'] = int(world.hud.simulation_time)
+    d['nearest_obstacle'] = nearest_obstacle
+    
     for key in agents_dict:
         d[key] = agents_dict[key].id
+
     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
         json.dump(d, f)
 
@@ -2294,17 +2297,39 @@ def write_actor_list(world,stored_path):
         
         # write the data
 
-def generate_obstacle(world, bp, path):
+def generate_obstacle(world, bp, path, ego_transform):
     f = open(path, 'r')
     lines = f.readlines()
     f.close()
-
+    min_dis = float('Inf')
+    nearest_obstacle = -1
+    
     if lines[0][:6] == 'static':
         for line in lines:
             obstacle_name = line.split('\t')[0]
             transform = line.split('\t')[1]
             # print(obstacle_name, " ", transform)
-            exec("world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
+            # exec("obstacle_actor = world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
+
+            x = float(transform.split('x=')[1].split(',')[0])
+            y = float(transform.split('y=')[1].split(',')[0])
+            z = float(transform.split('z=')[1].split(')')[0])
+            pitch = float(transform.split('pitch=')[1].split(',')[0])
+            yaw = float(transform.split('yaw=')[1].split(',')[0])
+            roll = float(transform.split('roll=')[1].split(')')[0])
+
+            obstacle_loc = carla.Location(x, y, z)
+            obstacle_rot = carla.Rotation(pitch, yaw, roll)
+            obstacle_trans = carla.Transform(obstacle_loc, obstacle_rot)
+
+            obstacle_actor = world.spawn_actor(bp.filter(obstacle_name)[0], obstacle_trans)
+
+            dis = ego_transform.location.distance(obstacle_loc)
+            if dis < min_dis:
+                nearest_obstacle = obstacle_actor.id
+                min_dis = dis
+
+    return nearest_obstacle
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -2380,10 +2405,6 @@ def game_loop(args):
         controller = KeyboardControl(world, args.autopilot)
         blueprint_library = client.get_world().get_blueprint_library()
 
-        if args.scenario_type == 'obstacle':
-            generate_obstacle(client.get_world(), blueprint_library,
-                              path+"/obstacle/obstacle_list.txt")
-
         # lm = world.world.get_lightmanager()
         # lights = lm.get_all_lights()
 
@@ -2412,6 +2433,11 @@ def game_loop(args):
         world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
         
+        # generate obstacles and calculate the distance between ego-car and nearest obstacle
+        if args.scenario_type == 'obstacle':
+            nearest_obstacle = generate_obstacle(client.get_world(), blueprint_library,
+                              path+"/obstacle/obstacle_list.txt", ego_transform)
+
         # set controller
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
@@ -2445,6 +2471,8 @@ def game_loop(args):
         root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
         scenario_name = str(weather) + '_'
 
+        vehicles_list = []
+        all_id = None 
         if args.random_actors != 'none':
             if args.random_actors == 'pedestrian':  #only pedestrian
                 vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.0,
@@ -2622,14 +2650,16 @@ def game_loop(args):
             world.collision_sensor.save_history(stored_path)
             time.sleep(10)
             world.camera_manager.toggle_recording(stored_path)
-            save_description(world, args, stored_path, weather,agents_dict)
+            save_description(world, args, stored_path, weather, agents_dict, nearest_obstacle)
             world.finish = True
         if traj_col:
             traj_col.join()
             topo_col.join()
-    except Exception as e:
-        print("Exception occured.")
-        print(e)
+    
+    # except Exception as e:
+    #     print("Exception occured.")
+    #     print(e)
+    
     finally:
         # to save a top view video
         out.release()
