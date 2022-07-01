@@ -2433,10 +2433,14 @@ def game_loop(args):
         world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
         
+
         # generate obstacles and calculate the distance between ego-car and nearest obstacle
+        min_dis = float('Inf')
+        nearest_obstacle = -1
         if args.scenario_type == 'obstacle':
             nearest_obstacle = generate_obstacle(client.get_world(), blueprint_library,
                               path+"/obstacle/obstacle_list.txt", ego_transform)
+
 
         # set controller
         for actor_id, bp in filter_dict.items():
@@ -2449,6 +2453,13 @@ def game_loop(args):
                             set_bp(blueprint_library.filter(
                                 filter_dict[actor_id]), actor_id),
                             transform_spawn)
+
+                        if args.scenario_type == 'obstacle':
+                            dis = ego_transform.location.distance(transform_spawn.location)
+                            if dis < min_dis:
+                                nearest_obstacle = actor_id
+                                min_dis = dis
+
                         break
                     except Exception:
                         transform_spawn.location.z += 1.5
