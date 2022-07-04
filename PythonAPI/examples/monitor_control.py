@@ -415,6 +415,9 @@ class DualControl(object):
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.button == 23:
                     world.camera_manager.next_sensor()
+                elif event.button == 10: # R3
+                    self.r = world.camera_manager.toggle_recording()
+                    return self.r
 
             elif event.type == pygame.KEYUP:
                 if self._is_quit_shortcut(event.key):
