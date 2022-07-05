@@ -2274,28 +2274,31 @@ def save_description(world, args, stored_path, weather,agents_dict, nearest_obst
 
 
 def write_actor_list(world,stored_path):
+
+    def write_row(writer,actors,filter_str,class_id,min_id,max_id):
+        filter_actors = actors.filter(filter_str)
+        for actor in filter_actors:
+            if actor.id<min_id:
+                min_id = actor.id
+            if actor.id>max_id:
+                max_id = actor.id
+            writer.writerow([actor.id,class_id,actor.type_id])
+        return min_id,max_id
+    
+    filter_ = ['walker.*','vehicle.*','static.prop.streetbarrier*',
+            'static.prop.trafficcone*','static.prop.trafficwarning*']
+    id_ = [4,10,20,20,20]
     actors = world.world.get_actors()
+    min_id = int(1e7)
+    max_id = int(0)
     with open(stored_path+'/actor_list.csv', 'w') as f:
         writer = csv.writer(f)
         # write the header
         writer.writerow(['Actor_ID','Class','Blueprint'])
-        filter_actors = actors.filter('walker.*')
-        for actor in filter_actors:
-            writer.writerow([actor.id,4,actor.type_id])
-        filter_actors = actors.filter('vehicle.*')
-        for actor in filter_actors:
-            writer.writerow([actor.id,10,actor.type_id])
-        filter_actors = actors.filter('static.prop.streetbarrier*')
-        for actor in filter_actors:
-            writer.writerow([actor.id,20,actor.type_id])
-        filter_actors = actors.filter('static.prop.trafficcone*')
-        for actor in filter_actors:
-            writer.writerow([actor.id,20,actor.type_id])
-        filter_actors = actors.filter('static.prop.trafficwarning*')
-        for actor in filter_actors:
-            writer.writerow([actor.id,20,actor.type_id])
-        
-        # write the data
+        for filter_str,class_id in zip(filter_,id_):
+            min_id, max_id = write_row(writer,actors,filter_str,class_id,min_id,max_id)
+        print('min id: {}, max id: {}'.format(min_id,max_id))
+    return min_id,max_id
 
 def generate_obstacle(world, bp, path, ego_transform):
     f = open(path, 'r')
@@ -2520,7 +2523,10 @@ def game_loop(args):
             print(world.rss_sensor)
             world.rss_sensor.stored_path = stored_path
         # write actor list
-        write_actor_list(world,stored_path)
+        min_id, max_id = write_actor_list(world,stored_path)
+        if max_id-min_id>=65535:
+            print('Actor id error. Abandom.')
+            raise 
         iter_tick = 0
         iter_start = 25
         iter_toggle = 50
