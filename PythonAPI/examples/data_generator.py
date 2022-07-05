@@ -76,8 +76,8 @@ from random_actors import spawn_actor_nearby
 from get_and_control_trafficlight import *
 from read_input import *
 # rss
-# from rss_sensor_benchmark import RssSensor # pylint: disable=relative-import
-# from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer # pylint: disable=relative-import
+from rss_sensor_benchmark import RssSensor # pylint: disable=relative-import
+from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer # pylint: disable=relative-import
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -219,10 +219,10 @@ class World(object):
         ]
         
         # # rss
-        # self.dim = (args.width, args.height)
-        # self.rss_sensor = None
-        # self.rss_unstructured_scene_visualizer = None
-        # self.rss_bounding_box_visualizer = None
+        self.dim = (args.width, args.height)
+        self.rss_sensor = None
+        self.rss_unstructured_scene_visualizer = None
+        self.rss_bounding_box_visualizer = None
         # # rss end
 
     def restart(self):
