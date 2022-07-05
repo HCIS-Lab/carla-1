@@ -219,10 +219,10 @@ class World(object):
         ]
         
         # # rss
-        self.dim = (args.width, args.height)
-        self.rss_sensor = None
-        self.rss_unstructured_scene_visualizer = None
-        self.rss_bounding_box_visualizer = None
+        # self.dim = (args.width, args.height)
+        # self.rss_sensor = None
+        # self.rss_unstructured_scene_visualizer = None
+        # self.rss_bounding_box_visualizer = None
         # # rss end
 
     def restart(self):
