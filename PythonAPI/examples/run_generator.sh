@@ -46,8 +46,8 @@ len=${#scenario_type}
 len=$((len + 19))
 SERVICE="CarlaUE4"
 folder=`ls -d ./data_collection/${scenario_type}/*`
-../../CarlaUE4.sh &
-sleep 15
+# ../../CarlaUE4.sh &
+# sleep 15
 for scenario_name in $folder
 do
 	mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/sample.mp4 
@@ -61,7 +61,7 @@ do
 						echo "$SERVICE is running"
 					else
 						echo "$SERVICE is  stopped"
-						../../CarlaUE4.sh & sleep 15	
+						#	../../CarlaUE4.sh & sleep 15	
 					fi
 
 					a=$(random_range 0 6)
@@ -80,9 +80,9 @@ do
 					then
 						if [ `echo ${scenario_name:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
 						then
-							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town10HD --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town10HD_opt --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
 						else
-							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town0${scenario_name:$len:1} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town0${scenario_name:$len:1}_opt --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
 						fi
 						
 						mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
