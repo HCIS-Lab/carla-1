@@ -2526,6 +2526,7 @@ def game_loop(args):
         min_id, max_id = write_actor_list(world,stored_path)
         if max_id-min_id>=65535:
             print('Actor id error. Abandom.')
+            abandon_scenario = True
             raise 
         iter_tick = 0
         iter_start = 25
