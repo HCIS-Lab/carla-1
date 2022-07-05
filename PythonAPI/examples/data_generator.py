@@ -165,7 +165,7 @@ def write_json(filename, index, seed ):
 class World(object):
     def __init__(self, carla_world, client_bp, hud, args, store_path):
         self.world = carla_world
-        # self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
+        self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
         self.abandon_scenario = False
         self.finish = False
         settings = self.world.get_settings()
@@ -401,14 +401,16 @@ class World(object):
                 self.camera_manager.sensor_dvs,
                 self.camera_manager.sensor_flow,
                 
-                self.camera_manager.sensor_lbc_seg,
-                self.camera_manager.seg_top,
+
                 # self.camera_manager.seg_front,
                 # self.camera_manager.seg_back,
                 # self.camera_manager.seg_right,
                 # self.camera_manager.seg_left,
                 # self.camera_manager.seg_back_right,
                 # self.camera_manager.seg_back_left,
+
+                self.camera_manager.sensor_lbc_ins,
+                self.camera_manager.ins_top,
 
                 self.camera_manager.ins_front,
                 self.camera_manager.ins_back,
@@ -434,7 +436,7 @@ class World(object):
         else:
             sensors = [
             self.camera_manager.lbc_img,
-            self.camera_manager.lbc_seg,
+            self.camera_manager.lbc_ins,
             self.camera_manager.sensor_top,
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
@@ -1234,8 +1236,8 @@ class CameraManager(object):
         self.dvs = []
 
         # self.top_iseg = []
-        self.lbc_seg = []
-        self.top_seg = []
+        
+        
         # self.front_seg = []
         # self.left_seg = []
         # self.right_seg = []
@@ -1243,6 +1245,8 @@ class CameraManager(object):
         # self.back_left_seg = []
         # self.back_right_seg = []
 
+        self.lbc_ins = []
+        self.top_ins = []
         self.front_ins = []
         self.left_ins = []
         self.right_ins = []
@@ -1330,7 +1334,7 @@ class CameraManager(object):
         #     self.bev_bp.set_attribute('gamma', str(gamma_correction))
 
 
-        self.bev_seg_bp = bp_library.find('sensor.camera.semantic_segmentation')
+        self.bev_seg_bp = bp_library.find('sensor.camera.instance_segmentation')
         self.bev_seg_bp.set_attribute('image_size_x', str(512))
         self.bev_seg_bp.set_attribute('image_size_y', str(512))
         self.bev_seg_bp.set_attribute('fov', str(50.0))
@@ -1438,17 +1442,10 @@ class CameraManager(object):
                     attachment_type=self._camera_transforms[0][1])
 
 
-                self.sensor_lbc_seg = self._parent.get_world().spawn_actor(
-                    self.bev_seg_bp,
-                    self._camera_transforms[7][0],
-                    attach_to=self._parent)
+
                     
 
-                self.seg_top = self._parent.get_world().spawn_actor(
-                    self.sensors[5][-1],
-                    self._camera_transforms[6][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[6][1])
+
                 # self.seg_front = self._parent.get_world().spawn_actor(
                 #     self.sensors[5][-1],
                 #     self._camera_transforms[0][0],
@@ -1479,6 +1476,18 @@ class CameraManager(object):
                 #     self._camera_transforms[5][0],
                 #     attach_to=self._parent,
                 #     attachment_type=self._camera_transforms[5][1])
+
+
+                self.sensor_lbc_ins = self._parent.get_world().spawn_actor(
+                    self.bev_seg_bp,
+                    self._camera_transforms[7][0],
+                    attach_to=self._parent)
+
+                self.ins_top = self._parent.get_world().spawn_actor(
+                    self.sensors[10][-1],
+                    self._camera_transforms[6][0],
+                    attach_to=self._parent,
+                    attachment_type=self._camera_transforms[6][1])
 
                 self.ins_front = self._parent.get_world().spawn_actor(
                     self.sensors[10][-1],
@@ -1573,10 +1582,10 @@ class CameraManager(object):
                     lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
 
 
-                self.sensor_lbc_seg.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'lbc_seg'))
-                self.seg_top.listen(lambda image: CameraManager._parse_image(
-                    weak_self, image, 'seg_top'))
+                self.sensor_lbc_ins.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'lbc_ins'))
+                self.ins_top.listen(lambda image: CameraManager._parse_image(
+                    weak_self, image, 'ins_top'))
                 # self.seg_front.listen(lambda image: CameraManager._parse_image(
                 #     weak_self, image, 'seg_front'))
                 # self.seg_right.listen(lambda image: CameraManager._parse_image(
@@ -1650,10 +1659,10 @@ class CameraManager(object):
             t_flow = Process(
                 target=self.save_img, args=(self.flow, 8, path, 'flow'))
 
-            t_lbc_seg = Process(
-                target=self.save_img, args=(self.lbc_seg, 5, path, 'lbc_seg'))
-            t_seg_top = Process(
-                target=self.save_img, args=(self.top_seg, 5, path, 'seg_top'))
+            t_lbc_ins = Process(
+                target=self.save_img, args=(self.lbc_ins, 10, path, 'lbc_ins'))
+            t_ins_top = Process(
+                target=self.save_img, args=(self.top_ins, 10, path, 'ins_top'))
 
             # t_seg_front = Process(target=self.save_img, args=(
             #     self.front_seg, 5, path, 'seg_front'))
@@ -1707,8 +1716,8 @@ class CameraManager(object):
             t_dvs.start()
             t_flow.start()
 
-            t_lbc_seg.start()
-            t_seg_top.start()
+            t_lbc_ins.start()
+            t_ins_top.start()
             # t_seg_front.start()
             # t_seg_right.start()
             # t_seg_left.start()
@@ -1732,7 +1741,7 @@ class CameraManager(object):
 
             self.top_img = []
             self.lbc_img = []
-            self.lbc_seg = []
+            self.lbc_ins = []
 
             self.front_img = []
             self.right_img = []
@@ -1765,7 +1774,7 @@ class CameraManager(object):
             # self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
             self.top_img = []
             
-            self.top_seg = []
+            self.top_ins = []
             # self.front_seg = []
             # self.right_seg = []
             # self.left_seg = []
@@ -1785,8 +1794,8 @@ class CameraManager(object):
             t_dvs.join()
             t_flow.join()
             
-            t_lbc_seg.join()
-            t_seg_top.join()
+            t_lbc_ins.join()
+            t_ins_top.join()
             # t_seg_front.join()
             # t_seg_right.join()
             # t_seg_left.join()
@@ -1949,10 +1958,10 @@ class CameraManager(object):
                 self.dvs.append(image)
             elif view == 'flow':
                 self.flow.append(image)
-            elif view == 'lbc_seg':
-                self.lbc_seg.append(image)
-            elif view == 'seg_top':
-                self.top_seg.append(image)
+            elif view == 'lbc_ins':
+                self.lbc_ins.append(image)
+            elif view == 'ins_top':
+                self.top_ins.append(image)
             elif view == 'seg_front':
                 self.front_seg.append(image)
             # elif view == 'seg_right':
@@ -2278,9 +2287,9 @@ def write_actor_list(world,stored_path):
     def write_row(writer,actors,filter_str,class_id,min_id,max_id):
         filter_actors = actors.filter(filter_str)
         for actor in filter_actors:
-            if actor.id<min_id:
+            if actor.id < min_id:
                 min_id = actor.id
-            if actor.id>max_id:
+            if actor.id > max_id:
                 max_id = actor.id
             writer.writerow([actor.id,class_id,actor.type_id])
         return min_id,max_id
