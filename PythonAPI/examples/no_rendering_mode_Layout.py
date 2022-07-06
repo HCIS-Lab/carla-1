@@ -1572,7 +1572,7 @@ def game_loop(args):
         # Init
         input_control = InputControl(TITLE_INPUT)
         hud = HUD(TITLE_HUD, args.width, args.height)
-        world = World(TITLE_WORLD, args, timeout=12.0)
+        world = World(TITLE_WORLD, args, timeout=8.0)
 
         # For each module, assign other modules that are going to be used inside that module
         input_control.start(hud, world)
@@ -1660,6 +1660,7 @@ def game_loop(args):
     finally:
         if world is not None:
             world.destroy()
+        exit_game()
 
 
 def exit_game():
@@ -1767,5 +1768,5 @@ def main():
 
 import time
 if __name__ == '__main__':
-    time.sleep(18)
+    time.sleep(25)
     main()
