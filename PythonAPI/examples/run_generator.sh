@@ -46,8 +46,8 @@ len=${#scenario_type}
 len=$((len + 19))
 SERVICE="CarlaUE4"
 folder=`ls -d ./data_collection/${scenario_type}/*`
-# ../../CarlaUE4.sh &
-# sleep 15
+../../CarlaUE4.sh &
+sleep 10
 for scenario_name in $folder
 do
 	mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/sample.mp4 
@@ -55,13 +55,13 @@ do
 	do
 			for((j=0; j<${#random_actor[@]}; j++))
 			do
-					sleep 8
+					sleep 5
 					if pgrep "$SERVICE" >/dev/null
 					then
 						echo "$SERVICE is running"
 					else
 						echo "$SERVICE is  stopped"
-						#	../../CarlaUE4.sh & sleep 15	
+						../../CarlaUE4.sh & sleep 15	
 					fi
 
 					a=$(random_range 0 6)
@@ -80,9 +80,17 @@ do
 					then
 						if [ `echo ${scenario_name:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
 						then
+							python no_rendering_mode_GT.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} &
+							python no_rendering_mode_Layout.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} &
+							
 							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town10HD_opt --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+							
 						else
+							python no_rendering_mode_GT.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} &
+							python no_rendering_mode_Layout.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} &
+							
 							python data_generator.py --scenario_type ${scenario_type} --scenario_id ${scenario_name:$len} --map Town0${scenario_name:$len:1}_opt --weather ${weather[${w[${i}]}]} --random_actors ${random_actor[j]} --save_rss
+
 						fi
 						
 						mv ./data_collection/${scenario_type}/${scenario_name:$len}/${scenario_name:$len}.mp4 ./data_collection/${scenario_type}/${scenario_name:$len}/${weather[${w[${i}]}]}_${random_actor[j]}_
@@ -100,34 +108,42 @@ do
 	for name in $f
 	do 
 		FILE=${name}/finish.txt
+		dynamic=${name}/dynamic_description.json
 		if test -f "$FILE"; 
 		then
 			echo "$FILE exists."
 
-			col=${name}/collision_history.json
-
-			if [ ${ds_id} != 1 ]
+			if test -f "$dynamic"; 
 			then
-				if test -f "$col"; 
+
+				col=${name}/collision_history.json
+
+				if [ ${ds_id} != 1 ]
 				then
-					echo "$col exists."
-					rm -r ${name}
+					if test -f "$col"; 
+					then
+						echo "$col exists."
+						rm -r ${name}
+					else
+						mv ${name} "${x}/variant_scenario"
+						
+					fi
 				else
-					mv ${name} "${x}/variant_scenario"
-					
+					if test -f "$col"; 
+					then
+						echo "$col exists."
+						mv ${name} "${x}/variant_scenario"
+						
+					else
+						echo "$col not  exists."
+						
+						rm -r ${name}
+						
+					fi
 				fi
 			else
-				if test -f "$col"; 
-				then
-					echo "$col exists."
-					mv ${name} "${x}/variant_scenario"
-					
-				else
-					echo "$col not  exists."
-					
-					rm -r ${name}
-					
-				fi
+				echo "$dynamic not exist. remove this folder"
+				rm -r ${name}
 			fi
 		else
 			echo "$FILE not exist. remove this folder"
