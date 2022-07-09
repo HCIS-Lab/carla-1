@@ -1,17 +1,13 @@
 import os 
-import numpy as np
 import argparse
 import time
 import json
 import csv
-import matplotlib.pyplot as plt
 import cv2
 from torchvision.io import read_image
 import torch
-import torchvision.transforms.functional as F
 from torchvision.ops.boxes import masks_to_boxes
 from torchvision.io import read_image
-
 
 def instance_to_box(mask,class_filter,threshold=60):
     """
@@ -19,10 +15,15 @@ def instance_to_box(mask,class_filter,threshold=60):
             mask: instance image
             class_filter: List[int] int: CARLA Semantic segmentation tags (classes that need bounding boxes)
         return:
-            boxes: class_id, x1, y1, x2, y2
+            boxes: List[Dict], 
+                key: 
+                    actor_id: carla actor id & 0xffff, 
+                    class: carla segmentation tag, 
+                    box: bounding box(x1,y1,x2,y2)
     """
     # mask = torch.tensor(instance).type(torch.int)
-    mask_2 = torch.zeros(2,720,1280)
+    h,w = mask.shape[1:]
+    mask_2 = torch.zeros(2,h,w)
     mask_2[0] = mask[0]
     mask_2[1] = mask[1]+mask[2]*256
     condition = mask_2[0]==-1
@@ -53,7 +54,7 @@ def instance_to_box(mask,class_filter,threshold=60):
     return out_list
 
 def read_and_draw(scenario_path,write_video=True):
-    class_dict = {4:'Pedestrian',10:'Vehicle',20:'Dynamic',9:'Wrong!'}
+    # class_dict = {4:'Pedestrian',10:'Vehicle',20:'Dynamic',9:'Wrong!'}
     bboxes_file = sorted(os.listdir(os.path.join(scenario_path,'bbox/front')))
     rgb_file = sorted(os.listdir(os.path.join(scenario_path,'rgb/front')))
 
@@ -134,12 +135,13 @@ if __name__ == '__main__':
     argparser.add_argument(
         '--path',
         default=None,
-        required=True,
+        required=False,
         help='scenario path')
 
     args = argparser.parse_args()
     if args.mode == 'box':
         produce_boxes()
     elif args.mode == 'demo':
+        assert args.path is not None
         read_and_draw(args.path)
     
