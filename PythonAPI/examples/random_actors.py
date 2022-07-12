@@ -31,7 +31,15 @@ def write_json(filename, index, seed ):
 
 client = carla.Client('localhost', 2000)
 # client.set_timeout(5.0)
-def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
+def spawn_actor_nearby(args, store_path, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
+
+
+    # if args.replay:
+    # P = store_path.split("/")
+    # with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+    #     data = json.load(outfile)
+    #     seed_4 = int(data["4"])
+    # seed = 
     # get world and spawn points
     world = client.get_world()
     map = world.get_map()
@@ -111,8 +119,18 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
             waypoint_list.append(waypoint)
             
     seed_4 = int(time.time()) 
-    write_json(store_path + "/random_seeds.json", 4, seed_4 )
+
+
+    if args.replay:
+        P = store_path.split("/")
+        with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+            data = json.load(outfile)
+            seed_4 = int(data["4"])
+    else:
+        write_json(store_path + "/random_seeds.json", 4, seed_4 )
+
     random.seed(seed_4)
+    print("seed_4: ", seed_4)
     random.shuffle(waypoint_list)
     
     # print(len(waypoint_list))
@@ -145,9 +163,21 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         num_of_vehicles += 1
         
         seed_5 = int(time.time()) 
-        if num_of_vehicles == 1:
-            write_json(store_path + "/random_seeds.json", 5, seed_5 )
+
+        if args.replay:
+            P = store_path.split("/")
+            with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                data = json.load(outfile)
+                seed_5 = int(data["5"])
+        else:
+            if num_of_vehicles == 1:
+                write_json(store_path + "/random_seeds.json", 5, seed_5 )
+
         seed_5 += 5*num_of_vehicles
+
+
+
+        print("seed_5: ", seed_5)
         random.seed(seed_5)
         # print(seed_5)
         # print(num_of_vehicles)
@@ -157,10 +187,20 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         #print(blueprint)
         
         if blueprint.has_attribute('color'):
+
             seed_6 = int(time.time())
-            if num_of_vehicles == 1:
-                write_json(store_path + "/random_seeds.json", 6, seed_6 )
+            
+            if args.replay:
+                P = store_path.split("/")
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                    data = json.load(outfile)
+                    seed_6 = int(data["6"])
+            else:
+
+                if num_of_vehicles == 1:
+                    write_json(store_path + "/random_seeds.json", 6, seed_6 )
             seed_6 += 6*num_of_vehicles
+            print("seed_6: ", seed_6)
             random.seed(seed_6)
             
             color = random.choice(blueprint.get_attribute('color').recommended_values)
@@ -168,9 +208,18 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         if blueprint.has_attribute('driver_id'):
             
             seed_7 = int(time.time())
-            if num_of_vehicles == 1:
-                write_json(store_path + "/random_seeds.json", 7, seed_7 )
+            
+            if args.replay:
+                P = store_path.split("/")
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                    data = json.load(outfile)
+                    seed_7 = int(data["6"])
+            else:
+
+                if num_of_vehicles == 1:
+                    write_json(store_path + "/random_seeds.json", 7, seed_7 )
             seed_7 += 7*num_of_vehicles
+            print("seed_7: ", seed_7)
             random.seed(seed_7)
             
             driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
@@ -287,8 +336,15 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         
         n+=1
         seed_8 = int(time.time())
-        if n == 1:
-            write_json(store_path + "/random_seeds.json", 8, seed_8 )
+        if args.replay:
+            P = store_path.split("/")
+            with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                data = json.load(outfile)
+                seed_8 = int(data["8"])
+        else:
+
+            if n == 1:
+                write_json(store_path + "/random_seeds.json", 8, seed_8 )
         seed_8 += 8*n
         random.seed(seed_8)
         
@@ -299,8 +355,18 @@ def spawn_actor_nearby(store_path, distance=100, v_ratio=0.8, pedestrian=10, tra
         # set the max speed
         if walker_bp.has_attribute('speed'):
             seed_9 = int(time.time())
-            if n == 1:
-                write_json(store_path + "/random_seeds.json", 9, seed_9 )
+
+
+            if args.replay:
+                P = store_path.split("/")
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                    data = json.load(outfile)
+                    seed_9 = int(data["9"])
+            else:
+                if n == 1:
+                    write_json(store_path + "/random_seeds.json", 9, seed_9 )
+
+
             seed_9 += 9*n
             random.seed(seed_9)
             if (random.random() > percentagePedestriansRunning):

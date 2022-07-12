@@ -198,7 +198,7 @@ class World(object):
         self._gamma = args.gamma
         self.ego_data = {}
         self.save_mode = not args.no_save
-        self.restart()
+        self.restart(self.args)
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
         self.recording_start = 0
@@ -225,7 +225,7 @@ class World(object):
         # self.rss_bounding_box_visualizer = None
         # # rss end
 
-    def restart(self):
+    def restart(self, args):
         self.player_max_speed = 1.589
         self.player_max_speed_fast = 3.713
         # Keep same camera config if the camera manager exists.
@@ -234,27 +234,58 @@ class World(object):
         # Get a random blueprint.
         
         seed_1 = int(time.time())
-        
+
         d = {"1": seed_1}
-        random.seed(seed_1)
-        with open(self.store_path + "/random_seeds.json", "w+") as outfile:
-            json.dump(d, outfile)
+        if args.replay:
+            #print(self.store_path)
+            P = self.store_path.split("/")
+            #print(P)
+            with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
         
+                
+                data = json.load(outfile)
+                seed_1 = int(data["1"])
+        else:
+            with open(self.store_path + "/random_seeds.json", "w+") as outfile:
+                json.dump(d, outfile)
+        print("seed_1: ", seed_1)
+        random.seed(seed_1)
+
+
         blueprint = random.choice(
             self.world.get_blueprint_library().filter(self._actor_filter))
         blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
             seed_2 = int(time.time()) + 20
-            write_json(self.store_path + "/random_seeds.json", 2, seed_2 )
+
+            if args.replay:
+                P = self.store_path.split("/")
+                #print(P)
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+            
+                    data = json.load(outfile)
+                    seed_2 = int(data["2"])
+            else:
+
+                write_json(self.store_path + "/random_seeds.json", 2, seed_2 )
+            print("seed_2: ", seed_2)
             random.seed(seed_2)
                     
             color = random.choice(
                 blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
+
         if blueprint.has_attribute('driver_id'):
-            
-            seed_3 = int(time.time()) + int( random.random())
-            write_json(self.store_path + "/random_seeds.json", 3, seed_3 )
+            if args.replay:
+                P = self.store_path.split("/")
+                #print(P)
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                    data = json.load(outfile)
+                    seed_3 = int(data["3"])
+            else:
+                seed_3 = int(time.time()) + int( random.random())
+                write_json(self.store_path + "/random_seeds.json", 3, seed_3 )
+            print("seed_3: ", seed_3)
             random.seed(seed_3)
             
             driver_id = random.choice(
@@ -2498,16 +2529,16 @@ def game_loop(args):
         all_id = None 
         if args.random_actors != 'none':
             if args.random_actors == 'pedestrian':  #only pedestrian
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.0,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.0,
                                    pedestrian=40 , transform_dict=transform_dict)
             elif args.random_actors == 'low':
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.3,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.3,
                                    pedestrian=20 , transform_dict=transform_dict)
             elif args.random_actors == 'mid':
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.6,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.6,
                                    pedestrian=40, transform_dict=transform_dict)
             elif args.random_actors == 'high':
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(stored_path, distance=100, v_ratio=0.8,
+                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.8,
                                    pedestrian=80, transform_dict=transform_dict)
         scenario_name = scenario_name + args.random_actors + '_'
 
@@ -2814,11 +2845,11 @@ def main():
         default=False,
         action='store_true',
         help='save rss predictinos')
-    # argparser.add_argument(
-    #     '-random_objects',
-    #     type=bool,
-    #     default=False,
-    #     help='enable random objects')
+    argparser.add_argument(
+        '--replay',
+        default=False,
+        action='store_true',
+        help='use random seed to generate the same behavior')
 
     args = argparser.parse_args()
 
