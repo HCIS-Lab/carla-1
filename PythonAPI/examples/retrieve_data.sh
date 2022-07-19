@@ -212,6 +212,14 @@ do
             cp ${eachfile}/instance_segmentation/${file_name}.zip ./
             unzip ./${file_name}.zip
             rm ./${file_name}.zip
+
+	    if [ ${if_lbc} == 1 ]
+            then
+                file_name="lbc_ins"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
+                unzip ./${file_name}.zip
+                rm ./${file_name}.zip
+            fi
         fi
 
         # -- ray_cast
