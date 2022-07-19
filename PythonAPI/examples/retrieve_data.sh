@@ -78,6 +78,18 @@ echo "1 - True"
 read -p ": " if_back
 
 echo " "
+echo "Retrive left data? "
+echo "0 - False"
+echo "1 - True"
+read -p ": " if_left
+
+echo " "
+echo "Retrive right data? "
+echo "0 - False"
+echo "1 - True"
+read -p ": " if_right
+
+echo " "
 echo "Retrive DVS? "
 echo "0 - False"
 echo "1 - True"
@@ -119,15 +131,22 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="depth_back_left"
-                cp ${eachfile}/depth/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="depth_back_left"
+			cp ${eachfile}/depth/${file_name}.zip ./
+			unzip ./${file_name}.zip
+			rm ./${file_name}.zip
+		fi
 
-                file_name="depth_back_right"
-                cp ${eachfile}/depth/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="depth_back_right"
+		        cp ${eachfile}/depth/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
+             
             fi
 
             if [ ${if_front} == 1 ]
@@ -136,16 +155,22 @@ do
                 cp ${eachfile}/depth/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
-                
-                file_name="depth_left"
-                cp ${eachfile}/depth/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
 
-                file_name="depth_right"
-                cp ${eachfile}/depth/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+                if [ ${if_left} == 1 ]
+		then
+			file_name="depth_left"
+			cp ${eachfile}/depth/${file_name}.zip ./
+			unzip ./${file_name}.zip
+			rm ./${file_name}.zip
+		fi
+
+		if [ ${if_right} == 1 ]
+		then
+			file_name="depth_right"
+		        cp ${eachfile}/depth/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
             fi
         fi
 
@@ -180,15 +205,21 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="ins_back_left"
-                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="ins_back_left"
+		        cp ${eachfile}/instance_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
 
-                file_name="ins_back_right"
-                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="ins_back_right"
+		        cp ${eachfile}/instance_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
             fi
             if [ ${if_front} == 1 ]
             then
@@ -197,15 +228,21 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="ins_left"
-                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="ins_left"
+		        cp ${eachfile}/instance_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
 
-                file_name="ins_right"
-                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="ins_right"
+		        cp ${eachfile}/instance_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi            
             fi
 
             file_name="ins_top"
@@ -243,15 +280,21 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="back_left"
-                cp ${eachfile}/rgb/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="back_left"
+		        cp ${eachfile}/rgb/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
 
-                file_name="back_right"
-                cp ${eachfile}/rgb/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="back_right"
+		        cp ${eachfile}/rgb/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
             fi
             if [ ${if_front} == 1 ]
             then
@@ -260,15 +303,21 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="left"
-                cp ${eachfile}/rgb/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="left"
+		        cp ${eachfile}/rgb/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
 
-                file_name="right"
-                cp ${eachfile}/rgb/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="right"
+		        cp ${eachfile}/rgb/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
             fi
 
             file_name="top"
@@ -295,15 +344,21 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="seg_back_left"
-                cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="seg_back_left"
+		        cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
 
-                file_name="seg_back_right"
-                cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="seg_back_right"
+		        cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
             fi
             if [ ${if_front} == 1 ]
             then
@@ -312,15 +367,21 @@ do
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="seg_left"
-                cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_left} == 1 ]
+		then
+			file_name="seg_left"
+		        cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
 
-                file_name="seg_right"
-                cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
-                unzip ./${file_name}.zip
-                rm ./${file_name}.zip
+		if [ ${if_right} == 1 ]
+		then
+			file_name="seg_right"
+		        cp ${eachfile}/semantic_segmentation/${file_name}.zip ./
+		        unzip ./${file_name}.zip
+		        rm ./${file_name}.zip
+		fi
             fi
 
             file_name="seg_top"
