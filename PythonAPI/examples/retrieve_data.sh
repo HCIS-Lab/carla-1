@@ -60,10 +60,10 @@ echo "1 - True"
 read -p ": " if_of
 
 echo " "
-echo "Do you need bbox data? "
+echo "Do you need instance segmentation data? "
 echo "0 - False"
 echo "1 - True"
-read -p ": " if_bb
+read -p ": " if_instance
 
 echo " "
 echo "Retrive front data? "
@@ -170,46 +170,46 @@ do
             rm ./${file_name}.zip
         fi
 
-        # --- bbox 
-        if [ ${if_bb} == 1 ]
+        # --- instance 
+        if [ ${if_instance} == 1 ]
         then  
             if [ ${if_back} == 1 ]
             then 
-                file_name="back"
-                cp ${eachfile}/bbox/${file_name}.zip ./
+                file_name="ins_back"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="back_left"
-                cp ${eachfile}/bbox/${file_name}.zip ./
+                file_name="ins_back_left"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="back_right"
-                cp ${eachfile}/bbox/${file_name}.zip ./
+                file_name="ins_back_right"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
             fi
             if [ ${if_front} == 1 ]
             then
-                file_name="front"
-                cp ${eachfile}/bbox/${file_name}.zip ./
+                file_name="ins_front"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="left"
-                cp ${eachfile}/bbox/${file_name}.zip ./
+                file_name="ins_left"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
 
-                file_name="right"
-                cp ${eachfile}/bbox/${file_name}.zip ./
+                file_name="ins_right"
+                cp ${eachfile}/instance_segmentation/${file_name}.zip ./
                 unzip ./${file_name}.zip
                 rm ./${file_name}.zip
             fi
 
-            file_name="top"
-            cp ${eachfile}/bbox/${file_name}.zip ./
+            file_name="ins_top"
+            cp ${eachfile}/instance_segmentation/${file_name}.zip ./
             unzip ./${file_name}.zip
             rm ./${file_name}.zip
         fi
