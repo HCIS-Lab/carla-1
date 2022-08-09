@@ -2092,7 +2092,8 @@ class CameraManager(object):
             # print(image.raw_data[10])
             # exit()
             # pass
-            
+            # image
+
             # take out the raw data
             array_raw = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
             # print("array.shape", array.shape) # array.shape (1048576,)
