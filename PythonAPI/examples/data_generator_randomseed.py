@@ -3069,7 +3069,7 @@ def game_loop(args):
 
                                 # print(common.COLOR[top_down_to_draw[x_int][y_int]])
                             # cv2.imwrite('./test_result/'+str(frame)+'.png', cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
-                            out.write(cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
+                            # out.write(cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
 
 
                             # control
