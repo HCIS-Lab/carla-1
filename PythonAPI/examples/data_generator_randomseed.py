@@ -38,7 +38,7 @@ try:
     sys.path.append('../carla/')
     sys.path.append('../../HDMaps')
     sys.path.append('rss/') # rss
-    sys.path.append('LBC/') # LBC
+    sys.path.append('lbc/') # LBC
 
 except IndexError:
     pass
