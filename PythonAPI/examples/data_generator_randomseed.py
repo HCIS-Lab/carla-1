@@ -132,8 +132,8 @@ except ImportError:
 
 # LBC
 import torch
-from dataset import CarlaDataset
-from converter import Converter
+# from dataset import CarlaDataset
+# from converter import Converter
 from map_model import MapModel
 import common
 import pathlib
@@ -2092,8 +2092,7 @@ class CameraManager(object):
             # print(image.raw_data[10])
             # exit()
             # pass
-            # image
-
+            
             # take out the raw data
             array_raw = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
             # print("array.shape", array.shape) # array.shape (1048576,)
@@ -2740,6 +2739,7 @@ def game_loop(args):
 
         # get waypoints
         map = world.world.get_map()
+        ego_index = 0
         def find_next_target(max_distance, wp_now):
             wp_last = None
             wp_next = wp_now.next(2)[0] # next waypoint in 2 meters
@@ -2752,11 +2752,25 @@ def game_loop(args):
                 #     wp_next = wp_next[0]
             # print(wp_now.transform.location.distance(wp_next.transform.location))
             return wp_last
+        
+        def find_next_target_index(max_distance, location_now, transform_list, index):
+            if index == len(transform_list) - 1:
+                return index
+
+            while location_now.distance(transform_list[index].location) < max_distance and index < len(transform_list):
+                index += 1
+                if index == len(transform_list):
+                    break
+            
+            return index - 1
+
             
         min_distance = 7.5 #7.5
         max_distance = 25.0
-        wp_now = map.get_waypoint(location=world.player.get_location(), project_to_road=True, lane_type=carla.LaneType.Driving)
-        target = find_next_target(max_distance, wp_now)
+        ego_transform_list = transform_dict['player']
+        ego_loc_now = world.player.get_location()
+        # print(ego_transform_list[0], ego_transform_list[1])
+        ego_index = find_next_target_index(max_distance, ego_loc_now, ego_transform_list, ego_index)
         # sim_world.debug.draw_point(target.transform.location, 0.1, carla.Color(255,0,0), 0.0, True)
         # print(target)
 
@@ -2936,9 +2950,9 @@ def game_loop(args):
                             last_inf_frame = frame
                         # if True:
                             # update waypoint
-                            wp_now = map.get_waypoint(location=world.player.get_location(), project_to_road=True, lane_type=carla.LaneType.Driving)
-                            if wp_now.transform.location.distance(target.transform.location) < min_distance:
-                                target = find_next_target(max_distance, wp_now)
+                            ego_loc_now = world.player.get_location()
+                            if ego_loc_now.distance(ego_transform_list[ego_index].location) < min_distance:
+                                ego_index = find_next_target_index(max_distance, ego_loc_now, ego_transform_list, ego_index)
                                 # sim_world.debug.draw_point(target.transform.location, 0.1, carla.Color(255,0,0), 0.0, True)
 
                             
@@ -2972,8 +2986,8 @@ def game_loop(args):
                             PIXELS_PER_WORLD = 5.5 # from coverter.py 
                             ego_location = world.player.get_location()
                             ego_xy = np.float32([ego_location.x, ego_location.y])
-                            print(target)
-                            target_loc = target.transform.location
+                            # print(target)
+                            target_loc = ego_transform_list[ego_index].location
                             target_xy = np.float32([target_loc.x, target_loc.y])
                             target_xy = R.T.dot(target_xy - ego_xy)
                             target_xy_print = target_xy
@@ -3019,57 +3033,57 @@ def game_loop(args):
                             # between = alpha * out + (1-alpha) * points
 
                             # draw points
-                            points_to_draw = points_pred.cpu().data.numpy()
-                            points_to_draw = points_to_draw * 256
-                            print('points_to_draw:', points_to_draw)
+                            # points_to_draw = points_pred.cpu().data.numpy()
+                            # points_to_draw = points_to_draw * 256
+                            # print('points_to_draw:', points_to_draw)
 
-                            # points_to_draw -= [128, 256]
-                            # points_to_draw /= PIXELS_PER_WORLD
-                            # print(points_to_draw)
-                            R = np.array([
-                            [np.cos(-theta), -np.sin(-theta)],
-                            [np.sin(-theta),  np.cos(-theta)],
-                            ])
-                            # print('R', R)
-                            # points_to_draw = (1/R.T).dot(points_to_draw[0], axis=1)
-                            points_draw = []
-                            points_draw.append(R.T.dot(points_to_draw[0][0]))
-                            points_draw.append(R.T.dot(points_to_draw[0][1]))
-                            points_draw.append(R.T.dot(points_to_draw[0][2]))
-                            points_draw.append(R.T.dot(points_to_draw[0][3]))
-                            print('pred_points', points_draw)
-                            # sim_world.debug.draw_point(carla.Location(x=points_draw[0][0], y=points_draw[0][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
-                            # sim_world.debug.draw_point(carla.Location(x=points_draw[1][0], y=points_draw[1][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
-                            # sim_world.debug.draw_point(carla.Location(x=points_draw[2][0], y=points_draw[2][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
-                            # sim_world.debug.draw_point(carla.Location(x=points_draw[3][0], y=points_draw[3][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
+                            # # points_to_draw -= [128, 256]
+                            # # points_to_draw /= PIXELS_PER_WORLD
+                            # # print(points_to_draw)
+                            # R = np.array([
+                            # [np.cos(-theta), -np.sin(-theta)],
+                            # [np.sin(-theta),  np.cos(-theta)],
+                            # ])
+                            # # print('R', R)
+                            # # points_to_draw = (1/R.T).dot(points_to_draw[0], axis=1)
+                            # points_draw = []
+                            # points_draw.append(R.T.dot(points_to_draw[0][0]))
+                            # points_draw.append(R.T.dot(points_to_draw[0][1]))
+                            # points_draw.append(R.T.dot(points_to_draw[0][2]))
+                            # points_draw.append(R.T.dot(points_to_draw[0][3]))
+                            # print('pred_points', points_draw)
+                            # # sim_world.debug.draw_point(carla.Location(x=points_draw[0][0], y=points_draw[0][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
+                            # # sim_world.debug.draw_point(carla.Location(x=points_draw[1][0], y=points_draw[1][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
+                            # # sim_world.debug.draw_point(carla.Location(x=points_draw[2][0], y=points_draw[2][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
+                            # # sim_world.debug.draw_point(carla.Location(x=points_draw[3][0], y=points_draw[3][1], z=0.5), 0.1, carla.Color(0,255,0), 0.0, True)
                             
                             
-                            save_canvas = np.zeros((256, 256, 3), np.int8)
-                            print('points_to_draw', points_to_draw)
-                            save_canvas = common.COLOR[top_down_to_draw]
-                            for xy in points_to_draw[0]:
-                                print(xy)
-                                x_int = 128 + int(xy[0])
-                                y_int = int(xy[1])
-                                save_canvas[y_int][x_int] = [255, 255, 255]
+                            # save_canvas = np.zeros((256, 256, 3), np.int8)
+                            # print('points_to_draw', points_to_draw)
+                            # save_canvas = common.COLOR[top_down_to_draw]
+                            # for xy in points_to_draw[0]:
+                            #     print(xy)
+                            #     x_int = 128 + int(xy[0])
+                            #     y_int = int(xy[1])
+                            #     save_canvas[y_int][x_int] = [255, 255, 255]
 
-                                x_target = int(target_xy_print[0])
-                                y_target = int(target_xy_print[1])
-                                save_canvas[y_target][x_target] = [0, 255, 0]
-                                for pad in range(1, 3):
-                                    save_canvas[y_int-pad][x_int+pad] = [255, 255, 255]
-                                    save_canvas[y_int+pad][x_int+pad] = [255, 255, 255]
-                                    save_canvas[y_int-pad][x_int-pad] = [255, 255, 255]
-                                    save_canvas[y_int+pad][x_int-pad] = [255, 255, 255]
+                            #     x_target = int(target_xy_print[0])
+                            #     y_target = int(target_xy_print[1])
+                            #     save_canvas[y_target][x_target] = [0, 255, 0]
+                            #     for pad in range(1, 3):
+                            #         save_canvas[y_int-pad][x_int+pad] = [255, 255, 255]
+                            #         save_canvas[y_int+pad][x_int+pad] = [255, 255, 255]
+                            #         save_canvas[y_int-pad][x_int-pad] = [255, 255, 255]
+                            #         save_canvas[y_int+pad][x_int-pad] = [255, 255, 255]
 
-                                    save_canvas[y_target+pad][x_target+pad] = [0, 255, 0]
-                                    save_canvas[y_target+pad][x_target-pad] = [0, 255, 0]
-                                    save_canvas[y_target-pad][x_target+pad] = [0, 255, 0]
-                                    save_canvas[y_target-pad][x_target-pad] = [0, 255, 0]
+                            #         save_canvas[y_target+pad][x_target+pad] = [0, 255, 0]
+                            #         save_canvas[y_target+pad][x_target-pad] = [0, 255, 0]
+                            #         save_canvas[y_target-pad][x_target+pad] = [0, 255, 0]
+                            #         save_canvas[y_target-pad][x_target-pad] = [0, 255, 0]
 
-                                # print(common.COLOR[top_down_to_draw[x_int][y_int]])
-                            # cv2.imwrite('./test_result/'+str(frame)+'.png', cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
-                            # out.write(cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
+                            #     # print(common.COLOR[top_down_to_draw[x_int][y_int]])
+                            # # cv2.imwrite('./test_result/'+str(frame)+'.png', cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
+                            # # out.write(cv2.cvtColor(save_canvas, cv2.COLOR_RGB2BGR))
 
 
                             # control
