@@ -150,7 +150,7 @@ def testing(data_type, root, RA, threshold, T):
                     if risk_id in gt_cause_id:
                         TP += 1
                     else:
-                        FN += 1
+                        FP += 1
                 else:
                     FN += 1
         else:
