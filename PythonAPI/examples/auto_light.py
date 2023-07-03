@@ -120,13 +120,15 @@ def set_light_state(ight_dict, annotate, r):
         l.set_state(carla.TrafficLightState.Green)
     for l in annotate['left']:
         n = random.random()
-        if r==0:
+        # if r==0:
+        if n < 0.8:
             l.set_state(carla.TrafficLightState.Green)
         else:
             l.set_state(carla.TrafficLightState.Red)
     for l in annotate['right']:
         n = random.random()
-        if r==1:
+        # if r==1:
+        if n<0.8:
             l.set_state(carla.TrafficLightState.Green)
         else:
             l.set_state(carla.TrafficLightState.Red)
