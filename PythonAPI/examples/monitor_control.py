@@ -415,7 +415,7 @@ class DualControl(object):
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.button == 23:
                     world.camera_manager.next_sensor()
-                elif event.button == 10: # R3
+                elif event.button == 10:  # R3
                     self.r = world.camera_manager.toggle_recording()
                     return self.r
 
@@ -2045,7 +2045,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                   'sr': 'slide_right', 'u': 'u-turn', 'c': 'crossing',
                   'w': 'walking on sidewalk', 'j': 'jaywalking',
-                  #roundabout
+                  # roundabout
                   'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'
                   }
 
@@ -2068,9 +2068,9 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left',
                   'sr': 'lane-change-right', 'u': 'u-turn', 'b': 'backward', 'j': 'jaywalking',
-                  #roundabout
+                  # roundabout
                   'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout',
-                '0': 'None'}
+                  '0': 'None'}
 
         violation = {'0': 'None', 'rl': 'running traffic light',
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
@@ -2090,7 +2090,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
                           'u': 'u-turn'}
 
         action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left', 'sr': 'lane-change-right', 'u': 'u-turn',
-                    #roundabout
+                  # roundabout
                   'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
         obstacle_type = {'0': 'traffic cone',
@@ -2110,7 +2110,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left',
                   'sr': 'lane-change-right', 'u': 'u-turn', 'c': 'crossing',
                   'w': 'walking on sidewalk', 'j': 'jaywalking',
-                   #roundabout
+                  # roundabout
                   'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout',
                   '0': 'None'}
 
@@ -2149,16 +2149,19 @@ def save_traffic_lights(stored_path, lights_dict):
                 (str(l_id)), np.array(lights_dict[l_id]))
 
 
-def generate_obstacle(world, n, area):
+def generate_obstacle(world, n, area, map, scenario_tag):
+
     blueprint_library = world.get_blueprint_library()
     all_wp = world.get_map().generate_waypoints(6)
+    intersection_coordinators = scenario_tag_to_location(map)
+    spawn_location = [carla.Transform(location=carla.Location(*intersection_coordinators[scenario_tag]))]
 
     obstacle_list = []
     trans_list = []
     stat_prop = ["static.prop.trafficcone01", "static.prop.trafficcone02",
                  "static.prop.trafficwarning", "static.prop.streetbarrier"]
 
-    def dist(t, L, limit):
+    def dist(t, L, limit=30):
         for trans in L:
             if trans.location.distance(t.location) < limit:
                 return False
@@ -2207,6 +2210,8 @@ def generate_obstacle(world, n, area):
 
     if n == 1:
         for k, wp in enumerate(all_wp):
+            if dist(wp.transform, spawn_location, 60):
+                continue
             if wp.is_junction and dist(wp.transform, trans_list, 30) and random.randint(0, 2) == 0:
 
                 trans = wp.transform
@@ -2226,14 +2231,27 @@ def generate_obstacle(world, n, area):
                 else:
                     spawn_junction(vec_0, trans, 3)
                     spawn_junction(vec_r, trans, 3)
-                    
+
     elif 2 <= n <= 3:
+        k = -1
         for i in range(area):
-            while True:
-                wp = random.choice(all_wp)
-                if not wp.is_junction and dist(wp.transform, trans_list, 40)    \
-                        and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
+
+            while k+1 < len(all_wp):
+                k += 1
+                wp = all_wp[k]
+                if dist(wp.transform, spawn_location, 60):
+                    continue
+                elif not wp.is_junction and dist(wp.transform, trans_list, 40) and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
                     break
+
+            if k >= len(all_wp):
+                break
+
+            # while True:
+            #     wp = random.choice(all_wp)
+            #     if not wp.is_junction and dist(wp.transform, trans_list, 40)    \
+            #             and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
+            #         break
 
             wp_list = []
             # wp_list = (wp.previous_until_lane_start(4))[::-1]
@@ -2249,14 +2267,21 @@ def generate_obstacle(world, n, area):
             spawn_twoWarning(wp_list[rand-4].transform, n)
 
     elif n >= 4:
+        k = -1
         n_obstacle = 0
+
         while n_obstacle < n:
 
-            while True:
-                wp = random.choice(all_wp)
-                if not wp.is_junction and dist(wp.transform, trans_list, 30)    \
-                        and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 30):
+            while k+1 < len(all_wp):
+                k += 1
+                wp = all_wp[k]
+                if dist(wp.transform, spawn_location, 60):
+                    continue
+                elif not wp.is_junction and dist(wp.transform, trans_list, 40) and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
                     break
+
+            if k >= len(all_wp):
+                break
 
             wp_list = []
             # wp_list = (wp.previous_until_lane_start(4))[::-1]
@@ -2295,9 +2320,11 @@ def generate_obstacle(world, n, area):
     return obstacle_list
 
 
-def generate_parking(world, n):
+def generate_parking(world, n, map, scenario_tag):
 
     blueprint_library = world.get_blueprint_library()
+    intersection_coordinators = scenario_tag_to_location(map)
+    spawn_location = [carla.Transform(location=carla.Location(*intersection_coordinators[scenario_tag]))]
     parking_list = []
 
     motor_list = ['bh.crossbike', 'yamaha.yzf', 'vespa.zx125',
@@ -2309,9 +2336,9 @@ def generate_parking(world, n):
             vehicle_list.append(i.id)
     # print(vehicle_list)
 
-    def dist(waypoint, wp_list):
+    def dist(waypoint, wp_list, limit=7):
         for wp in wp_list:
-            if waypoint.transform.location.distance(wp.transform.location) < 7:
+            if waypoint.transform.location.distance(wp.transform.location) < limit:
                 return False
         return True
 
@@ -2321,11 +2348,17 @@ def generate_parking(world, n):
 
     num = 0
     # for wp in all_wp[:n]:
-    for wp in random.sample(all_wp, n):
+    for idx, wp in enumerate(all_wp):
+
+        if idx >= n:
+            break
+
         waypoint = world.get_map().get_waypoint(location=wp.transform.location,
                                                 lane_type=carla.LaneType.Shoulder)  # Shoulder Driving
-        if not dist(waypoint, wp_list):
+
+        if not dist(waypoint, wp_list, limit=7) or dist(waypoint, spawn_location, limit=60):
             continue
+
         wp_list.append(waypoint)
 
         vector = waypoint.transform.get_right_vector()
@@ -2355,6 +2388,313 @@ def generate_parking(world, n):
             pass
 
     return parking_list
+
+
+def scenario_tag_to_location(town):
+
+    if town == "Town01":
+        intersection_coordinators = {
+            't1':
+            (336, 327, 0.0),
+            't2':
+            (336, 2, 0),
+            't3':
+            (336, 197, 0.0),
+            't4':
+            (336, 132, 0.0),
+            't5':
+            (336, 58, 0.0),
+            't8':
+            (156, 56, 0.0),
+            't9':
+            (157, 1, 0.0),
+            't10':
+            (91, 195.8, 0.0),
+            't11':
+            (90.6, 56, 0.0),
+            't12':
+            (90.6, 328, 0.0),
+            't13':
+            (90.6, 2, 0.0),
+            't14':
+            (91.6, 130.6, 0.0),
+
+            # straight
+            's1':
+            (221, 328, 0.0),
+            's2':
+            (336, 255, 0.0),
+            's3':
+            (225, 195, 0.0),
+            's4':
+            (217, 130, 0.0),
+            's5':
+            (250, 56, 0.0),
+            's6':
+            (253, 1, 0.0),
+            's7':
+            (1, 2, 0.0),
+            's8':
+            (0, 163, 0.0),
+            's9':
+            (393, 174, 0.0),
+            's10':
+            (391, 1, 0.0)
+        }
+
+    elif town == "Town02":
+        intersection_coordinators = {
+            't1':
+            (-3, 190, 0),
+            't2':
+            (44, 189, 0),
+            't3':
+            (45, 248, 0.0),
+            't4':
+            (43, 303, 0.0),
+            't5':
+            (134, 190, 0.0),
+            't6':
+            (134, 238, 0.0),
+            't7':
+            (191, 191, 0.0),
+            't8':
+            (191, 237, 0.0),
+
+            # straight
+            's1':
+            (90, 107, 0.0),
+            's2':
+            (-4, 147, 0.0),
+            's3':
+            (87, 190, 0.0),
+            's4':
+            (-4, 249, 0.0),
+            's5':
+            (126, 305, 0.0),
+            's6':
+            (135, 216, 0.0),
+            's7':
+            (45, 273, 0.0)
+        }
+
+    elif town == 'Town03':
+        intersection_coordinators = {
+            'i1': (-80, 131, 0),
+            'i2': (-2, 132, 0),
+            'i4': (-78, -138, 0),
+            'i5': (3, -138, 0),
+
+            't2': (169.0, 64, 0),
+            't3': (232, 60, 0),
+            't6': (225, 2, 0),
+            't7': (9.8, -200, 0, 0),
+            't8': (83, -200, 0),
+            't10': (82, -74, 0),
+            't11': (151, -71, 0),
+
+            # straight
+            's1': (-79.7, 69.9, 0),
+            's2': (-80.1, -69.2, 0),
+            's3': (233.4, -179.3, 0),
+            's4': (219.3, 175.0, 0),
+            's5': (-1.6,  80.3, 0),
+            's6': (1.6,  -81.3, 0),
+            's7': (114.5, 9.8, 0),
+            's8': (120.8, 130.8, 0),
+        }
+
+    elif town == "Town04":
+        intersection_coordinators = {
+            'i1':
+            (258.7, -248.2, 0.0),
+            'i2':
+            (313.7, -247.2, 0.0),
+            'i3':
+            (310.3, -170.5, 0.0),
+            'i4':
+            (349.5, -170.5, 0.0),
+            'i5':
+            (255.0, -170.2, 0.0),
+            'i6':
+            (313.0, -119.7, 0.0),
+            'i7':
+            (200.3, -173.6, 0.0),
+            'i8':
+            (293.4, -247.7, 0.0),
+            'i9':
+            (203.8, -309.0, 0.0),
+
+            't1':
+            (256.3, -309.0, 0.0),
+            't2':
+            (130.5, -172.7, 0.0),
+            't3':
+            (61.9, -172.3, 0.0),
+            't4':
+            (21.2, -172.2, 0.0),
+            't5':
+            (256.5, -122.2, 0.0),
+
+            # straight
+            's1': (-489.0, 58.4, 0),
+            's2': (-216.7, -97.8, 0),
+            's3': (211.0,  -390.7, 0),
+            's4': (183.5,  205.7, 0),
+            's5': (-227.7, 420.3, 0),
+            's6': (-445.5, 372.0, 0),
+            's7': (-222.8, 22.2, 0),
+            's8': (91.9,   -280.5, 0),
+            's9': (144.3,  -223.7, 0),
+            's10': (256.5, -206.8, 0),
+            's11': (251.6, 24.9, 0),
+            's12': (-3.7,  265.8, 0),
+        }
+
+    elif town == "Town05":
+        intersection_coordinators = {
+            'i1':
+            (-189.3, -89.3, 0.0),
+            'i2':
+            (-190.5, 1.3, 0.0),
+            'i3':
+            (-189.7, 89.6, 0.0),
+            'i6':
+            (-125.6, 90.4, -0.0),
+            'i5':
+            (-126.2, 0.3, -0.0),
+            'i14':
+            (-126, -89.1, -0.0),
+            'i7':
+            (-50.5, -89.4, -0.0),
+            'i8':
+            (-49.1, 0.8, 0.0),
+            'i9':
+            (-50.3, 89.6, 0.0),
+            'i12':
+            (29.9, 90.0, 0.0),
+            'i11':
+            (29.9, 0.2, 0.0),
+            'i10':
+            (31.7, -89.2, 0.0),
+            'i13':
+            (101.9, -0.1, 0.0),
+
+            't2':
+            (-270, 1, 0.0),
+            't4':
+            (-127, -140, 0.0),
+            't5':
+            (-125, 146, 0.0),
+            't6':
+            (35, -148, 0.0),
+            't7':
+            (31, 142, 0.0),
+            't8':
+            (31, 195, 0.0),
+            't9':
+            (152, -0.3, 0.0),
+            't10':
+            (30, 196, 0.0),
+
+            # straight
+            's1': (197.5, 1.4, 0),
+            's2': (-216.9, -166.2, 0),
+            's3': (137.0, 124.3, 0),
+            's4': (84.7, -79.6, 0),
+            's5': (-90.5, 1.1, 0),
+
+        }
+
+    elif town == "Town07":
+        intersection_coordinators = {
+            'i1':
+            (-103, 53, 0.0),
+            'i2':
+            (-3, -3, 0),
+            'i3':
+            (-150.7, -35, 0.0),
+
+            't1':
+            (-152, 50, 0),
+            't2':
+            (66, 60, 0),
+            't3':
+            (-100, -0.5, 0),
+            't4':
+            (-200, -35, 0),
+            't5':
+            (-3, -160, 0),
+            't6':
+            (-100, -96, 0),
+            't7':
+            (-100, -62, 0),
+            't8':
+            (-100, -34, 0),
+            't9':
+            (-199, -161, 0),
+            't10':
+            (-2, -240, 0),
+            't11':
+            (-5, 60, 0),
+            't12':
+            (66, -1, 0),
+            't13':
+            (-200, 49, 0),
+            't14':
+            (-110, 114, 0),
+
+            # straight
+            's1': (67.5, -126.1, 0),
+            's2': (-30.3, 122.3, 0),
+            's3': (-200.3, -90.1, 0),
+            's4': (-189.4, -244.8, 0),
+            's5': (-52.9, 58.6, 0),
+            's6': (-54.0, -65.6, 0),
+        }
+
+    elif town == "Town10HD":
+        intersection_coordinators = {
+            'i1':
+            (-46.0, 18.8, 0.0),
+            't2':
+            (42.5, 63.3, 0.0),
+            't3':
+            (42.4, 29.1, 0.0),
+            't1':
+            (102.3, 21.4, 0.0),
+            't5':
+            (-42.0, 69.0, 0.0),
+            # 't4':
+            # (-47.0, 127.9, 0.0),
+            't7':
+            (-106.2, 21.8, 0.0),
+            't6':
+            (-47.0, -60.2, 0.0),
+
+            # straight
+            's1':
+            (90, 118, 0.0),
+            's2':
+            (62, -66, 0.0),
+            's3':
+            (-100, -49, 0.0),
+            's4':
+            (-98, 105, 0.0),
+            's5':
+            (27, 12, 0.0),
+            's6':
+            (-46, -23, 0.0)
+        }
+
+    return intersection_coordinators
+
+
+def scenario_id_exist(scenario_tag, map):
+
+    intersection_coordinators = scenario_tag_to_location(map)
+    return scenario_tag in intersection_coordinators
+
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -2395,9 +2735,9 @@ def game_loop(args):
 
         if args.obstacle != 0:
             obstacle_list = generate_obstacle(
-                client.get_world(), args.obstacle, args.area)
+                client.get_world(), args.obstacle, args.area, args.map, args.scenario_tag)
         if args.parking != 0:
-            obstacle_list = generate_parking(client.get_world(), args.parking)
+            obstacle_list = generate_parking(client.get_world(), args.parking, args.map, args.scenario_tag)
 
         lights = []
         actors = world.world.get_actors()
@@ -2541,7 +2881,7 @@ def main():
     argparser.add_argument(
         '-area',
         type=int,
-        default=50,
+        default=10,
         help='spawn obstacle area')
     argparser.add_argument(
         '-parking',
@@ -2552,10 +2892,22 @@ def main():
         '--scenario_type',
         type=str,
         choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
+        required=True,
         help='enable roaming actors')
+    argparser.add_argument(
+        '--scenario_tag',
+        default="None",
+        type=str,
+        help='enable roaming actors')
+
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
+
+    if args.scenario_type == "obstacle":
+        if not scenario_id_exist(args.scenario_tag, args.map):
+            print(f'scenario_tag \'{args.scenario_tag}\' does not exist!!')
+            exit()
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
