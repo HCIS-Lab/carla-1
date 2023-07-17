@@ -2044,7 +2044,10 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
         action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
                   'sr': 'slide_right', 'u': 'u-turn', 'c': 'crossing',
-                  'w': 'walking on sidewalk', 'j': 'jaywalking'}
+                  'w': 'walking on sidewalk', 'j': 'jaywalking',
+                  #roundabout
+                  'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'
+                  }
 
         violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
@@ -2063,8 +2066,11 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         # [topology_id, is_traffic_light, actor_type_action, my_action, violated_rule]
         actor = {'0': 'None'}
 
-        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                  'sr': 'slide_right', 'u': 'u-turn', 'b': 'backward', 'j': 'jaywalking', '0': 'None'}
+        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left',
+                  'sr': 'lane-change-right', 'u': 'u-turn', 'b': 'backward', 'j': 'jaywalking',
+                  #roundabout
+                  'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout',
+                '0': 'None'}
 
         violation = {'0': 'None', 'rl': 'running traffic light',
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
@@ -2080,11 +2086,12 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['map'] = carla_map
 
     elif scenario_type == 'obstacle':
-        initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
+        initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left', 'sr': 'lane-change-right',
                           'u': 'u-turn'}
 
-        action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
-                                    'u': 'u-turn'}
+        action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left', 'sr': 'lane-change-right', 'u': 'u-turn',
+                    #roundabout
+                  'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
         obstacle_type = {'0': 'traffic cone',
                          '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
@@ -2100,9 +2107,12 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         actor = {'c': 'car', 't': 'truck', 'b': 'bike',
                  'm': 'motor', 'p': 'pedestrian', 's': 'static_object'}
 
-        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                  'sr': 'slide_right', 'u': 'u-turn', 's': 'stop', 'b': 'backward', 'c': 'crossing',
-                  'w': 'walking on sidewalk', 'j': 'jaywalking', 'ri': 'Crash into refuge island', '0': 'None'}
+        action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left',
+                  'sr': 'lane-change-right', 'u': 'u-turn', 'c': 'crossing',
+                  'w': 'walking on sidewalk', 'j': 'jaywalking',
+                   #roundabout
+                  'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout',
+                  '0': 'None'}
 
         violation = {'0': 'None', 'p': 'parking', 'j': 'jay-walker', 'rl': 'running traffic light',
                      's': 'driving on a sidewalk', 'ss': 'stop sign'}
