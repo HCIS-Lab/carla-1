@@ -2001,9 +2001,8 @@ def save_actor(stored_path, actor_dict, control_dict, timestamp_list, obstacle_l
         data['velocity'] = []
         data['filter'] = []
 
-    with open(stored_path + "/obstacle/obstacle_list.txt", "w") as text_file:
-        for line in obstacle_list:
-            text_file.write(line+"\n")
+    with open(stored_path + "/obstacle/obstacle_list.json", "w") as f:
+        json.dump(obstacle_list, f, indent=4)
 
     for actor_id, data in control_dict.items():
         np.save(stored_path + '/ped_control/%s' %
@@ -2178,7 +2177,11 @@ def generate_obstacle(world, n, area, map, scenario_tag):
         actor = world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
-        obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
+        obstacle_attr = {"obstacle_type": stat_prop[id],
+                         "basic_id": actor.id,
+                         "location": new_trans.location.__dict__,
+                         "rotation": new_trans.rotation.__dict__}
+        obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
 
@@ -2190,7 +2193,11 @@ def generate_obstacle(world, n, area, map, scenario_tag):
         actor = world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
-        obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
+        obstacle_attr = {"obstacle_type": stat_prop[id],
+                         "basic_id": actor.id,
+                         "location": new_trans.location.__dict__,
+                         "rotation": new_trans.rotation.__dict__}
+        obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
 
@@ -2204,7 +2211,11 @@ def generate_obstacle(world, n, area, map, scenario_tag):
         actor = world.spawn_actor(
             blueprint_library.filter(stat_prop[id])[0], new_trans)
 
-        obstacle_list.append(f'{stat_prop[id]}\t{new_trans}\t{actor.id}')
+        obstacle_attr = {"obstacle_type": stat_prop[id],
+                         "basic_id": actor.id,
+                         "location": new_trans.location.__dict__,
+                         "rotation": new_trans.rotation.__dict__}
+        obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
 
@@ -2376,13 +2387,16 @@ def generate_parking(world, n, map, scenario_tag):
             random_vehicle = random.choice(vehicle_list)
             vehicle = blueprint_library.filter(random_vehicle)[0]
             # vehicle = random.choice(blueprint_library.filter('vehicle.*'))
-            world.spawn_actor(vehicle, cur_trans)
+            actor = world.spawn_actor(vehicle, cur_trans)
 
-            print(num, vehicle.id)
+            print(num, vehicle, actor.type_id, actor.id)
             num += 1
 
-            parking_list.append(
-                vehicle.id+'\t'+f'{cur_trans}')
+            parking_attr = {"obstacle_type": actor.type_id,
+                            "basic_id": actor.id,
+                            "location": cur_trans.location.__dict__,
+                            "rotation": cur_trans.rotation.__dict__}
+            parking_list.append(parking_attr)
 
         except Exception:
             pass

@@ -11,6 +11,14 @@
 
 
 from __future__ import print_function
+import cv2
+import pickle
+from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer  # pylint: disable=relative-import
+from rss_sensor_benchmark import RssSensor  # pylint: disable=relative-import
+from read_input import *
+from get_and_control_trafficlight import *
+from random_actors import spawn_actor_nearby
+import matplotlib.pyplot as plt
 
 
 # ==============================================================================
@@ -37,7 +45,7 @@ try:
     sys.path.append('../carla/agents')
     sys.path.append('../carla/')
     sys.path.append('../../HDMaps')
-    sys.path.append('rss/') # rss
+    sys.path.append('rss/')  # rss
 
 except IndexError:
     pass
@@ -69,15 +77,9 @@ from multiprocessing import Process
 import xml.etree.ElementTree as ET
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 
-from random_actors import spawn_actor_nearby
-from get_and_control_trafficlight import *
-from read_input import *
 # rss
-from rss_sensor_benchmark import RssSensor # pylint: disable=relative-import
-from rss_visualization import RssUnstructuredSceneVisualizer, RssBoundingBoxVisualizer, RssStateVisualizer # pylint: disable=relative-import
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -148,14 +150,14 @@ def get_actor_display_name(actor, truncate=250):
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
 
-def write_json(filename, index, seed ):
-    with open(filename,'r+') as file:
-          # First we load existing data into a dict.
+def write_json(filename, index, seed):
+    with open(filename, 'r+') as file:
+        # First we load existing data into a dict.
         file_data = json.load(file)
-        y = {str(index):seed}
+        y = {str(index): seed}
         file_data.update(y)
         file.seek(0)
-        json.dump(file_data, file, indent = 4)
+        json.dump(file_data, file, indent=4)
 
 # ==============================================================================
 # -- World ---------------------------------------------------------------------
@@ -175,7 +177,7 @@ class World(object):
         self.actor_role_name = args.rolename
         self.store_path = store_path
         self.args = args
-        
+
         try:
             self.map = self.world.get_map()
         except RuntimeError as error:
@@ -217,7 +219,7 @@ class World(object):
             carla.MapLayer.Walls,
             carla.MapLayer.All
         ]
-        
+
         # # rss
         # self.dim = (args.width, args.height)
         # self.rss_sensor = None
@@ -232,17 +234,16 @@ class World(object):
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
         # Get a random blueprint.
-        
+
         seed_1 = int(time.time())
 
         d = {"1": seed_1}
         if args.replay:
-            #print(self.store_path)
+            # print(self.store_path)
             P = self.store_path.split("/")
-            #print(P)
-            with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
-        
-                
+            # print(P)
+            with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3])+"/random_seeds.json", "r") as outfile:
+
                 data = json.load(outfile)
                 seed_1 = int(data["1"])
         else:
@@ -250,7 +251,6 @@ class World(object):
                 json.dump(d, outfile)
         print("seed_1: ", seed_1)
         random.seed(seed_1)
-
 
         blueprint = random.choice(
             self.world.get_blueprint_library().filter(self._actor_filter))
@@ -260,17 +260,17 @@ class World(object):
 
             if args.replay:
                 P = self.store_path.split("/")
-                #print(P)
-                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
-            
+                # print(P)
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3])+"/random_seeds.json", "r") as outfile:
+
                     data = json.load(outfile)
                     seed_2 = int(data["2"])
             else:
 
-                write_json(self.store_path + "/random_seeds.json", 2, seed_2 )
+                write_json(self.store_path + "/random_seeds.json", 2, seed_2)
             print("seed_2: ", seed_2)
             random.seed(seed_2)
-                    
+
             color = random.choice(
                 blueprint.get_attribute('color').recommended_values)
             blueprint.set_attribute('color', color)
@@ -278,16 +278,16 @@ class World(object):
         if blueprint.has_attribute('driver_id'):
             if args.replay:
                 P = self.store_path.split("/")
-                #print(P)
-                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3] )+"/random_seeds.json", "r") as outfile:
+                # print(P)
+                with open(os.path.join('data_collection', args.scenario_type,  args.scenario_id, 'variant_scenario', P[3])+"/random_seeds.json", "r") as outfile:
                     data = json.load(outfile)
                     seed_3 = int(data["3"])
             else:
-                seed_3 = int(time.time()) + int( random.random())
-                write_json(self.store_path + "/random_seeds.json", 3, seed_3 )
+                seed_3 = int(time.time()) + int(random.random())
+                write_json(self.store_path + "/random_seeds.json", 3, seed_3)
             print("seed_3: ", seed_3)
             random.seed(seed_3)
-            
+
             driver_id = random.choice(
                 blueprint.get_attribute('driver_id').recommended_values)
             blueprint.set_attribute('driver_id', driver_id)
@@ -338,8 +338,10 @@ class World(object):
 
         # rss
         if self.args.save_rss:
-            self.rss_unstructured_scene_visualizer = RssUnstructuredSceneVisualizer(self.player, self.world, self.hud.dim)
-            self.rss_bounding_box_visualizer = RssBoundingBoxVisualizer(self.hud.dim, self.world, self.camera_manager.sensor_top)
+            self.rss_unstructured_scene_visualizer = RssUnstructuredSceneVisualizer(
+                self.player, self.world, self.hud.dim)
+            self.rss_bounding_box_visualizer = RssBoundingBoxVisualizer(
+                self.hud.dim, self.world, self.camera_manager.sensor_top)
             self.rss_sensor = RssSensor(self.player, self.world,
                                         self.rss_unstructured_scene_visualizer, self.rss_bounding_box_visualizer, self.hud.rss_state_visualizer)
         # rss end
@@ -399,6 +401,7 @@ class World(object):
                                            'gear': c.gear}
         self.ego_data[frame]['transform'] = {'x': t.location.x, 'y': t.location.y, 'z': t.location.z,
                                              'pitch': t.rotation.pitch, 'yaw': t.rotation.yaw, 'roll': t.rotation.roll}
+
     def save_ego_data(self, path):
         self.imu_sensor.toggle_recording_IMU()
         self.gnss_sensor.toggle_recording_Gnss()
@@ -431,7 +434,7 @@ class World(object):
                 self.camera_manager.sensor_lidar,
                 self.camera_manager.sensor_dvs,
                 self.camera_manager.sensor_flow,
-                
+
 
                 # self.camera_manager.seg_front,
                 # self.camera_manager.seg_back,
@@ -463,16 +466,15 @@ class World(object):
 
             self.camera_manager.sensor_front = None
 
-
         else:
             sensors = [
-            self.camera_manager.lbc_img,
-            self.camera_manager.lbc_ins,
-            self.camera_manager.sensor_top,
-            self.collision_sensor.sensor,
-            self.lane_invasion_sensor.sensor,
-            self.gnss_sensor.sensor,
-            self.imu_sensor.sensor]
+                self.camera_manager.lbc_img,
+                self.camera_manager.lbc_ins,
+                self.camera_manager.sensor_top,
+                self.collision_sensor.sensor,
+                self.lane_invasion_sensor.sensor,
+                self.gnss_sensor.sensor,
+                self.imu_sensor.sensor]
 
         if self.args.save_rss and self.save_mode:
             # rss
@@ -481,12 +483,10 @@ class World(object):
             if self.rss_unstructured_scene_visualizer:
                 self.rss_unstructured_scene_visualizer.destroy()
 
-
         for i, sensor in enumerate(sensors):
             if sensor is not None:
                 sensor.stop()
                 sensor.destroy()
-
 
         if self.player is not None:
             self.player.destroy()
@@ -779,8 +779,8 @@ class HUD(object):
         self._world = world
         self.args = args
         self.frame = 0
-        if self.args.save_rss: # rss
-            self._world = world 
+        if self.args.save_rss:  # rss
+            self._world = world
             self.rss_state_visualizer = RssStateVisualizer(self.dim, self._font_mono, self._world)
 
     def on_world_tick(self, timestamp):
@@ -912,7 +912,7 @@ class HUD(object):
                     display.blit(surface, (8, v_offset))
                 v_offset += 18
             if self.args.save_rss:
-                self.rss_state_visualizer.render(display, v_offset) # rss
+                self.rss_state_visualizer.render(display, v_offset)  # rss
         self._notifications.render(display)
         # self.help.render(display)
 
@@ -989,7 +989,7 @@ class CollisionSensor(object):
         self.history = []
         self._parent = parent_actor
         self.hud = hud
-        self.other_actor_id = 0 # init as 0 for static object
+        self.other_actor_id = 0  # init as 0 for static object
         self.wrong_collision = False
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.collision')
@@ -1025,7 +1025,6 @@ class CollisionSensor(object):
         self.collision = True
         if event.other_actor.id != self.other_actor_id:
             self.wrong_collision = True
-        
 
     def save_history(self, path):
         if self.collision:
@@ -1165,6 +1164,7 @@ class IMUSensor(object):
                 self.ego_dict[sensor_data.frame] = {}
             self.ego_dict[sensor_data.frame]['imu'] = imu
             self.ego_dict[sensor_data.frame]['timestamp'] = sensor_data.timestamp
+
     def toggle_recording_IMU(self):
         self.recording = not self.recording
     #     if not self.recording:
@@ -1267,8 +1267,7 @@ class CameraManager(object):
         self.dvs = []
 
         # self.top_iseg = []
-        
-        
+
         # self.front_seg = []
         # self.left_seg = []
         # self.right_seg = []
@@ -1364,14 +1363,13 @@ class CameraManager(object):
         # if self.bev_bp.has_attribute('gamma'):
         #     self.bev_bp.set_attribute('gamma', str(gamma_correction))
 
-
         self.bev_seg_bp = bp_library.find('sensor.camera.instance_segmentation')
         self.bev_seg_bp.set_attribute('image_size_x', str(512))
         self.bev_seg_bp.set_attribute('image_size_y', str(512))
         self.bev_seg_bp.set_attribute('fov', str(50.0))
 
         for item in self.sensors:
-            
+
             bp = bp_library.find(item[0])
             if item[0].startswith('sensor.camera'):
                 bp.set_attribute('image_size_x', str(hud.dim[0]))
@@ -1412,13 +1410,11 @@ class CameraManager(object):
                 self._camera_transforms[7][0],
                 attach_to=self._parent)
 
-
             self.sensor_top = self._parent.get_world().spawn_actor(
                 self.sensors[0][-1],
                 self._camera_transforms[6][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[6][1])
-
 
             if self.save_mode:
                 self.sensor_front = self._parent.get_world().spawn_actor(
@@ -1472,11 +1468,6 @@ class CameraManager(object):
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
 
-
-
-                    
-
-
                 # self.seg_front = self._parent.get_world().spawn_actor(
                 #     self.sensors[5][-1],
                 #     self._camera_transforms[0][0],
@@ -1507,7 +1498,6 @@ class CameraManager(object):
                 #     self._camera_transforms[5][0],
                 #     attach_to=self._parent,
                 #     attachment_type=self._camera_transforms[5][1])
-
 
                 self.sensor_lbc_ins = self._parent.get_world().spawn_actor(
                     self.bev_seg_bp,
@@ -1550,7 +1540,6 @@ class CameraManager(object):
                     self._camera_transforms[5][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[5][1])
-
 
                 # depth estimation sensor
                 self.depth_front = self._parent.get_world().spawn_actor(
@@ -1611,7 +1600,6 @@ class CameraManager(object):
                     lambda image: CameraManager._parse_image(weak_self, image, 'dvs'))
                 self.sensor_flow.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'flow'))
-
 
                 self.sensor_lbc_ins.listen(lambda image: CameraManager._parse_image(
                     weak_self, image, 'lbc_ins'))
@@ -1785,7 +1773,6 @@ class CameraManager(object):
             self.dvs = []
             self.flow = []
 
-
             self.front_depth = []
             self.right_depth = []
             self.left_depth = []
@@ -1804,7 +1791,7 @@ class CameraManager(object):
             #     fov_list.append(int(float(sensor.attributes['fov'])))
             # self.save_bbox(path, [self.top_seg ,self.front_seg ,self.right_seg ,self.left_seg  ,self.back_seg  ,self.back_right_seg,self.back_left_seg], width_list,height_list,fov_list)
             self.top_img = []
-            
+
             self.top_ins = []
             # self.front_seg = []
             # self.right_seg = []
@@ -1824,7 +1811,7 @@ class CameraManager(object):
             t_lidar.join()
             t_dvs.join()
             t_flow.join()
-            
+
             t_lbc_ins.join()
             t_ins_top.join()
             # t_seg_front.join()
@@ -2096,7 +2083,7 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path, c
 
     if not is_exist_all:
         w_all.writerow(['TIMESTAMP', 'TRACK_ID',
-                   'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
+                        'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
 
     actors = get_world.world.get_actors()
     town_map = get_world.world.get_map()
@@ -2113,7 +2100,7 @@ def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path, c
                 return
             elif get_world.finish:
                 print("trajectory collection finish")
-                return 
+                return
             # 25: the landing iter
             # 0.1s = 0.05000000074505806s * 2
             if (time_end - time_start) > 2/fps:
@@ -2153,7 +2140,7 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
     town_map = get_world.world.get_map()
     if not os.path.exists(stored_path + '/topology/'):
         os.mkdir(stored_path + '/topology/')
-    #with open(root + '/scenario_description.json') as f:
+    # with open(root + '/scenario_description.json') as f:
     #    data = json.load(f)
     time_start = time.time()
     fps = clock.get_fps()
@@ -2222,9 +2209,9 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
                             if (after_yaw < -360.0):
                                 after_yaw = after_yaw + 360.0
                             if (after_yaw > before_yaw):
-                                turn_direction = "right" # right
+                                turn_direction = "right"  # right
                             elif (after_yaw < before_yaw):
-                                turn_direction = "left" # left
+                                turn_direction = "left"  # left
                             distance = []
                             for t in range(len(before)):
                                 distance.append(after[t] - before[t])
@@ -2240,12 +2227,11 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
                             halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
                             halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
                             center_lane = np.vstack((center_lane, lane_c))
-                    #if data['traffic_light']:
+                    # if data['traffic_light']:
                     #    is_junction = True
                     lane_feature_ls.append(
                         [halluc_lane_1, halluc_lane_2, center_lane, turn_direction, is_traffic_control, is_junction, (i, j)])
-                np.save(stored_path + '/topology/' + str(scenario_id),
-                        np.array(lane_feature_ls))
+                np.save(stored_path + '/topology/' + str(scenario_id), np.array(lane_feature_ls, dtype=object))
 
                 # Other objects can also be plot in the graph
                 # with open(filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv', newline='') as csvfile:
@@ -2258,15 +2244,16 @@ def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock)
                     x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[
                         :, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
                     plt.plot(x_s, y_s, '--', color='gray')
-                    #x_c, y_c = np.vstack((features[2][:, :2], features[2][-1, 3:5]))[
+                    # x_c, y_c = np.vstack((features[2][:, :2], features[2][-1, 3:5]))[
                     #    :, 0], np.vstack((features[2][:, :2], features[2][-1, 3:5]))[:, 1]
                     #plt.plot(x_c, y_c, '--', color='gray')
                 plt.savefig(stored_path + '/topology/topology.png')
                 break
         print("topology collection finished")
-        return 
+        return
     except:
         print("topology collection error.")
+
 
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
@@ -2282,7 +2269,6 @@ def set_bp(blueprint, actor_id):
     if blueprint.has_attribute('is_invincible'):
         blueprint.set_attribute('is_invincible', 'true')
 
-
     # set the max speed
     # if blueprint.has_attribute('speed'):
     #     self.player_max_speed = float(
@@ -2294,7 +2280,7 @@ def set_bp(blueprint, actor_id):
     return blueprint
 
 
-def save_description(world, args, stored_path, weather,agents_dict, nearest_obstacle):
+def save_description(world, args, stored_path, weather, agents_dict, nearest_obstacle):
     vehicles = world.world.get_actors().filter('vehicle.*')
     peds = world.world.get_actors().filter('walker.*')
     d = dict()
@@ -2305,79 +2291,186 @@ def save_description(world, args, stored_path, weather,agents_dict, nearest_obst
     d['random_actors'] = args.random_actors
     d['simulation_time'] = int(world.hud.simulation_time)
     d['nearest_obstacle'] = nearest_obstacle
-    
+
     for key in agents_dict:
         d[key] = agents_dict[key].id
 
     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
-        json.dump(d, f)
+        json.dump(d, f, indent=4)
 
 
-def write_actor_list(world,stored_path):
+def write_actor_list(world, stored_path):
 
-    def write_row(writer,actors,filter_str,class_id,min_id,max_id):
+    def write_row(writer, actors, filter_str, class_id, min_id, max_id):
         filter_actors = actors.filter(filter_str)
         for actor in filter_actors:
             if actor.id < min_id:
                 min_id = actor.id
             if actor.id > max_id:
                 max_id = actor.id
-            writer.writerow([actor.id,class_id,actor.type_id])
-        return min_id,max_id
-    
-    filter_ = ['walker.*','vehicle.*','static.prop.streetbarrier*',
-            'static.prop.trafficcone*','static.prop.trafficwarning*']
-    id_ = [4,10,20,20,20]
+            writer.writerow([actor.id, class_id, actor.type_id])
+        return min_id, max_id
+
+    filter_ = ['walker.*', 'vehicle.*', 'static.prop.streetbarrier*',
+               'static.prop.trafficcone*', 'static.prop.trafficwarning*']
+    id_ = [4, 10, 20, 20, 20]
     actors = world.world.get_actors()
     min_id = int(1e7)
     max_id = int(0)
     with open(stored_path+'/actor_list.csv', 'w') as f:
         writer = csv.writer(f)
         # write the header
-        writer.writerow(['Actor_ID','Class','Blueprint'])
-        for filter_str,class_id in zip(filter_,id_):
-            min_id, max_id = write_row(writer,actors,filter_str,class_id,min_id,max_id)
-        print('min id: {}, max id: {}'.format(min_id,max_id))
-    return min_id,max_id
+        writer.writerow(['Actor_ID', 'Class', 'Blueprint'])
+        for filter_str, class_id in zip(filter_, id_):
+            min_id, max_id = write_row(writer, actors, filter_str, class_id, min_id, max_id)
+        print('min id: {}, max id: {}'.format(min_id, max_id))
+    return min_id, max_id
 
-def generate_obstacle(world, bp, path, ego_transform):
-    f = open(path, 'r')
-    lines = f.readlines()
-    f.close()
+
+def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
+
+    """
+        stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'    
+    """
+    
+    obstacle_list = json.load(open(src_path))
+    
     min_dis = float('Inf')
     nearest_obstacle = -1
-    
-    if lines[0][:6] == 'static':
-        for line in lines:
-            obstacle_name = line.split('\t')[0]
-            transform = line.split('\t')[1]
-            # print(obstacle_name, " ", transform)
-            # exec("obstacle_actor = world.spawn_actor(bp.filter(obstacle_name)[0], %s)" % transform)
 
-            x = float(transform.split('x=')[1].split(',')[0])
-            y = float(transform.split('y=')[1].split(',')[0])
-            z = float(transform.split('z=')[1].split(')')[0])
-            pitch = float(transform.split('pitch=')[1].split(',')[0])
-            yaw = float(transform.split('yaw=')[1].split(',')[0])
-            roll = float(transform.split('roll=')[1].split(')')[0])
+    for obstacle_attr in obstacle_list:
 
-            obstacle_loc = carla.Location(x, y, z)
-            obstacle_rot = carla.Rotation(pitch, yaw, roll)
-            obstacle_trans = carla.Transform(obstacle_loc, obstacle_rot)
+        """
+            obstacle_attr = {"obstacle_type": actor.type_id,
+                            "basic_id": actor.id,
+                            "location": new_trans.location.__dict__,
+                            "rotation": new_trans.rotation.__dict__}
+        """
 
+        obstacle_name = obstacle_attr["obstacle_type"]
+        location = obstacle_attr["location"]
+        rotation = obstacle_attr["rotation"]
+
+        x = float(location["x"])
+        y = float(location["y"])
+        z = float(location["z"])
+        pitch = float(rotation["pitch"])
+        yaw = float(rotation["yaw"])
+        roll = float(rotation["roll"])
+
+        obstacle_loc = carla.Location(x, y, z)
+        obstacle_rot = carla.Rotation(pitch, yaw, roll)
+        obstacle_trans = carla.Transform(obstacle_loc, obstacle_rot)
+
+        if "static" in obstacle_name:
             obstacle_actor = world.spawn_actor(bp.filter(obstacle_name)[0], obstacle_trans)
 
-            dis = ego_transform.location.distance(obstacle_loc)
-            if dis < min_dis:
-                nearest_obstacle = obstacle_actor.id
-                min_dis = dis
-
+        dis = ego_transform.location.distance(obstacle_loc)
+        if dis < min_dis:
+            nearest_obstacle = obstacle_actor.id
+            min_dis = dis
+        
+        obstacle_attr["id"] = obstacle_actor.id
+    
+    with open(os.path.join(stored_path, "obstacle_info.json"), "w")as f:
+        json.dump(obstacle_list, f, indent=4)
+    
     return nearest_obstacle
+
+
+def save_all_actor_state(actor_list, stored_path, frame, ego_id=-1):
+    """
+        actor_list  : carla.ActorList
+        stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'
+        frame       : current frame no.
+        ego_id(int) : ego id
+    """
+
+    def get_xyz(method, rotation=False):
+
+        if rotation:
+            roll = method.roll
+            pitch = method.pitch
+            yaw = method.yaw
+            return {"pitch": pitch, "yaw": yaw, "roll": roll}
+
+        else:
+            x = method.x
+            y = method.y
+            z = method.z
+
+            # return x, y, z
+            return {"x": x, "y": y, "z": z}
+
+    json_path = os.path.join(stored_path, "actor_state")
+    if not os.path.exists(json_path):
+        os.makedirs(json_path)
+
+
+    all_actor_state_list = list()
+    ego_loc = actor_list.find(ego_id).get_location()
+
+    for actor in actor_list:
+        state_dict = {}
+
+        actor_id = actor.id
+        type_id = actor.type_id
+        semantic_tags = actor.semantic_tags
+        attributes = actor.attributes
+
+        actor_loc = actor.get_location()
+
+        location = get_xyz(actor_loc)
+        rotation = get_xyz(actor.get_transform().rotation, True)
+
+        if "vehicle" in type_id or "pedestrian" in type_id:
+            acceleration = get_xyz(actor.get_acceleration())
+            velocity = get_xyz(actor.get_velocity())
+            angular_velocity = get_xyz(actor.get_angular_velocity())
+            bbox = actor.bounding_box
+            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
+                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
+        
+            if "vehicle" in type_id:
+                control = actor.get_control().__dict__
+            elif "pedestrian" in type_id:
+                walker_control = actor.get_control()
+                control = {"direction": get_xyz(walker_control.direction),
+                        "speed": walker_control.speed, "jump": walker_control.jump}
+        else:
+            acceleration = {}
+            velocity = {}
+            angular_velocity = {}
+            bounding_box = {}
+            control = {}
+
+        distance = ego_loc.distance(actor_loc)
+
+        state_dict = {"id": actor_id,
+                      "type_id": type_id,
+                      "semantic_tags": semantic_tags,
+                      "attributes": attributes,
+                      "location": location,
+                      "rotation": rotation,
+                      "acceleration": acceleration,
+                      "velocity": velocity,
+                      "angular_velocity": angular_velocity,
+                      "distance": distance,
+                      "bounding_box": bounding_box,
+                      "control": control}
+
+        all_actor_state_list.append(state_dict)
+
+    json_path = os.path.join(json_path, f"{int(frame):08d}.json")
+
+    with open(json_path, "w") as f:
+        json.dump(all_actor_state_list, f, indent=4)
+
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
-import cv2
+
 
 def game_loop(args):
     pygame.init()
@@ -2386,7 +2479,7 @@ def game_loop(args):
 
     path = os.path.join('data_collection', args.scenario_type, args.scenario_id)
 
-    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 20,  (1280, 720) )
+    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
 
     filter_dict = {}
     try:
@@ -2413,13 +2506,15 @@ def game_loop(args):
         if 'pedestrian' in filter:
             ped_control_dict[actor_id] = read_ped_control(
                 os.path.join(path, 'ped_control', actor_id + '.npy'))
-    # num_files = len(filter_dict)
     abandon_scenario = False
-    # stored_path = None
     scenario_name = None
+
+    vehicles_list = []
+    all_id = []
 
     try:
         client = carla.Client(args.host, args.port)
+
         client.set_timeout(10.0)
         display = pygame.display.set_mode(
             (args.width, args.height),
@@ -2431,9 +2526,10 @@ def game_loop(args):
 
         weather = args.weather
         exec("args.weather = carla.WeatherParameters.%s" % args.weather)
-        stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id, weather + "_" + args.random_actors + "_")
+        stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id,
+                                   weather + "_" + args.random_actors + "_")
         print(stored_path)
-        if not os.path.exists(stored_path) :
+        if not os.path.exists(stored_path):
             os.makedirs(stored_path)
         world = World(client.load_world(args.map),
                       filter_dict['player'], hud, args, stored_path)
@@ -2456,13 +2552,13 @@ def game_loop(args):
         # for l in actors:
         #     if 5 in l.semantic_tags and 18 in l.semantic_tags:
         #         lights.append(l)
-        
+
         lights = []
         actors = world.world.get_actors().filter('traffic.traffic_light*')
         for l in actors:
             lights.append(l)
         light_dict, light_transform_dict = read_traffic_lights(path, lights)
-        
+
         clock = pygame.time.Clock()
 
         agents_dict = {}
@@ -2475,21 +2571,19 @@ def game_loop(args):
         ego_transform.location.z += 3
         world.player.set_transform(ego_transform)
         agents_dict['player'] = world.player
-        
 
         # generate obstacles and calculate the distance between ego-car and nearest obstacle
         min_dis = float('Inf')
         nearest_obstacle = -1
         if args.scenario_type == 'obstacle':
             nearest_obstacle = generate_obstacle(client.get_world(), blueprint_library,
-                              path+"/obstacle/obstacle_list.txt", ego_transform)
-
+                                                 path+"/obstacle/obstacle_list.json", ego_transform, stored_path)
 
         # set controller
         for actor_id, bp in filter_dict.items():
             if actor_id != 'player':
                 transform_spawn = transform_dict[actor_id][0]
-                
+
                 while True:
                     try:
                         agents_dict[actor_id] = client.get_world().spawn_actor(
@@ -2512,7 +2606,7 @@ def game_loop(args):
 
             if 'vehicle' in bp:
                 controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
-                                                                    max_throttle=1.0, max_brake=1.0, max_steering=1.0)
+                                                                 max_throttle=1.0, max_brake=1.0, max_steering=1.0)
                 try:
                     agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
                 except:
@@ -2525,21 +2619,19 @@ def game_loop(args):
         root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
         scenario_name = str(weather) + '_'
 
-        vehicles_list = []
-        all_id = None 
         if args.random_actors != 'none':
-            if args.random_actors == 'pedestrian':  #only pedestrian
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.0,
-                                   pedestrian=40 , transform_dict=transform_dict)
+            if args.random_actors == 'pedestrian':  # only pedestrian
+                vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.0,
+                                                                       pedestrian=40, transform_dict=transform_dict)
             elif args.random_actors == 'low':
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.3,
-                                   pedestrian=20 , transform_dict=transform_dict)
+                vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.3,
+                                                                       pedestrian=20, transform_dict=transform_dict)
             elif args.random_actors == 'mid':
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.6,
-                                   pedestrian=40, transform_dict=transform_dict)
+                vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.6,
+                                                                       pedestrian=40, transform_dict=transform_dict)
             elif args.random_actors == 'high':
-                vehicles_list, all_actors,all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.8,
-                                   pedestrian=80, transform_dict=transform_dict)
+                vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, distance=100, v_ratio=0.8,
+                                                                       pedestrian=80, transform_dict=transform_dict)
         scenario_name = scenario_name + args.random_actors + '_'
 
         if not args.no_save:
@@ -2563,11 +2655,11 @@ def game_loop(args):
             print(world.rss_sensor)
             world.rss_sensor.stored_path = stored_path
         # write actor list
-        min_id, max_id = write_actor_list(world,stored_path)
-        if max_id-min_id>=65535:
+        min_id, max_id = write_actor_list(world, stored_path)
+        if max_id-min_id >= 65535:
             print('Actor id error. Abandom.')
             abandon_scenario = True
-            raise 
+            raise
         iter_tick = 0
         iter_start = 25
         iter_toggle = 50
@@ -2578,9 +2670,9 @@ def game_loop(args):
         is_exist = os.path.isfile(filepath)
         f = open(filepath, 'w')
         w = csv.writer(f)
-        #if not is_exist:
+        # if not is_exist:
         w.writerow(['FRAME', 'TRACK_ID',
-                                'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
+                    'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
         while (1):
             clock.tick_busy_loop(40)
             frame = world.world.tick()
@@ -2591,9 +2683,9 @@ def game_loop(args):
                     world.player, world.world, light_transform_dict)
                 annotate = annotate_trafficlight_in_group(
                     ref_light, lights, world.world)
-            
+
             elif iter_tick > iter_start:
-                                
+
                 # iterate actors
                 for actor_id, _ in filter_dict.items():
                     # apply recorded location and velocity on the controller
@@ -2611,7 +2703,8 @@ def game_loop(args):
                             target_speed = (velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6
                             waypoint = transform_dict[actor_id][actor_transform_index[actor_id]]
 
-                            agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(target_speed, waypoint))                            
+                            agents_dict[actor_id].apply_control(
+                                controller_dict[actor_id].run_step(target_speed, waypoint))
                             # agents_dict[actor_id].apply_control(controller_dict[actor_id].run_step(
                             #     (velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6, transform_dict[actor_id][actor_transform_index[actor_id]]))
 
@@ -2632,11 +2725,10 @@ def game_loop(args):
 
                             if actor_id == 'player':
                                 w.writerow(
-                                        [frame, actor_id, 'AGENT', str(x), str(y), args.map])
+                                    [frame, actor_id, 'AGENT', str(x), str(y), args.map])
                             elif actor_id != 'player':
                                 w.writerow(
-                                        [frame, actor_id, 'actor.vehicle', str(x), str(y), args.map])
-                                
+                                    [frame, actor_id, 'actor.vehicle', str(x), str(y), args.map])
 
                         elif 'pedestrian' in filter_dict[actor_id]:
                             agents_dict[actor_id].apply_control(
@@ -2644,14 +2736,16 @@ def game_loop(args):
                             actor_transform_index[actor_id] += 1
 
                             w.writerow(
-                                    [frame, actor_id, 'actor.pedestrian', str(x), str(y), args.map])
+                                [frame, actor_id, 'actor.pedestrian', str(x), str(y), args.map])
                     else:
                         finish[actor_id] = True
 
                         # elif actor_id == 'player':
                         #     scenario_finished = True
                         #     break
+
                 for actor in actors:
+
                     if actor_transform_index['player'] < len(transform_dict[actor_id]):
                         if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
                             x = actor.get_location().x
@@ -2659,10 +2753,13 @@ def game_loop(args):
                             id = actor.id
                             if actor.type_id[0:7] == 'vehicle':
                                 w.writerow(
-                                        [frame, id, 'vehicle', str(x), str(y), args.map])
+                                    [frame, id, 'vehicle', str(x), str(y), args.map])
                             elif actor.type_id[0:6] == 'walker':
                                 w.writerow(
-                                        [frame, id, 'pedestrian', str(x), str(y), args.map])
+                                    [frame, id, 'pedestrian', str(x), str(y), args.map])
+
+                save_all_actor_state(actors, stored_path, frame, ego_id=int(agents_dict['player'].id))
+
                 if not False in finish.values():
                     break
 
@@ -2692,12 +2789,13 @@ def game_loop(args):
                         world, world.player, args.scenario_id, half_period, root, stored_path, clock))
                     topo_col.start()
                     # start recording .log file
-                    print("Recording on file: %s" % client.start_recorder(os.path.join(os.path.abspath(os.getcwd()), stored_path, 'recording.log'),True))
+                    print("Recording on file: %s" % client.start_recorder(os.path.join(
+                        os.path.abspath(os.getcwd()), stored_path, 'recording.log'), True))
             elif iter_tick > iter_toggle:
                 pygame.image.save(display, "screenshot.jpeg")
                 image = cv2.imread("screenshot.jpeg")
                 out.write(image)
-                    
+
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
@@ -2713,18 +2811,18 @@ def game_loop(args):
         if traj_col:
             traj_col.join()
             topo_col.join()
-    
-    # except Exception as e:
-    #     print("Exception occured.")
-    #     print(e)
-    
+
+    except Exception as e:
+        print("Exception occured.")
+        print(e)
+
     finally:
         # to save a top view video
         out.release()
         print('Closing...')
         if not args.no_save:
-            client.stop_recorder() # end recording
-        
+            client.stop_recorder()  # end recording
+
         if (world and world.recording_enabled):
             client.stop_recorder()
 
@@ -2742,7 +2840,7 @@ def game_loop(args):
 
         if world is not None:
             world.destroy()
-        
+
         if not args.no_save and not abandon_scenario:
             stored_path = os.path.join(root, scenario_name)
             finish_tag = open(stored_path+'/finish.txt', 'w')
@@ -2787,8 +2885,8 @@ def main():
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
-        default='1280x720',
-        help='window resolution (default: 1280x720)')
+        default='640x360',
+        help='window resolution (default: 640x360)')
     argparser.add_argument(
         '--filter',
         metavar='PATTERN',
