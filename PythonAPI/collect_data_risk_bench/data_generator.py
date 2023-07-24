@@ -2154,15 +2154,15 @@ class Data_Collection():
         # self.depth_rear = []
         # self.depth_rear_left = []
         # self.depth_rear_right = []
-        
         self.sensor_lidar = []
-
-
-        # self.data_list = []
-        # self.frame_list = []
-
-        # self.sensor_data_list = []
-        # self.ego_list = []
+        
+        self.frame_list = []
+        self.data_list = []
+        self.sensor_data_list = []
+        self.ego_list = []
+        
+        self.id_list = []
+        
         
     def set_start_frame(self, frame):
         self.start_frame = frame
@@ -2257,11 +2257,267 @@ class Data_Collection():
 
             
         # store all actor 
+        self.frame_list.append(frame)
+        
+        self.sensor_data_list.append(self.collect_camera_data(world))
+
+        data, ego_id, vehicle_ids, pedestrian_ids, traffic_light_ids = self.collect_actor_data(world)
+
+        ids = {'ego_id': ego_id, "vehicle_ids" : vehicle_ids, "pedestrian_ids" : pedestrian_ids, "traffic_light_ids" : traffic_light_ids }
+        
+        self.id_list.append(ids)
+        self.data_list.append(data)
+        self.ego_list.append(self.get_ego_data(world))
         
         # 
+    def get_ego_data(self, world):
+        v = world.player.get_velocity()
+        c = world.player.get_control()
+        t = world.player.get_transform()
+
+        data = {}
+        data['x'] = t.location.x
+        data['y'] = t.location.y
+        data['z'] = t.location.z
+
+        data['pitch'] = t.rotation.pitch
+        data['yaw'] =  t.rotation.yaw
+        data['roll']=  t.rotation.roll
+
+        data['throttle'] = c.throttle
+        data['steer'] = c.steer
+        data['brake'] = c.brake
+
+        return data
+
+   
+    def collect_actor_data(self, world):
+
+        ego_id = world.player.id
+        vehicle_ids = []
+        pedestrian_ids = []
+        traffic_light_ids = []
+        data = {}    
+        vehicles = world.world.get_actors().filter("*vehicle*")
+        for actor in vehicles:
+            loc = actor.get_location()
+            if loc.distance(world.player.get_location()) > 50:
+                continue
+            _id = actor.id
+
+            vehicle_ids.append(_id)
+
+            data[_id] = {}
+            data[_id]["loc"] = [loc.x, loc.y, loc.z]
+            ori = actor.get_transform().rotation.get_forward_vector()
+            data[_id]["ori"] = [ori.x, ori.y, ori.z]
+            box = actor.bounding_box.extent
+            data[_id]["box"] = [box.x, box.y]
+            vel = actor.get_velocity()
+            data[_id]["vel"] = [vel.x, vel.y, vel.z]
+            
+            vehicle_transform = actor.get_transform()
+            vehicle_control   = actor.get_control()
+            vehicle_velocity  = actor.get_velocity()
+            vehicle_speed = self._get_forward_speed(transform=vehicle_transform, velocity=vehicle_velocity) # In m/s
+            vehicle_brake = vehicle_control.brake
+
+            data[_id]["speed"] =  vehicle_speed, 
+            data[_id]["brake"] =  vehicle_brake,
+
+            bb = actor.bounding_box
+            verts = [v for v in bb.get_world_vertices(actor.get_transform())]
+            
+            counter = 0
+            for loc in verts:
+                data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+
+            data[_id]["tpe"] = "vehicle" # 0
+
+        # walkers = world.world.get_actors().filter("*walker*")
+        # pedestrian
+        walkers = world.world.get_actors().filter("*pedestrian*")
+        for actor in walkers:
+            loc = actor.get_location()
+            if loc.distance(world.player.get_location()) > 50:
+                continue
+            _id = actor.id
+            pedestrian_ids.append(_id)
+
+            data[_id] = {}
+            data[_id]["loc"] = [loc.x, loc.y, loc.z]
+            ori = actor.get_transform().rotation.get_forward_vector()
+            data[_id]["ori"] = [ori.x, ori.y, ori.z]
+            box = actor.bounding_box.extent
+            data[_id]["box"] = [box.x, box.y]
+            vel = actor.get_velocity()
+            data[_id]["vel"] = [vel.x, vel.y, vel.z]
+
+            bb = actor.bounding_box
+            verts = [v for v in bb.get_world_vertices(actor.get_transform())]
+            
+            counter = 0
+            for loc in verts:
+                data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+
+            data[_id]["tpe"] = 'walker' #1
+
+        lights = world.world.get_actors().filter("*traffic_light*")
+        for actor in lights:
+            loc = actor.get_location()
+            if loc.distance(world.player.get_location()) > 70:
+                continue
+            _id = actor.id
+            traffic_light_ids.append(_id)
+
+            data[_id] = {}
+            data[_id]["loc"] = [loc.x, loc.y, loc.z]
+            ori = actor.get_transform().rotation.get_forward_vector()
+            data[_id]["ori"] = [ori.x, ori.y, ori.z]
+            vel = actor.get_velocity()
+            data[_id]["sta"] = int(actor.state) # traffic light state 
+            trigger = actor.trigger_volume
+            box = trigger.extent
+            loc = trigger.location
+            ori = trigger.rotation.get_forward_vector()
+            data[_id]["taigger_loc"] = [loc.x, loc.y, loc.z]
+            data[_id]["trigger_ori"] = [ori.x, ori.y, ori.z]
+            data[_id]["trigger_box"] = [box.x, box.y]
+
+            data[_id]["tpe"] = "traffic_light" # 2
+
+        return data, ego_id, vehicle_ids, pedestrian_ids, traffic_light_ids
+
+   
+    def collect_camera_data(self, world):
+
+        data = {}
+        intrinsic = np.identity(3)
+        intrinsic[0, 2] = 960 / 2.0
+        intrinsic[1, 2] = 480 / 2.0
+        intrinsic[0, 0] = intrinsic[1, 1] = 960 / (
+            2.0 * np.tan(60 * np.pi / 360.0)
+        )
+        data["front"] = {}
+        data["front"]["extrinsic"] = world.camera_manager.sensor_rgb_front.get_transform().get_matrix()
+        data["front"]["intrinsic"] = intrinsic
+    
+        data["left"] = {}
+        data["left"]["extrinsic"] =  world.camera_manager.sensor_rgb_left.get_transform().get_matrix()
+        data["left"]["intrinsic"] = intrinsic
+
+        data["right"] = {}
+        data["right"]["extrinsic"] = world.camera_manager.sensor_rgb_right.get_transform().get_matrix()
+        data["right"]["intrinsic"] = intrinsic
         
+        data["rear"] = {}
+        data["rear"]["extrinsic"] = world.camera_manager.sensor_rgb_rear.get_transform().get_matrix()
+        data["rear"]["intrinsic"] = intrinsic
+
+        data["rear_left"] = {}
+        data["rear_left"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_left.get_transform().get_matrix()
+        data["rear_left"]["intrinsic"] = intrinsic
+    
+        data["rear_right"] = {}
+        data["rear_right"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_right.get_transform().get_matrix()
+        data["rear_right"]["intrinsic"] = intrinsic
+
+        return data 
+
+     
+
+    def save_json_data(self, frame_list, data_list, path, start_frame, end_frame, folder_name):
+
+        counter = 0
+
+        stored_path = os.path.join(path, folder_name) # "actors_data") # folder_name
+        if not os.path.exists(stored_path):
+            os.makedirs(stored_path)
+        for idx in range(len(frame_list) ):
+            frame = frame_list[idx]
+            data = data_list[idx]
+            if (frame > start_frame ) and  ( frame < end_frame ):
+                counter+=1
+                actors_data_file = stored_path + ("/%08d.json" % frame)
+                f = open(actors_data_file, "w")
+                json.dump(data, f, indent=4)
+                f.close()
+
+        print(folder_name +  " save finished. Total: ", counter)
+
+    def save_np_data(self, frame_list, data_list, path, start_frame, end_frame, folder_name):
+
+        counter = 0
+
+        stored_path = os.path.join(path, folder_name) # "actors_data") # folder_name
+        if not os.path.exists(stored_path):
+            os.makedirs(stored_path)
+        for idx in range(len(frame_list) ):
+            
+            frame = frame_list[idx]
+            data = data_list[idx]
+            if (frame > start_frame ) and  ( frame < end_frame ):
+                counter+=1
+                sensor_data_file = stored_path + ("/%08d.npy" % frame)
+                np.save( sensor_data_file, np.array(data))
+
+        print(folder_name + " save finished. Total: ", counter)
+
+    def save_img(self, img_list, sensor, path, start_frame, end_frame ,view='top'):
+
+        sensors = [
+            ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
+            ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
+            ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
+            ['sensor.camera.depth', cc.LogarithmicDepth,
+                'Camera Depth (Logarithmic Gray Scale)', {}],
+            ['sensor.camera.semantic_segmentation', cc.Raw,
+                'Camera Semantic Segmentation (Raw)', {}],
+            ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
+                'Camera Semantic Segmentation (CityScapes Palette)', {}],
+            ['sensor.lidar.ray_cast', None,
+                'Lidar (Ray-Cast)', {'range': '85', 'rotation_frequency': '25'}],
+            ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
+            ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
+            ['sensor.other.lane_invasion', None, 'Lane lane_invasion', {}],
+            ['sensor.camera.instance_segmentation', cc.CityScapesPalette,
+                'Camera Instance Segmentation (CityScapes Palette)', {}],
+        ]
+
+
+        modality = sensors[sensor][0].split('.')[-1]
+        counter = 0
+        for img in img_list:
+            if (img.frame % 1 == 0) and (img.frame > start_frame ) and  ( img.frame < end_frame ):
+                
+                counter+=1
+                if 'seg' in view:
+                    img.save_to_disk(
+                        '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.CityScapesPalette)
+                elif 'depth' in view:
+                    img.save_to_disk(
+                        '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.LogarithmicDepth)
+                elif 'flow' in view:
+                    frame = img.frame
+                    img = img.get_color_coded_flow()
+                    array = np.frombuffer(
+                        img.raw_data, dtype=np.dtype("uint8"))
+                    array = np.reshape(array, (img.height, img.width, 4))
+                    array = array[:, :, :3]
+                    array = array[:, :, ::-1]
+                    stored_path = os.path.join(path, modality, view)
+                    if not os.path.exists(stored_path):
+                        os.makedirs(stored_path)
+                    np.save('%s/%08d' % (stored_path, frame), array)
+                else:
+                    img.save_to_disk('%s/%s/%s/%08d' %
+                                     (path, modality, view, img.frame))
+        print("%s %s save finished. Total: %d" % (sensors[sensor][2], view, counter))
     
     
+   
     def save_data(self, path):
         t_rgb_front = Process(target=self.save_img, args=(self.rgb_front, 0, path, self.start_frame, self.end_frame, 'rgb_front'))
         t_rgb_left = Process(target=self.save_img, args=(self.rgb_left, 0, path, self.start_frame, self.end_frame, 'rgb_left'))
@@ -2392,101 +2648,6 @@ class Data_Collection():
         # self.sensor_data_list = []
         # self.ego_list = []
 
-
-    def save_json_data(self, frame_list, data_list, path, start_frame, end_frame, folder_name):
-
-        counter = 0
-
-        stored_path = os.path.join(path, folder_name) # "actors_data") # folder_name
-        if not os.path.exists(stored_path):
-            os.makedirs(stored_path)
-        for idx in range(len(frame_list) ):
-            frame = frame_list[idx]
-            data = data_list[idx]
-            if (frame > start_frame ) and  ( frame < end_frame ):
-                counter+=1
-                actors_data_file = stored_path + ("/%08d.json" % frame)
-                f = open(actors_data_file, "w")
-                json.dump(data, f, indent=4)
-                f.close()
-
-        print(folder_name +  " save finished. Total: ", counter)
-
-
-
-    def save_np_data(self, frame_list, data_list, path, start_frame, end_frame, folder_name):
-
-        counter = 0
-
-        stored_path = os.path.join(path, folder_name) # "actors_data") # folder_name
-        if not os.path.exists(stored_path):
-            os.makedirs(stored_path)
-        for idx in range(len(frame_list) ):
-            
-            frame = frame_list[idx]
-            data = data_list[idx]
-            if (frame > start_frame ) and  ( frame < end_frame ):
-                counter+=1
-                sensor_data_file = stored_path + ("/%08d.npy" % frame)
-                np.save( sensor_data_file, np.array(data))
-
-        print(folder_name + " save finished. Total: ", counter)
-
-
-
-    def save_img(self, img_list, sensor, path, start_frame, end_frame ,view='top'):
-
-        sensors = [
-            ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
-            ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
-            ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
-            ['sensor.camera.depth', cc.LogarithmicDepth,
-                'Camera Depth (Logarithmic Gray Scale)', {}],
-            ['sensor.camera.semantic_segmentation', cc.Raw,
-                'Camera Semantic Segmentation (Raw)', {}],
-            ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
-                'Camera Semantic Segmentation (CityScapes Palette)', {}],
-            ['sensor.lidar.ray_cast', None,
-                'Lidar (Ray-Cast)', {'range': '85', 'rotation_frequency': '25'}],
-            ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
-            ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
-            ['sensor.other.lane_invasion', None, 'Lane lane_invasion', {}],
-            ['sensor.camera.instance_segmentation', cc.CityScapesPalette,
-                'Camera Instance Segmentation (CityScapes Palette)', {}],
-        ]
-
-
-        modality = sensors[sensor][0].split('.')[-1]
-        counter = 0
-        for img in img_list:
-            if (img.frame % 1 == 0) and (img.frame > start_frame ) and  ( img.frame < end_frame ):
-                
-                counter+=1
-                if 'seg' in view:
-                    img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.CityScapesPalette)
-                elif 'depth' in view:
-                    img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, img.frame), cc.LogarithmicDepth)
-                elif 'flow' in view:
-                    frame = img.frame
-                    img = img.get_color_coded_flow()
-                    array = np.frombuffer(
-                        img.raw_data, dtype=np.dtype("uint8"))
-                    array = np.reshape(array, (img.height, img.width, 4))
-                    array = array[:, :, :3]
-                    array = array[:, :, ::-1]
-                    stored_path = os.path.join(path, modality, view)
-                    if not os.path.exists(stored_path):
-                        os.makedirs(stored_path)
-                    np.save('%s/%08d' % (stored_path, frame), array)
-                else:
-                    img.save_to_disk('%s/%s/%s/%08d' %
-                                     (path, modality, view, img.frame))
-        print("%s %s save finished. Total: %d" % (sensors[sensor][2], view, counter))
-    
-    
-        
                     
 
 
@@ -2654,10 +2815,10 @@ def game_loop(args):
                                                                     pedestrian=20, transform_dict=transform_dict)
         elif args.random_actors == 'mid':
             vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, seeds,  distance=100, v_ratio=0.6,
-                                                                    pedestrian=25, transform_dict=transform_dict)
+                                                                    pedestrian=35, transform_dict=transform_dict)
         elif args.random_actors == 'high':
             vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, seeds,  distance=100, v_ratio=0.8,
-                                                                    pedestrian=35, transform_dict=transform_dict)
+                                                                    pedestrian=50, transform_dict=transform_dict)
     scenario_name = scenario_name + args.random_actors + '_'
 
     # if not args.no_save:
@@ -2682,11 +2843,11 @@ def game_loop(args):
 
 
     # write actor list
-    min_id, max_id = write_actor_list(world, stored_path)
-    if max_id-min_id >= 65535:
-        print('Actor id error. Abandom.')
-        abandon_scenario = True
-        raise
+    # min_id, max_id = write_actor_list(world, stored_path)
+    # if max_id-min_id >= 65535:
+    #     print('Actor id error. Abandom.')
+    #     abandon_scenario = True
+    #     raise
     
     iter_tick = 0
     iter_start = 25
@@ -2985,7 +3146,7 @@ def main():
     argparser.add_argument(
         '--random_actors',
         type=str,
-        default='low', # 'none',
+        default='high', # 'none',
         choices=['none', 'pedestrian', 'low', 'mid', 'high'],
         help='enable roaming actors')
     argparser.add_argument(
