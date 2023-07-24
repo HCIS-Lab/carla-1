@@ -1721,79 +1721,6 @@ def control_with_trasform_controller(controller, transform):
     #         new_obj.destroy()
 
 
-def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path, clock):
-    if not os.path.exists(stored_path + '/trajectory/'):
-        os.mkdir(stored_path + '/trajectory/')
-    filepath = stored_path + '/trajectory/' + str(scenario_id) + '.csv'
-    is_exist = os.path.isfile(filepath)
-    f = open(filepath, 'w')
-    w = csv.writer(f)
-
-    filepath_all = stored_path + '/trajectory/' + str(scenario_id) + '_all.csv'
-    is_exist_all = os.path.isfile(filepath_all)
-    f_all = open(filepath_all, 'w')
-    w_all = csv.writer(f_all)
-
-    if not is_exist:
-        w.writerow(['TIMESTAMP', 'TRACK_ID',
-                   'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
-
-    if not is_exist_all:
-        w_all.writerow(['TIMESTAMP', 'TRACK_ID',
-                        'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
-
-    actors = get_world.world.get_actors()
-    town_map = get_world.world.get_map()
-    agent_id = agent.id
-    period_start = 0
-    fps = clock.get_fps()
-    record_time = 0
-    time_start = time.time()
-    try:
-        while True:
-            time_end = time.time()
-            if get_world.abandon_scenario:
-                print('Abandom, killing thread.')
-                return
-            elif get_world.finish:
-                print("trajectory collection finish")
-                return
-            # 25: the landing iter
-            # 0.1s = 0.05000000074505806s * 2
-            if (time_end - time_start) > 2/fps:
-                period_start += 0.1 * fps
-                record_time += 0.1
-                time_start = time.time()
-                for actor in actors:
-                    if agent_id == actor.id:
-                        agent = actor
-                    if agent.get_location().x == 0 and agent.get_location().y == 0:
-                        return True
-                    if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
-                        x = actor.get_location().x
-                        y = actor.get_location().y
-                        id = actor.id
-                        if x == agent.get_location().x and y == agent.get_location().y:
-                            w.writerow(
-                                [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
-                            w_all.writerow(
-                                [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
-                        else:
-                            if actor.type_id[0:7] == 'vehicle':
-                                w_all.writerow(
-                                    [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
-                            if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
-                                if actor.type_id[0:7] == 'vehicle':
-                                    w.writerow(
-                                        [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
-                                elif actor.type_id[0:6] == 'walker':
-                                    w.writerow(
-                                        [record_time - 0.1, id, 'walker', str(x), str(y), town_map.name.split('/')[2]])
-    except:
-        print("trajectory collection error")
-
-
-
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
     blueprint.set_attribute('role_name', 'tp')
@@ -2150,6 +2077,7 @@ class Data_Collection():
         self.ego_list.append(self.get_ego_data(world))
         
         # 
+        self.collect_topology(world)
     
     def get_ego_data(self, world):
         v = world.player.get_velocity()
@@ -2171,124 +2099,100 @@ class Data_Collection():
 
         return data
 
-    def collect_topology(get_world, agent, scenario_id, t, root, stored_path, clock):
-        # town_map = get_world.world.get_map()
-        # if not os.path.exists(stored_path + '/topology/'):
-        #     os.mkdir(stored_path + '/topology/')
-        # # with open(root + '/scenario_description.json') as f:
-        # #    data = json.load(f)
-        # time_start = time.time()
-        # fps = clock.get_fps()
-        # try:
-        #     while True:
-        #         if get_world.abandon_scenario:
-        #             print('Abandom, killing thread.')
-        #             return
-        #         time_end = time.time()
-        #         if (time_end - time_start) > t * fps:         # t may need change
-        #             waypoint = town_map.get_waypoint(agent.get_location())
-        #             waypoint_list = town_map.generate_waypoints(2.0)
-        #             nearby_waypoint = []
-        #             roads = []
-        #             all = []
-        #             for wp in waypoint_list:
-        #                 dist_x = int(wp.transform.location.x) - \
-        #                     int(waypoint.transform.location.x)
-        #                 dist_y = int(wp.transform.location.y) - \
-        #                     int(waypoint.transform.location.y)
-        #                 if abs(dist_x) <= 37.5 and abs(dist_y) <= 37.5:
-        #                     nearby_waypoint.append(wp)
-        #                     roads.append((wp.road_id, wp.lane_id))
-        #             for wp in nearby_waypoint:
-        #                 for id in roads:
-        #                     if wp.road_id == id[0] and wp.lane_id == id[1]:
-        #                         all.append(((wp.road_id, wp.lane_id), wp))
-        #                         break
-        #             all = sorted(all, key=lambda s: s[0][1])
-        #             temp_d = {}
-        #             d = {}
-        #             for (i, j), wp in all:
-        #                 if (i, j) in temp_d:
-        #                     temp_d[(i, j)] += 1
-        #                 else:
-        #                     temp_d[(i, j)] = 1
-        #             for (i, j) in temp_d:
-        #                 if temp_d[(i, j)] != 1:
-        #                     d[(i, j)] = temp_d[(i, j)]
-        #             rotate_quat = np.array([[0.0, -1.0], [1.0, 0.0]])
-        #             lane_feature_ls = []
-        #             for i, j in d:
-        #                 halluc_lane_1, halluc_lane_2 = np.empty(
-        #                     (0, 3*2)), np.empty((0, 3*2))
-        #                 center_lane = np.empty((0, 3*2))
-        #                 is_traffic_control = False
-        #                 is_junction = False
-        #                 turn_direction = None
-        #                 for k in range(len(all)-1):
-        #                     if (i, j) == all[k][0] and (i, j) == all[k+1][0]:
-        #                         # may change & need traffic light
-        #                         if all[k][1].get_landmarks(50, False):
-        #                             is_traffic_control = True
-        #                         if all[k][1].is_junction:
-        #                             is_junction = True
-        #                         # -= norm center
-        #                         before = [all[k][1].transform.location.x,
-        #                                 all[k][1].transform.location.y]
-        #                         after = [all[k+1][1].transform.location.x,
-        #                                 all[k+1][1].transform.location.y]
-        #                         # transform.rotation.yaw can not be overwritten
-        #                         before_yaw = all[k][1].transform.rotation.yaw
-        #                         after_yaw = all[k+1][1].transform.rotation.yaw
-        #                         if (before_yaw < -360.0):
-        #                             before_yaw = before_yaw + 360.0
-        #                         if (after_yaw < -360.0):
-        #                             after_yaw = after_yaw + 360.0
-        #                         if (after_yaw > before_yaw):
-        #                             turn_direction = "right"  # right
-        #                         elif (after_yaw < before_yaw):
-        #                             turn_direction = "left"  # left
-        #                         distance = []
-        #                         for t in range(len(before)):
-        #                             distance.append(after[t] - before[t])
-        #                         np_distance = np.array(distance)
-        #                         norm = np.linalg.norm(np_distance)
-        #                         e1, e2 = rotate_quat @ np_distance / norm, rotate_quat.T @ np_distance / norm
-        #                         lane_1 = np.hstack((before + e1 * all[k][1].lane_width/2, all[k][1].transform.location.z,
-        #                                         after + e1 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
-        #                         lane_2 = np.hstack((before + e2 * all[k][1].lane_width/2, all[k][1].transform.location.z,
-        #                                         after + e2 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
-        #                         lane_c = np.hstack((before, all[k][1].transform.location.z,
-        #                                         after, all[k+1][1].transform.location.z))
-        #                         halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
-        #                         halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
-        #                         center_lane = np.vstack((center_lane, lane_c))
-        #                 # if data['traffic_light']:
-        #                 #    is_junction = True
-        #                 lane_feature_ls.append(
-        #                     [halluc_lane_1, halluc_lane_2, center_lane, turn_direction, is_traffic_control, is_junction, (i, j)])
-        #             np.save(stored_path + '/topology/' + str(scenario_id), np.array(lane_feature_ls, dtype=object))
-
-        #             # Other objects can also be plot in the graph
-        #             # with open(filepath + str(scenario_id) + '/' + str(scenario_id) + '.csv', newline='') as csvfile:
-        #             #    rows = csv.DictReader(csvfile)
-
-        #             for features in lane_feature_ls:
-        #                 xs, ys = np.vstack((features[0][:, :2], features[0][-1, 3:5]))[
-        #                     :, 0], np.vstack((features[0][:, :2], features[0][-1, 3:5]))[:, 1]
-        #                 plt.plot(xs, ys, '--', color='gray')
-        #                 x_s, y_s = np.vstack((features[1][:, :2], features[1][-1, 3:5]))[
-        #                     :, 0], np.vstack((features[1][:, :2], features[1][-1, 3:5]))[:, 1]
-        #                 plt.plot(x_s, y_s, '--', color='gray')
-        #                 # x_c, y_c = np.vstack((features[2][:, :2], features[2][-1, 3:5]))[
-        #                 #    :, 0], np.vstack((features[2][:, :2], features[2][-1, 3:5]))[:, 1]
-        #                 #plt.plot(x_c, y_c, '--', color='gray')
-        #             plt.savefig(stored_path + '/topology/topology.png')
-        #             break
-        #     print("topology collection finished")
-        #     return
-        # except:
-        #     print("topology collection error.")
-        pass
+    def collect_topology(get_world):
+        town_map = get_world.world.get_map()
+        lane_feature_ls = []
+        try:
+            while True:
+                if get_world.abandon_scenario:
+                    print('Abandom, killing thread.')
+                    return
+                waypoint = town_map.get_waypoint(get_world.player.get_location())
+                waypoint_list = town_map.generate_waypoints(2.0)
+                nearby_waypoint = []
+                roads = []
+                all = []
+                for wp in waypoint_list:
+                    dist_x = int(wp.transform.location.x) - \
+                        int(waypoint.transform.location.x)
+                    dist_y = int(wp.transform.location.y) - \
+                        int(waypoint.transform.location.y)
+                    if abs(dist_x) <= 37.5 and abs(dist_y) <= 37.5:
+                        nearby_waypoint.append(wp)
+                        roads.append((wp.road_id, wp.lane_id))
+                for wp in nearby_waypoint:
+                    for id in roads:
+                        if wp.road_id == id[0] and wp.lane_id == id[1]:
+                            all.append(((wp.road_id, wp.lane_id), wp))
+                            break
+                all = sorted(all, key=lambda s: s[0][1])
+                temp_d = {}
+                d = {}
+                for (i, j), wp in all:
+                    if (i, j) in temp_d:
+                        temp_d[(i, j)] += 1
+                    else:
+                        temp_d[(i, j)] = 1
+                for (i, j) in temp_d:
+                    if temp_d[(i, j)] != 1:
+                        d[(i, j)] = temp_d[(i, j)]
+                rotate_quat = np.array([[0.0, -1.0], [1.0, 0.0]])
+                for i, j in d:
+                    halluc_lane_1, halluc_lane_2 = np.empty(
+                        (0, 3*2)), np.empty((0, 3*2))
+                    center_lane = np.empty((0, 3*2))
+                    is_traffic_control = False
+                    is_junction = False
+                    turn_direction = None
+                    for k in range(len(all)-1):
+                        if (i, j) == all[k][0] and (i, j) == all[k+1][0]:
+                            # may change & need traffic light
+                            if all[k][1].get_landmarks(50, False):
+                                is_traffic_control = True
+                            if all[k][1].is_junction:
+                                is_junction = True
+                            # -= norm center
+                            before = [all[k][1].transform.location.x,
+                                    all[k][1].transform.location.y]
+                            after = [all[k+1][1].transform.location.x,
+                                    all[k+1][1].transform.location.y]
+                            # transform.rotation.yaw can not be overwritten
+                            before_yaw = all[k][1].transform.rotation.yaw
+                            after_yaw = all[k+1][1].transform.rotation.yaw
+                            if (before_yaw < -360.0):
+                                before_yaw = before_yaw + 360.0
+                            if (after_yaw < -360.0):
+                                after_yaw = after_yaw + 360.0
+                            if (after_yaw > before_yaw):
+                                turn_direction = "right"  # right
+                            elif (after_yaw < before_yaw):
+                                turn_direction = "left"  # left
+                            distance = []
+                            for t in range(len(before)):
+                                distance.append(after[t] - before[t])
+                            np_distance = np.array(distance)
+                            norm = np.linalg.norm(np_distance)
+                            e1, e2 = rotate_quat @ np_distance / norm, rotate_quat.T @ np_distance / norm
+                            lane_1 = np.hstack((before + e1 * all[k][1].lane_width/2, all[k][1].transform.location.z,
+                                            after + e1 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
+                            lane_2 = np.hstack((before + e2 * all[k][1].lane_width/2, all[k][1].transform.location.z,
+                                            after + e2 * all[k][1].lane_width/2, all[k+1][1].transform.location.z))
+                            lane_c = np.hstack((before, all[k][1].transform.location.z,
+                                            after, all[k+1][1].transform.location.z))
+                            halluc_lane_1 = np.vstack((halluc_lane_1, lane_1))
+                            halluc_lane_2 = np.vstack((halluc_lane_2, lane_2))
+                            center_lane = np.vstack((center_lane, lane_c))
+                        # if data['traffic_light']:
+                        #    is_junction = True
+                        lane_feature_ls.append(
+                            [halluc_lane_1, halluc_lane_2, center_lane, turn_direction, is_traffic_control, is_junction, (i, j)])
+                    #np.save(stored_path + '/topology/' + str(scenario_id), np.array(lane_feature_ls, dtype=object))
+                    print("topology collection finished")
+                    return lane_feature_ls
+                    #break
+        except:
+            print("topology collection error.")
+        
 
     def collect_actor_data(self, world):
 
