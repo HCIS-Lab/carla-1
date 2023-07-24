@@ -2390,7 +2390,15 @@ class Data_Collection():
 
         return data, ego_id, vehicle_ids, pedestrian_ids, traffic_light_ids
 
-   
+    def _get_forward_speed(self, transform, velocity):
+        """ Convert the vehicle transform directly to forward speed """
+
+        vel_np = np.array([velocity.x, velocity.y, velocity.z])
+        pitch = np.deg2rad(transform.rotation.pitch)
+        yaw = np.deg2rad(transform.rotation.yaw)
+        orientation = np.array([np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)])
+        speed = np.dot(vel_np, orientation)
+        return speed
     def collect_camera_data(self, world):
 
         data = {}
@@ -2412,17 +2420,17 @@ class Data_Collection():
         data["right"]["extrinsic"] = world.camera_manager.sensor_rgb_right.get_transform().get_matrix()
         data["right"]["intrinsic"] = intrinsic
         
-        data["rear"] = {}
-        data["rear"]["extrinsic"] = world.camera_manager.sensor_rgb_rear.get_transform().get_matrix()
-        data["rear"]["intrinsic"] = intrinsic
+        # data["rear"] = {}
+        # data["rear"]["extrinsic"] = world.camera_manager.sensor_rgb_rear.get_transform().get_matrix()
+        # data["rear"]["intrinsic"] = intrinsic
 
-        data["rear_left"] = {}
-        data["rear_left"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_left.get_transform().get_matrix()
-        data["rear_left"]["intrinsic"] = intrinsic
+        # data["rear_left"] = {}
+        # data["rear_left"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_left.get_transform().get_matrix()
+        # data["rear_left"]["intrinsic"] = intrinsic
     
-        data["rear_right"] = {}
-        data["rear_right"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_right.get_transform().get_matrix()
-        data["rear_right"]["intrinsic"] = intrinsic
+        # data["rear_right"] = {}
+        # data["rear_right"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_right.get_transform().get_matrix()
+        # data["rear_right"]["intrinsic"] = intrinsic
 
         return data 
 
@@ -2703,9 +2711,6 @@ def game_loop(args):
     vehicles_list = []
     all_id = []
     
-    
-    
-
     # try:
     
     client = carla.Client(args.host, args.port)
@@ -2885,6 +2890,7 @@ def game_loop(args):
 
             # iterate actors
             for actor_id, _ in filter_dict.items():
+                
                 # apply recorded location and velocity on the controller
                 actors = world.world.get_actors()
                 # reproduce traffic light state
@@ -2970,38 +2976,25 @@ def game_loop(args):
                 world.abandon_scenario = True
                 break
             
-        # if iter_tick == iter_toggle:
-        #     if not args.no_save:
-        #         time.sleep(10)
-        #         world.camera_manager.toggle_recording(stored_path)
-        #         world.imu_sensor.toggle_recording_IMU()
-        #         world.gnss_sensor.toggle_recording_Gnss()
-        #         traj_col = threading.Thread(target=collect_trajectory, args=(
-        #             world, world.player, args.scenario_id, period, stored_path, clock))
-        #         traj_col.start()
-        #         topo_col = threading.Thread(target=collect_topology, args=(
-        #             world, world.player, args.scenario_id, half_period, root, stored_path, clock))
-        #         topo_col.start()
-        #         # start recording .log file
-        #         print("Recording on file: %s" % client.start_recorder(os.path.join(
-        #             os.path.abspath(os.getcwd()), stored_path, 'recording.log'), True))
-        
-        elif iter_tick == iter_toggle:
-            if not args.no_save:
-                data_collection.set_start_frame(frame)
-            
-        elif iter_tick > iter_toggle:
+            if iter_tick == iter_toggle:
+                if not args.no_save:
+                    data_collection.set_start_frame(frame)
+                
+            elif iter_tick > iter_toggle:
 
-            if not args.no_save:
-                # collect data in sensor's list 
-                data_collection.collect_sensor(frame, world)
-            
-            view = pygame.surfarray.array3d(display)
-            #  convert from (width, height, channel) to (height, width, channel)
-            view = view.transpose([1, 0, 2])
-            #  convert from rgb to bgr
-            image = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-            out.write(image)
+                if not args.no_save:
+                    # collect data in sensor's list 
+                    data_collection.collect_sensor(frame, world)
+                    print("")
+                    print(stored_path)
+                    print("\n")
+                
+                view = pygame.surfarray.array3d(display)
+                #  convert from (width, height, channel) to (height, width, channel)
+                view = view.transpose([1, 0, 2])
+                #  convert from rgb to bgr
+                image = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
+                out.write(image)
 
         world.tick(clock)
         world.render(display)
@@ -3124,11 +3117,7 @@ def main():
         default=2.2,
         type=float,
         help='Gamma correction of the camera (default: 2.2)')
-    argparser.add_argument(
-        '-s', '--seed',
-        metavar='S',
-        type=int,
-        help='Random device seed')
+
     argparser.add_argument(
         '--weather',
         default='ClearNoon',
@@ -3146,22 +3135,25 @@ def main():
     argparser.add_argument(
         '--random_actors',
         type=str,
-        default='high', # 'none',
+        default='high', 
         choices=['none', 'pedestrian', 'low', 'mid', 'high'],
         help='enable roaming actors')
+    
     argparser.add_argument(
         '--scenario_type',
         type=str,
         choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
         required=True,
         help='enable roaming actors')
+    
+    # no_save flag 
+    # fast
+    # only use 1 camera sensor 
     argparser.add_argument(
         '--no_save',
         default= False,
         action='store_true',
         help='run scenarios only')
-    
-   
     
     argparser.add_argument(
         '--random_seed',
