@@ -21,7 +21,7 @@ import json
 
 client = carla.Client('localhost', 2000)
 # client.set_timeout(5.0)
-def spawn_actor_nearby(args, store_path, seeds, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
+def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
 
     world = client.get_world()
     map = world.get_map()

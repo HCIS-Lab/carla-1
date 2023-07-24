@@ -159,7 +159,7 @@ def write_json(filename, index, seed):
 
 
 class World(object):
-    def __init__(self, carla_world, client_bp, hud, args, store_path, seeds ):
+    def __init__(self, carla_world, client_bp, hud, args, seeds ):
         self.world = carla_world
         self.world.unload_map_layer(carla.MapLayer.ParkedVehicles)
         self.abandon_scenario = False
@@ -169,7 +169,6 @@ class World(object):
         settings.synchronous_mode = True  # Enables synchronous mode
         self.world.apply_settings(settings)
         self.actor_role_name = args.rolename
-        self.store_path = store_path
         self.args = args
 
         try:
@@ -2726,16 +2725,19 @@ def game_loop(args):
 
     weather = args.weather
     exec("args.weather = carla.WeatherParameters.%s" % args.weather)
-    stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id, weather + "_" + args.random_actors + "_")
+    stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id, 'variant_scenario', weather + "_" + args.random_actors + "_")
     
     # print(stored_path)
     
     if not os.path.exists(stored_path):
         os.makedirs(stored_path)
         
+        
+    
+        
     # pass seeds to the world 
     world = World(client.load_world(args.map),
-                    filter_dict['player'], hud, args, stored_path, seeds)
+                    filter_dict['player'], hud, args, seeds)
     
     client.get_world().set_weather(args.weather)
     # client.get_world().set_weather(getattr(carla.WeatherParameters, args.weather))
@@ -2813,16 +2815,16 @@ def game_loop(args):
 
     if args.random_actors != 'none':
         if args.random_actors == 'pedestrian':  # only pedestrian
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, seeds,  distance=100, v_ratio=0.0,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.0,
                                                                     pedestrian=40, transform_dict=transform_dict)
         elif args.random_actors == 'low':
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, seeds,  distance=100, v_ratio=0.3,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.3,
                                                                     pedestrian=20, transform_dict=transform_dict)
         elif args.random_actors == 'mid':
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, seeds,  distance=100, v_ratio=0.6,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.6,
                                                                     pedestrian=35, transform_dict=transform_dict)
         elif args.random_actors == 'high':
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, stored_path, seeds,  distance=100, v_ratio=0.8,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.8,
                                                                     pedestrian=50, transform_dict=transform_dict)
     scenario_name = scenario_name + args.random_actors + '_'
 
@@ -2985,9 +2987,7 @@ def game_loop(args):
                 if not args.no_save:
                     # collect data in sensor's list 
                     data_collection.collect_sensor(frame, world)
-                    print("")
-                    print(stored_path)
-                    print("\n")
+
                 
                 view = pygame.surfarray.array3d(display)
                 #  convert from (width, height, channel) to (height, width, channel)
@@ -3025,9 +3025,12 @@ def game_loop(args):
     
     if not args.no_save:
         data_collection.set_end_frame(frame)
-        
         print("start saving data")
-        # data_collection.save_data(frame, world)
+
+        # path format 
+        # data_collection/interactive/10_s-2_0_c_sr_f_1_0/ClearNoon_high_
+        # stored_path = os.path.join(stored_path, 'variant_scenario')
+        data_collection.save_data(stored_path)
     
     
     # to save a top view video
