@@ -1898,92 +1898,92 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
     return nearest_obstacle, obstacle_info
 
 
-def save_all_actor_state(actor_list, stored_path, frame, ego_id=-1):
-    """
-        actor_list  : carla.ActorList
-        stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'
-        frame       : current frame no.
-        ego_id(int) : ego id
-    """
+# def save_all_actor_state(actor_list, stored_path, frame, ego_id=-1):
+#     """
+#         actor_list  : carla.ActorList
+#         stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'
+#         frame       : current frame no.
+#         ego_id(int) : ego id
+#     """
 
-    def get_xyz(method, rotation=False):
+#     def get_xyz(method, rotation=False):
 
-        if rotation:
-            roll = method.roll
-            pitch = method.pitch
-            yaw = method.yaw
-            return {"pitch": pitch, "yaw": yaw, "roll": roll}
+#         if rotation:
+#             roll = method.roll
+#             pitch = method.pitch
+#             yaw = method.yaw
+#             return {"pitch": pitch, "yaw": yaw, "roll": roll}
 
-        else:
-            x = method.x
-            y = method.y
-            z = method.z
+#         else:
+#             x = method.x
+#             y = method.y
+#             z = method.z
 
-            # return x, y, z
-            return {"x": x, "y": y, "z": z}
+#             # return x, y, z
+#             return {"x": x, "y": y, "z": z}
 
-    json_path = os.path.join(stored_path, "actor_state")
-    if not os.path.exists(json_path):
-        os.makedirs(json_path)
+#     json_path = os.path.join(stored_path, "actor_state")
+#     if not os.path.exists(json_path):
+#         os.makedirs(json_path)
 
-    all_actor_state_list = list()
-    ego_loc = actor_list.find(ego_id).get_location()
+#     all_actor_state_list = list()
+#     ego_loc = actor_list.find(ego_id).get_location()
 
-    for actor in actor_list:
-        state_dict = {}
+#     for actor in actor_list:
+#         state_dict = {}
 
-        actor_id = actor.id
-        type_id = actor.type_id
-        semantic_tags = actor.semantic_tags
-        attributes = actor.attributes
+#         actor_id = actor.id
+#         type_id = actor.type_id
+#         semantic_tags = actor.semantic_tags
+#         attributes = actor.attributes
 
-        actor_loc = actor.get_location()
+#         actor_loc = actor.get_location()
 
-        location = get_xyz(actor_loc)
-        rotation = get_xyz(actor.get_transform().rotation, True)
+#         location = get_xyz(actor_loc)
+#         rotation = get_xyz(actor.get_transform().rotation, True)
 
-        if "vehicle" in type_id or "pedestrian" in type_id:
-            acceleration = get_xyz(actor.get_acceleration())
-            velocity = get_xyz(actor.get_velocity())
-            angular_velocity = get_xyz(actor.get_angular_velocity())
-            bbox = actor.bounding_box
-            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
-                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
+#         if "vehicle" in type_id or "pedestrian" in type_id:
+#             acceleration = get_xyz(actor.get_acceleration())
+#             velocity = get_xyz(actor.get_velocity())
+#             angular_velocity = get_xyz(actor.get_angular_velocity())
+#             bbox = actor.bounding_box
+#             bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
+#                 bbox.location), "rotation": get_xyz(bbox.rotation, True)}
 
-            if "vehicle" in type_id:
-                control = actor.get_control().__dict__
-            elif "pedestrian" in type_id:
-                walker_control = actor.get_control()
-                control = {"direction": get_xyz(walker_control.direction),
-                           "speed": walker_control.speed, "jump": walker_control.jump}
-        else:
-            acceleration = {}
-            velocity = {}
-            angular_velocity = {}
-            bounding_box = {}
-            control = {}
+#             if "vehicle" in type_id:
+#                 control = actor.get_control().__dict__
+#             elif "pedestrian" in type_id:
+#                 walker_control = actor.get_control()
+#                 control = {"direction": get_xyz(walker_control.direction),
+#                            "speed": walker_control.speed, "jump": walker_control.jump}
+#         else:
+#             acceleration = {}
+#             velocity = {}
+#             angular_velocity = {}
+#             bounding_box = {}
+#             control = {}
 
-        distance = ego_loc.distance(actor_loc)
+#         distance = ego_loc.distance(actor_loc)
 
-        state_dict = {"id": actor_id,
-                      "type_id": type_id,
-                      "semantic_tags": semantic_tags,
-                      "attributes": attributes,
-                      "location": location,
-                      "rotation": rotation,
-                      "acceleration": acceleration,
-                      "velocity": velocity,
-                      "angular_velocity": angular_velocity,
-                      "distance": distance,
-                      "bounding_box": bounding_box,
-                      "control": control}
+#         state_dict = {"id": actor_id,
+#                       "type_id": type_id,
+#                       "semantic_tags": semantic_tags,
+#                       "attributes": attributes,
+#                       "location": location,
+#                       "rotation": rotation,
+#                       "acceleration": acceleration,
+#                       "velocity": velocity,
+#                       "angular_velocity": angular_velocity,
+#                       "distance": distance,
+#                       "bounding_box": bounding_box,
+#                       "control": control}
 
-        all_actor_state_list.append(state_dict)
+#         all_actor_state_list.append(state_dict)
 
-    json_path = os.path.join(json_path, f"{int(frame):08d}.json")
+#     json_path = os.path.join(json_path, f"{int(frame):08d}.json")
 
-    with open(json_path, "w") as f:
-        json.dump(all_actor_state_list, f, indent=4)
+#     with open(json_path, "w") as f:
+#         json.dump(all_actor_state_list, f, indent=4)
 
 
 # ==============================================================================
@@ -1994,6 +1994,9 @@ def save_all_actor_state(actor_list, stored_path, frame, ego_id=-1):
 class Data_Collection():
     def __init__(self) -> None:
 
+        self.scenario_type = "interactive"
+        self.gt_interactor = -1
+        
         self.rgb_front = []
         self.rgb_left = []
         self.rgb_right = []
@@ -2028,7 +2031,13 @@ class Data_Collection():
 
     def set_end_frame(self, frame):
         self.end_frame = frame
-
+        
+    def set_scenario_type(self, sceanrio):
+        self.scenario_type = sceanrio
+        
+    def set_gt_interactor(self, id):
+        self.gt_interactor = id
+        
     def collect_sensor(self, frame, world):
         while True:
             if world.camera_manager.rgb_front.frame == frame:
@@ -2119,9 +2128,9 @@ class Data_Collection():
 
         self.sensor_data_list.append(self.collect_camera_data(world))
 
-        data, ego_id, vehicle_ids, pedestrian_ids, traffic_light_ids, obstacle_ids = self.collect_actor_data(world)
+        data, ego_id, gt_interactor,  vehicle_ids, pedestrian_ids, traffic_light_ids, obstacle_ids = self.collect_actor_data(world)
 
-        ids = {'ego_id': ego_id, "vehicle_ids": vehicle_ids,
+        ids = {'ego_id': ego_id, 'interactor_id': gt_interactor ,  "vehicle_ids": vehicle_ids,
                "pedestrian_ids": pedestrian_ids, "traffic_light_ids": traffic_light_ids, "obstacle_ids": obstacle_ids}
 
         self.id_list.append(ids)
@@ -2147,16 +2156,17 @@ class Data_Collection():
         data['throttle'] = c.throttle
         data['steer'] = c.steer
         data['brake'] = c.brake
+        data['speed'] =  math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
         data["acceleration"] = {}
-        data["acceleration"]['x'] = a.location.x
-        data["acceleration"]['y'] = a.location.y
-        data["acceleration"]['z'] = a.location.z
+        data["acceleration"]['x'] = a.x
+        data["acceleration"]['y'] = a.y
+        data["acceleration"]['z'] = a.z
 
         data["velocity"] = {}
-        data["velocity"]['x'] = v.location.x
-        data["velocity"]['y'] = v.location.y
-        data["velocity"]['z'] = v.location.z
+        data["velocity"]['x'] = v.x
+        data["velocity"]['y'] = v.y
+        data["velocity"]['z'] = v.z
 
         return data
 
@@ -2304,6 +2314,24 @@ class Data_Collection():
         traffic_light_ids = []
         obstacle_ids = []
         data = {}
+        
+        # get all bbox ( including static car)
+        # print(carla.CityObjectLabel)
+        # vehicles_bbs = world.world.get_level_bbs(carla.CityObjectLabel.Vehicle)
+        
+        # for bbox in vehicles_bbs:
+        #     print(bbox)
+            
+        
+            
+            # verts = [v for v in bbox.get_world_vertices(actor.get_transform())]
+            # counter = 0
+            # for loc in verts:
+            #     data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+            #     counter += 1
+        
+        
+        
 
         vehicles = world.world.get_actors().filter("*vehicle*")
         for actor in vehicles:
@@ -2340,8 +2368,20 @@ class Data_Collection():
             data[_id]["velocity"] = velocity
             data[_id]["angular_velocity"] = angular_velocity
             data[_id]["control"] = control
+            
+            
+            bb = actor.bounding_box
+            verts = [v for v in bb.get_world_vertices(actor.get_transform())]
+            counter = 0
+            for loc in verts:
+                data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id]["tpe"] = "vehicle"
+            
+            
 
         walkers = world.world.get_actors().filter("*pedestrian*")
+
         for actor in walkers:
 
             _id = actor.id
@@ -2379,6 +2419,16 @@ class Data_Collection():
             data[_id]["velocity"] = velocity
             data[_id]["angular_velocity"] = angular_velocity
             data[_id]["control"] = control
+            
+
+            bb = actor.bounding_box
+            verts = [v for v in bb.get_world_vertices(actor.get_transform())]
+            
+            counter = 0
+            for loc in verts:
+                data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id]["tpe"] = 'pedestrian'
 
         lights = world.world.get_actors().filter("*traffic_light*")
         for actor in lights:
@@ -2414,6 +2464,7 @@ class Data_Collection():
             data[_id]["bounding_box"] = bounding_box
             data[_id]["trigger_volume_bounding_box"] = trigger_volume_bounding_box
             data[_id]["distance"] = distance
+            data[_id]["tpe"] = "traffic_light"
 
         obstacle = world.world.get_actors().filter("*static.prop*")
         for actor in obstacle:
@@ -2443,7 +2494,7 @@ class Data_Collection():
             data[_id]["bounding_box"] = bounding_box
             data[_id]["distance"] = distance
 
-        return data, ego_id, vehicle_ids, pedestrian_ids, traffic_light_ids, obstacle_ids
+        return data, ego_id, self.gt_interactor, vehicle_ids, pedestrian_ids, traffic_light_ids, obstacle_ids
 
     def _get_forward_speed(self, transform, velocity):
         """ Convert the vehicle transform directly to forward speed """
@@ -2458,35 +2509,57 @@ class Data_Collection():
     def collect_camera_data(self, world):
 
         data = {}
+        
         intrinsic = np.identity(3)
         intrinsic[0, 2] = 960 / 2.0
         intrinsic[1, 2] = 480 / 2.0
         intrinsic[0, 0] = intrinsic[1, 1] = 960 / (
             2.0 * np.tan(60 * np.pi / 360.0)
         )
+        # sensor_location
         data["front"] = {}
-        data["front"]["extrinsic"] = world.camera_manager.sensor_rgb_front.get_transform().get_matrix()
+        data["front"]["extrinsic"] = world.camera_manager.sensor_rgb_front.get_transform().get_matrix() # camera 2 world
         data["front"]["intrinsic"] = intrinsic
-
+        sensor = world.camera_manager.sensor_rgb_front
+        data["front"]["loc"] = np.array([sensor.get_location().x,sensor.get_location().y,sensor.get_location().z])
+        data["front"]["w2c"] = np.array(world.camera_manager.sensor_rgb_front.get_transform().get_inverse_matrix())
+        
         data["left"] = {}
-        data["left"]["extrinsic"] = world.camera_manager.sensor_rgb_left.get_transform().get_matrix()
+        data["left"]["extrinsic"] =  world.camera_manager.sensor_rgb_left.get_transform().get_matrix()
         data["left"]["intrinsic"] = intrinsic
-
+        sensor = world.camera_manager.sensor_rgb_left
+        data["left"]["loc"] = np.array([sensor.get_location().x,sensor.get_location().y,sensor.get_location().z])
+        data["left"]["w2c"] = np.array(world.camera_manager.sensor_rgb_left.get_transform().get_inverse_matrix())
+        
         data["right"] = {}
         data["right"]["extrinsic"] = world.camera_manager.sensor_rgb_right.get_transform().get_matrix()
         data["right"]["intrinsic"] = intrinsic
-
+        sensor = world.camera_manager.sensor_rgb_right
+        data["right"]["loc"] = np.array([sensor.get_location().x,sensor.get_location().y,sensor.get_location().z])
+        data["right"]["w2c"] = np.array(world.camera_manager.sensor_rgb_right.get_transform().get_inverse_matrix())
+    
         # data["rear"] = {}
         # data["rear"]["extrinsic"] = world.camera_manager.sensor_rgb_rear.get_transform().get_matrix()
         # data["rear"]["intrinsic"] = intrinsic
+        # sensor = world.camera_manager.sensor_rgb_rear
+        # data["rear"]["loc"] = np.array([sensor.get_location().x,sensor.get_location().y,sensor.get_location().z])
+        # data["rear"]["w2c"] = np.array(world.camera_manager.sensor_rgb_rear.get_transform().get_inverse_matrix())
+
 
         # data["rear_left"] = {}
         # data["rear_left"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_left.get_transform().get_matrix()
         # data["rear_left"]["intrinsic"] = intrinsic
-
+        # sensor = world.camera_manager.sensor_rgb_rear_left
+        # data["rear_left"]["loc"] = np.array([sensor.get_location().x,sensor.get_location().y,sensor.get_location().z])
+        # data["rear_left"]["w2c"] = np.array(world.camera_manager.sensor_rgb_rear_left.get_transform().get_inverse_matrix())
+        
+    
         # data["rear_right"] = {}
         # data["rear_right"]["extrinsic"] = world.camera_manager.sensor_rgb_rear_right.get_transform().get_matrix()
         # data["rear_right"]["intrinsic"] = intrinsic
+        # sensor = world.camera_manager.sensor_rgb_rear_right
+        # data["rear_right"]["loc"] = np.array([sensor.get_location().x,sensor.get_location().y,sensor.get_location().z])
+        # data["rear_right"]["w2c"] = np.array(world.camera_manager.sensor_rgb_rear_right.get_transform().get_inverse_matrix())
 
         return data
 
@@ -2917,10 +2990,11 @@ def game_loop(args):
         actor_transform_index[actor_id] = 1
         finish[actor_id] = False
 
-    with open(os.path.join(stored_path, "obstacle_info.json"), "w")as f:
-        json.dump(obstacle_info, f, indent=4)
+    if args.scenario_type =="obstacle":
+        with open(os.path.join(stored_path, "obstacle_info.json"), "w")as f:
+            json.dump(obstacle_info, f, indent=4)
 
-    root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
+    # root = os.path.join('data_collection', args.scenario_type, args.scenario_id)
     scenario_name = str(weather) + '_'
 
     if args.random_actors != 'none':
@@ -2982,6 +3056,7 @@ def game_loop(args):
 
     if not args.no_save:
         data_collection = Data_Collection()
+        data_collection.set_scenario_type(args.scenario_type)
 
     while (1):
         clock.tick_busy_loop(40)
@@ -2996,6 +3071,13 @@ def game_loop(args):
                 ref_light, lights, world.world)
 
         elif iter_tick > iter_start:
+            
+            if not args.no_save:
+                if args.scenario_type == "interactive" or args.scenario_type == "collision":
+                    keys = list( agents_dict.keys())
+                    keys.remove('player')
+                    gt_interactor_id = int(keys[0])
+                    data_collection.set_gt_interactor(gt_interactor_id)
 
             # iterate actors
             for actor_id, _ in filter_dict.items():
@@ -3024,7 +3106,6 @@ def game_loop(args):
                         v = ((v.x)**2 + (v.y)**2+(v.z)**2)**(0.5)
 
                         # to avoid the actor slowing down for the dense location around
-                        # if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2 + v/20.0:
                         if agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) < 2.0:
                             actor_transform_index[actor_id] += 2
                         elif agents_dict[actor_id].get_transform().location.distance(transform_dict[actor_id][actor_transform_index[actor_id]].location) > 6.0:
@@ -3032,41 +3113,12 @@ def game_loop(args):
                         else:
                             actor_transform_index[actor_id] += 1
 
-                        # if actor_id == 'player' and not args.no_save:
-                        #     world.record_speed_control_transform(frame)
-
-                        # if actor_id == 'player':
-                        #     w.writerow(
-                        #         [frame, actor_id, 'AGENT', str(x), str(y), args.map])
-                        # elif actor_id != 'player':
-                        #     w.writerow(
-                        #         [frame, actor_id, 'actor.vehicle', str(x), str(y), args.map])
-
                     elif 'pedestrian' in filter_dict[actor_id]:
                         agents_dict[actor_id].apply_control(
                             ped_control_dict[actor_id][actor_transform_index[actor_id]])
                         actor_transform_index[actor_id] += 1
-
-                        # w.writerow(
-                        #     [frame, actor_id, 'actor.pedestrian', str(x), str(y), args.map])
                 else:
                     finish[actor_id] = True
-
-            # for actor in actors:
-
-            #     if actor_transform_index['player'] < len(transform_dict[actor_id]):
-            #         if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
-            #             x = actor.get_location().x
-            #             y = actor.get_location().y
-            #             id = actor.id
-            #             if actor.type_id[0:7] == 'vehicle':
-            #                 w.writerow(
-            #                     [frame, id, 'vehicle', str(x), str(y), args.map])
-            #             elif actor.type_id[0:6] == 'walker':
-            #                 w.writerow(
-            #                     [frame, id, 'pedestrian', str(x), str(y), args.map])
-
-            # save_all_actor_state(actors, stored_path, frame, ego_id=int(agents_dict['player'].id))
 
             if not False in finish.values():
                 break
@@ -3131,7 +3183,7 @@ def game_loop(args):
 
     if not args.no_save:
         data_collection.set_end_frame(frame)
-        print("start saving data")
+        # print("start saving data")
 
         # path format
         # data_collection/interactive/10_s-2_0_c_sr_f_1_0/ClearNoon_high_
@@ -3141,9 +3193,6 @@ def game_loop(args):
     # to save a top view video
     out.release()
     print('Closing...')
-
-    # if (world and world.recording_enabled):
-    #     client.stop_recorder()
 
     print('destroying vehicles')
     client.apply_batch([carla.command.DestroyActor(x) for x in vehicles_list])
@@ -3240,7 +3289,7 @@ def main():
     argparser.add_argument(
         '--random_actors',
         type=str,
-        default='none',
+        default='low',
         choices=['none', 'pedestrian', 'low', 'mid', 'high'],
         help='enable roaming actors')
 
