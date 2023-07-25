@@ -2174,7 +2174,7 @@ class Data_Collection():
 
         return data
 
-    def collect_topology(get_world):
+    def collect_topology(self, get_world):
         town_map = get_world.world.get_map()
         try:
             while True:
@@ -2259,7 +2259,7 @@ class Data_Collection():
                             center_lane = np.vstack((center_lane, lane_c))
                     lane_feature_ls.append(
                         [halluc_lane_1, halluc_lane_2, center_lane, turn_direction, is_traffic_control, is_junction, (i, j)])
-                print("topology collection finished")
+                # print("topology collection finished")
                 return lane_feature_ls
 
         except:
@@ -2562,7 +2562,7 @@ class Data_Collection():
             if (frame > start_frame) and (frame < end_frame):
                 counter += 1
                 sensor_data_file = stored_path + ("/%08d.npy" % frame)
-                np.save(sensor_data_file, np.array(data))
+                np.save(sensor_data_file, np.array(data, dtype=object))
 
         print(folder_name + " save finished. Total: ", counter)
 
@@ -2671,6 +2671,11 @@ class Data_Collection():
                             path, self.start_frame, self.end_frame, "id_data"))
         t_ego_data = Process(target=self.save_json_data, args=(
             self.frame_list, self.ego_list, path, self.start_frame, self.end_frame, "ego_data"))
+        
+        t_topology = Process(target=self.save_np_data, args=(
+            self.frame_list, self.topology_list, path, self.start_frame, self.end_frame, "topology"))
+        
+        #
 
         # self.sensor_lidar = []
         # self.frame_list = []
@@ -2715,6 +2720,8 @@ class Data_Collection():
         t_sensor_data.start()
         t_id_data.start()
         t_ego_data.start()
+        
+        t_topology.start()
 
         # ------------------------------ #
 
@@ -2751,6 +2758,8 @@ class Data_Collection():
         t_sensor_data.join()
         t_id_data.join()
         t_ego_data.join()
+        t_topology.join()
+
 
         end_time = time.time()
 
@@ -2788,6 +2797,7 @@ class Data_Collection():
         self.id_list = []
 
         self.frame_list = []
+        self.topology_list
 
 
 def game_loop(args):
