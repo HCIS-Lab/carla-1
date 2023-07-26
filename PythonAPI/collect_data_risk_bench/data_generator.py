@@ -9,28 +9,14 @@
 # Allows controlling a vehicle with a keyboard. For a simpler and more
 # documented example, please take a look at tutorial.py.
 
-
 from __future__ import print_function
-import cv2
-import pickle
-from read_input import *
-from get_and_control_trafficlight import *
-from random_actors import spawn_actor_nearby
-import matplotlib.pyplot as plt
-
+import glob
+import os
+import sys
 
 # ==============================================================================
 # -- find carla module ---------------------------------------------------------
 # ==============================================================================
-
-
-import glob
-import os
-import sys
-import random
-import csv
-import json
-from turtle import back
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -45,23 +31,29 @@ try:
 except IndexError:
     pass
 
-
 # ==============================================================================
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
 
+from read_input import *
+from get_and_control_trafficlight import *
+from random_actors import spawn_actor_nearby
 
 import carla
 from carla import VehicleLightState as vls
 from carla import ColorConverter as cc
 from carla import Transform, Location, Rotation
 from controller import VehiclePIDController
+
 import argparse
 import collections
 import datetime
 import logging
 import math
 import random
+import cv2
+import csv
+import json
 import re
 import weakref
 import time
@@ -285,7 +277,8 @@ class World(object):
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.gnss_sensor = GnssSensor(self.player, self.ego_data)
         self.imu_sensor = IMUSensor(self.player, self.ego_data)
-        self.camera_manager = CameraManager(self.player, self.hud, self._gamma, self.save_mode)
+        self.camera_manager = CameraManager(
+            self.player, self.hud, self._gamma, self.save_mode)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         self.camera_manager.background = True
@@ -952,7 +945,8 @@ class CollisionSensor(object):
         # intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
         # dict: {data1, data2}
         # data = frame: {timestamp, other_actor's id, intensity}
-        self.history.append({'frame': event.frame, 'actor_id': event.other_actor.id})
+        self.history.append(
+            {'frame': event.frame, 'actor_id': event.other_actor.id})
         # if len(self.history) > 4000:
         #     self.history.pop(0)
         self.collision = True
@@ -1313,7 +1307,8 @@ class CameraManager(object):
         self.sensor_rgb_bp.set_attribute('image_size_y', str(480))
         self.sensor_rgb_bp.set_attribute('fov', str(60.0))
 
-        self.sensor_ss_bp = bp_library.find('sensor.camera.instance_segmentation')
+        self.sensor_ss_bp = bp_library.find(
+            'sensor.camera.instance_segmentation')
         self.sensor_ss_bp.set_attribute('image_size_x', str(960))
         self.sensor_ss_bp.set_attribute('image_size_y', str(480))
         self.sensor_ss_bp.set_attribute('fov', str(60.0))
@@ -1507,23 +1502,30 @@ class CameraManager(object):
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
 
             if self.save_mode:
-                self.sensor_rgb_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_front'))
-                self.sensor_rgb_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_left'))
-                self.sensor_rgb_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_right'))
+                self.sensor_rgb_front.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'rgb_front'))
+                self.sensor_rgb_left.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'rgb_left'))
+                self.sensor_rgb_right.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'rgb_right'))
                 # self.sensor_rgb_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear'))
                 # self.sensor_rgb_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear_left'))
                 # self.sensor_rgb_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear_right'))
 
-                self.sensor_ss_front.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_front'))
-                self.sensor_ss_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_left'))
-                self.sensor_ss_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_right'))
+                self.sensor_ss_front.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_front'))
+                self.sensor_ss_left.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_left'))
+                self.sensor_ss_right.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_right'))
                 # self.sensor_ss_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear'))
                 # self.sensor_ss_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear_left'))
                 # self.sensor_ss_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear_right'))
 
                 self.sensor_depth_front.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'depth_front'))
-                self.sensor_depth_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
+                self.sensor_depth_left.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
                 self.sensor_depth_right.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'depth_right'))
                 # self.sensor_depth_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear'))
@@ -1842,7 +1844,8 @@ def write_actor_list(world, stored_path):
         # write the header
         writer.writerow(['Actor_ID', 'Class', 'Blueprint'])
         for filter_str, class_id in zip(filter_, id_):
-            min_id, max_id = write_row(writer, actors, filter_str, class_id, min_id, max_id)
+            min_id, max_id = write_row(
+                writer, actors, filter_str, class_id, min_id, max_id)
         print('min id: {}, max id: {}'.format(min_id, max_id))
     return min_id, max_id
 
@@ -1886,7 +1889,8 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
         obstacle_rot = carla.Rotation(pitch, yaw, roll)
         obstacle_trans = carla.Transform(obstacle_loc, obstacle_rot)
 
-        obstacle_actor = world.spawn_actor(bp.filter(obstacle_name)[0], obstacle_trans)
+        obstacle_actor = world.spawn_actor(
+            bp.filter(obstacle_name)[0], obstacle_trans)
 
         dis = ego_transform.location.distance(obstacle_loc)
         if dis < min_dis:
@@ -2025,7 +2029,7 @@ class Data_Collection():
         self.ego_list = []
         self.topology_list = []
 
-        self.id_list = []
+        self.id_list = {}
 
     def set_start_frame(self, frame):
         self.start_frame = frame
@@ -2036,8 +2040,158 @@ class Data_Collection():
     def set_scenario_type(self, sceanrio):
         self.scenario_type = sceanrio
 
+    def set_ego_id(self, world):
+        self.ego_id = world.player.id
+
     def set_gt_interactor(self, id):
         self.gt_interactor = id
+
+    def set_id_attr(self, world):
+
+        def get_xyz(method, rotation=False):
+
+            if rotation:
+                roll = method.roll
+                pitch = method.pitch
+                yaw = method.yaw
+                return {"pitch": pitch, "yaw": yaw, "roll": roll}
+
+            else:
+                x = method.x
+                y = method.y
+                z = method.z
+
+                # return x, y, z
+                return {"x": x, "y": y, "z": z}
+
+        ego_id = {}
+        interactor_id = {}
+        interactor_id[self.gt_interactor] = {}
+
+        _id = world.player.id
+        ego_type_id = world.player.type_id
+        ego_semantic_tags = world.player.semantic_tags
+        ego_attributes = world.player.attributes
+        ego_bbox = world.player.bounding_box
+        ego_bounding_box = {"extent": get_xyz(ego_bbox.extent), "location": get_xyz(
+            ego_bbox.location)}
+
+        ego_id[_id] = {}
+        ego_id[_id]["type_id"] = ego_type_id
+        ego_id[_id]["semantic_tags"] = ego_semantic_tags
+        ego_id[_id]["attributes"] = ego_attributes
+        ego_id[_id]["bounding_box"] = ego_bounding_box
+
+        vehicle_ids = {}
+        pedestrian_ids = {}
+        traffic_light_ids = {}
+        obstacle_ids = {}
+
+        vehicles = world.world.get_actors().filter("*vehicle*")
+        for actor in vehicles:
+
+            _id = actor.id
+
+            type_id = actor.type_id
+            semantic_tags = actor.semantic_tags
+            attributes = actor.attributes
+            bbox = actor.bounding_box
+            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
+                bbox.location)}
+            
+            vehicle_ids[_id] = {}
+            vehicle_ids[_id]["type_id"] = type_id
+            vehicle_ids[_id]["semantic_tags"] = semantic_tags
+            vehicle_ids[_id]["attributes"] = attributes
+            vehicle_ids[_id]["bounding_box"] = bounding_box
+
+        walkers = world.world.get_actors().filter("*pedestrian*")
+        for actor in walkers:
+
+            _id = actor.id
+
+            type_id = actor.type_id
+            semantic_tags = actor.semantic_tags
+            attributes = actor.attributes
+            bbox = actor.bounding_box
+            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
+                bbox.location)}
+            
+            pedestrian_ids[_id] = {}
+            pedestrian_ids[_id]["type_id"] = type_id
+            pedestrian_ids[_id]["semantic_tags"] = semantic_tags
+            pedestrian_ids[_id]["attributes"] = attributes
+            pedestrian_ids[_id]["bounding_box"] = bounding_box
+
+
+        lights = world.world.get_actors().filter("*traffic_light*")
+        for actor in lights:
+
+            _id = actor.id
+
+            type_id = actor.type_id
+            semantic_tags = actor.semantic_tags
+
+            actor_loc = actor.get_location()
+            location = get_xyz(actor_loc)
+            rotation = get_xyz(actor.get_transform().rotation, True)
+
+            bbox = actor.bounding_box
+            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
+                bbox.location)}
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(
+                actor.get_transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+
+            traffic_light_ids[_id] = {}
+            traffic_light_ids[_id]["type_id"] = type_id
+            traffic_light_ids[_id]["semantic_tags"] = semantic_tags
+            traffic_light_ids[_id]["location"] = location
+            traffic_light_ids[_id]["rotation"] = rotation
+            traffic_light_ids[_id]["bounding_box"] = bounding_box
+            traffic_light_ids[_id]["cord_bounding_box"] = cord_bounding_box
+
+        obstacle = world.world.get_actors().filter("*static.prop*")
+        for actor in obstacle:
+
+            _id = actor.id
+
+            type_id = actor.type_id
+            semantic_tags = actor.semantic_tags
+            attributes = actor.attributes
+
+            actor_loc = actor.get_location()
+            location = get_xyz(actor_loc)
+            rotation = get_xyz(actor.get_transform().rotation, True)
+
+            bbox = actor.bounding_box
+            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
+                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(
+                actor.get_transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+
+            obstacle_ids[_id] = {}
+            obstacle_ids[_id]["type_id"] = type_id
+            obstacle_ids[_id]["semantic_tags"] = semantic_tags
+            obstacle_ids[_id]["attributes"] = attributes
+            obstacle_ids[_id]["location"] = location
+            obstacle_ids[_id]["rotation"] = rotation
+            obstacle_ids[_id]["bounding_box"] = bounding_box
+            obstacle_ids[_id]["cord_bounding_box"] = cord_bounding_box
+
+        self.id_list = {'ego_id': ego_id, 'interactor_id': interactor_id,  "vehicle_ids": vehicle_ids,
+                        "pedestrian_ids": pedestrian_ids, "traffic_light_ids": traffic_light_ids, "obstacle_ids": obstacle_ids}
 
     def collect_sensor(self, frame, world):
         while True:
@@ -2129,50 +2283,11 @@ class Data_Collection():
 
         self.sensor_data_list.append(self.collect_camera_data(world))
 
-        data, ego_id, gt_interactor,  vehicle_ids, pedestrian_ids, traffic_light_ids, obstacle_ids = self.collect_actor_data(
-            world)
+        data = self.collect_actor_data(world)
 
-        ids = {'ego_id': ego_id, 'interactor_id': gt_interactor,  "vehicle_ids": vehicle_ids,
-               "pedestrian_ids": pedestrian_ids, "traffic_light_ids": traffic_light_ids, "obstacle_ids": obstacle_ids}
-
-        self.id_list.append(ids)
         self.data_list.append(data)
-        self.ego_list.append(self.get_ego_data(world))
+        self.ego_list.append(data[self.ego_id])
         self.topology_list.append(self.collect_topology(world))
-        
-
-    def get_ego_data(self, world):
-
-        v = world.player.get_velocity()
-        a = world.player.get_acceleration()
-        c = world.player.get_control()
-        t = world.player.get_transform()
-
-        data = {}
-        data['x'] = t.location.x
-        data['y'] = t.location.y
-        data['z'] = t.location.z
-
-        data['pitch'] = t.rotation.pitch
-        data['yaw'] = t.rotation.yaw
-        data['roll'] = t.rotation.roll
-
-        data['throttle'] = c.throttle
-        data['steer'] = c.steer
-        data['brake'] = c.brake
-        data['speed'] = math.sqrt(v.x**2 + v.y**2 + v.z**2)
-
-        data["acceleration"] = {}
-        data["acceleration"]['x'] = a.x
-        data["acceleration"]['y'] = a.y
-        data["acceleration"]['z'] = a.z
-
-        data["velocity"] = {}
-        data["velocity"]['x'] = v.x
-        data["velocity"]['y'] = v.y
-        data["velocity"]['z'] = v.z
-
-        return data
 
     def collect_topology(self, get_world):
         town_map = get_world.world.get_map()
@@ -2181,7 +2296,8 @@ class Data_Collection():
                 if get_world.abandon_scenario:
                     print('Abandom, killing thread.')
                     return
-                waypoint = town_map.get_waypoint(get_world.player.get_location())
+                waypoint = town_map.get_waypoint(
+                    get_world.player.get_location())
                 waypoint_list = town_map.generate_waypoints(2.0)
                 nearby_waypoint = []
                 roads = []
@@ -2284,12 +2400,7 @@ class Data_Collection():
                 # return x, y, z
                 return {"x": x, "y": y, "z": z}
 
-        ego_id = world.player.id
         ego_loc = world.player.get_location()
-        vehicle_ids = []
-        pedestrian_ids = []
-        traffic_light_ids = []
-        obstacle_ids = []
         data = {}
 
         # get all bbox ( including static car)
@@ -2309,63 +2420,65 @@ class Data_Collection():
         for actor in vehicles:
 
             _id = actor.id
-            vehicle_ids.append(_id)
 
-            type_id = actor.type_id
-            semantic_tags = actor.semantic_tags
-            attributes = actor.attributes
             actor_loc = actor.get_location()
             location = get_xyz(actor_loc)
             rotation = get_xyz(actor.get_transform().rotation, True)
 
+            cord_bounding_box = {}
             bbox = actor.bounding_box
-            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
-                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
+            verts = [v for v in bbox.get_world_vertices(
+                actor.get_transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
 
             distance = ego_loc.distance(actor_loc)
             acceleration = get_xyz(actor.get_acceleration())
             velocity = get_xyz(actor.get_velocity())
             angular_velocity = get_xyz(actor.get_angular_velocity())
-            control = actor.get_control().__dict__
+
+            vehicle_control = actor.get_control()
+            control = {
+                "throttle": vehicle_control.throttle,
+                "steer": vehicle_control.steer,
+                "brake": vehicle_control.brake,
+                "hand_brake": vehicle_control.hand_brake,
+                "reverse": vehicle_control.reverse,
+                "manual_gear_shift": vehicle_control.manual_gear_shift,
+                "gear": vehicle_control.gear
+            }
 
             data[_id] = {}
-            data[_id]["type_id"] = type_id
-            data[_id]["semantic_tags"] = semantic_tags
-            data[_id]["attributes"] = attributes
             data[_id]["location"] = location
             data[_id]["rotation"] = rotation
-            data[_id]["bounding_box"] = bounding_box
             data[_id]["distance"] = distance
             data[_id]["acceleration"] = acceleration
             data[_id]["velocity"] = velocity
             data[_id]["angular_velocity"] = angular_velocity
             data[_id]["control"] = control
 
-            bb = actor.bounding_box
-            verts = [v for v in bb.get_world_vertices(actor.get_transform())]
-            counter = 0
-            for loc in verts:
-                data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
-                counter += 1
-            data[_id]["tpe"] = "vehicle"
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = "vehicle"
 
         walkers = world.world.get_actors().filter("*pedestrian*")
-
         for actor in walkers:
 
             _id = actor.id
-            pedestrian_ids.append(_id)
 
-            type_id = actor.type_id
-            semantic_tags = actor.semantic_tags
-            attributes = actor.attributes
             actor_loc = actor.get_location()
             location = get_xyz(actor_loc)
             rotation = get_xyz(actor.get_transform().rotation, True)
 
+            cord_bounding_box = {}
             bbox = actor.bounding_box
-            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
-                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
+            verts = [v for v in bbox.get_world_vertices(
+                actor.get_transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
 
             distance = ego_loc.distance(actor_loc)
             acceleration = get_xyz(actor.get_acceleration())
@@ -2377,92 +2490,42 @@ class Data_Collection():
                        "speed": walker_control.speed, "jump": walker_control.jump}
 
             data[_id] = {}
-            data[_id]["type_id"] = type_id
-            data[_id]["semantic_tags"] = semantic_tags
-            data[_id]["attributes"] = attributes
             data[_id]["location"] = location
-            data[_id]["rotation"] = rotation
-            data[_id]["bounding_box"] = bounding_box
+            # data[_id]["rotation"] = rotation
             data[_id]["distance"] = distance
             data[_id]["acceleration"] = acceleration
             data[_id]["velocity"] = velocity
             data[_id]["angular_velocity"] = angular_velocity
             data[_id]["control"] = control
 
-            bb = actor.bounding_box
-            verts = [v for v in bb.get_world_vertices(actor.get_transform())]
-
-            counter = 0
-            for loc in verts:
-                data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
-                counter += 1
-            data[_id]["tpe"] = 'pedestrian'
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = 'pedestrian'
 
         lights = world.world.get_actors().filter("*traffic_light*")
         for actor in lights:
 
             _id = actor.id
-            traffic_light_ids.append(_id)
-
-            type_id = actor.type_id
-            semantic_tags = actor.semantic_tags
-            attributes = actor.attributes
-            actor_loc = actor.get_location()
-            location = get_xyz(actor_loc)
-            rotation = get_xyz(actor.get_transform().rotation, True)
 
             traffic_light_state = int(actor.state)  # traffic light state
-            bbox = actor.bounding_box
-            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
-                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
-
-            trigger_volume_bbox = actor.trigger_volume
-            trigger_volume_bounding_box = {"extent": get_xyz(trigger_volume_bbox.extent), "location": get_xyz(
-                trigger_volume_bbox.location), "rotation": get_xyz(trigger_volume_bbox.rotation, True)}
-
             distance = ego_loc.distance(actor_loc)
 
             data[_id] = {}
-            data[_id]["type_id"] = type_id
-            data[_id]["semantic_tags"] = semantic_tags
-            data[_id]["attributes"] = attributes
-            data[_id]["location"] = location
-            data[_id]["rotation"] = rotation
             data[_id]["state"] = traffic_light_state
-            data[_id]["bounding_box"] = bounding_box
-            data[_id]["trigger_volume_bounding_box"] = trigger_volume_bounding_box
             data[_id]["distance"] = distance
-            data[_id]["tpe"] = "traffic_light"
+            data[_id]["type"] = "traffic_light"
 
         obstacle = world.world.get_actors().filter("*static.prop*")
         for actor in obstacle:
 
             _id = actor.id
-            obstacle_ids.append(_id)
-
-            type_id = actor.type_id
-            semantic_tags = actor.semantic_tags
-            attributes = actor.attributes
-            actor_loc = actor.get_location()
-            location = get_xyz(actor_loc)
-            rotation = get_xyz(actor.get_transform().rotation, True)
-
-            bbox = actor.bounding_box
-            bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
-                bbox.location), "rotation": get_xyz(bbox.rotation, True)}
 
             distance = ego_loc.distance(actor_loc)
 
             data[_id] = {}
-            data[_id]["type_id"] = type_id
-            data[_id]["semantic_tags"] = semantic_tags
-            data[_id]["attributes"] = attributes
-            data[_id]["location"] = location
-            data[_id]["rotation"] = rotation
-            data[_id]["bounding_box"] = bounding_box
             data[_id]["distance"] = distance
+            data[_id]["type"] = "obstacle"
 
-        return data, ego_id, self.gt_interactor, vehicle_ids, pedestrian_ids, traffic_light_ids, obstacle_ids
+        return data
 
     def _get_forward_speed(self, transform, velocity):
         """ Convert the vehicle transform directly to forward speed """
@@ -2470,7 +2533,8 @@ class Data_Collection():
         vel_np = np.array([velocity.x, velocity.y, velocity.z])
         pitch = np.deg2rad(transform.rotation.pitch)
         yaw = np.deg2rad(transform.rotation.yaw)
-        orientation = np.array([np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)])
+        orientation = np.array(
+            [np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)])
         speed = np.dot(vel_np, orientation)
         return speed
 
@@ -2486,25 +2550,34 @@ class Data_Collection():
         )
         # sensor_location
         data["front"] = {}
-        data["front"]["extrinsic"] = world.camera_manager.sensor_rgb_front.get_transform().get_matrix()  # camera 2 world
+        data["front"]["extrinsic"] = world.camera_manager.sensor_rgb_front.get_transform(
+        ).get_matrix()  # camera 2 world
         data["front"]["intrinsic"] = intrinsic
         sensor = world.camera_manager.sensor_rgb_front
-        data["front"]["loc"] = np.array([sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
-        data["front"]["w2c"] = np.array(world.camera_manager.sensor_rgb_front.get_transform().get_inverse_matrix())
+        data["front"]["loc"] = np.array(
+            [sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
+        data["front"]["w2c"] = np.array(
+            world.camera_manager.sensor_rgb_front.get_transform().get_inverse_matrix())
 
         data["left"] = {}
-        data["left"]["extrinsic"] = world.camera_manager.sensor_rgb_left.get_transform().get_matrix()
+        data["left"]["extrinsic"] = world.camera_manager.sensor_rgb_left.get_transform(
+        ).get_matrix()
         data["left"]["intrinsic"] = intrinsic
         sensor = world.camera_manager.sensor_rgb_left
-        data["left"]["loc"] = np.array([sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
-        data["left"]["w2c"] = np.array(world.camera_manager.sensor_rgb_left.get_transform().get_inverse_matrix())
+        data["left"]["loc"] = np.array(
+            [sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
+        data["left"]["w2c"] = np.array(
+            world.camera_manager.sensor_rgb_left.get_transform().get_inverse_matrix())
 
         data["right"] = {}
-        data["right"]["extrinsic"] = world.camera_manager.sensor_rgb_right.get_transform().get_matrix()
+        data["right"]["extrinsic"] = world.camera_manager.sensor_rgb_right.get_transform(
+        ).get_matrix()
         data["right"]["intrinsic"] = intrinsic
         sensor = world.camera_manager.sensor_rgb_right
-        data["right"]["loc"] = np.array([sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
-        data["right"]["w2c"] = np.array(world.camera_manager.sensor_rgb_right.get_transform().get_inverse_matrix())
+        data["right"]["loc"] = np.array(
+            [sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
+        data["right"]["w2c"] = np.array(
+            world.camera_manager.sensor_rgb_right.get_transform().get_inverse_matrix())
 
         # data["rear"] = {}
         # data["rear"]["extrinsic"] = world.camera_manager.sensor_rgb_rear.get_transform().get_matrix()
@@ -2533,7 +2606,8 @@ class Data_Collection():
 
         counter = 0
 
-        stored_path = os.path.join(path, folder_name)  # "actors_data") # folder_name
+        # "actors_data") # folder_name
+        stored_path = os.path.join(path, folder_name)
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
         for idx in range(len(frame_list)):
@@ -2552,7 +2626,8 @@ class Data_Collection():
 
         counter = 0
 
-        stored_path = os.path.join(path, folder_name)  # "actors_data") # folder_name
+        # "actors_data") # folder_name
+        stored_path = os.path.join(path, folder_name)
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
         for idx in range(len(frame_list)):
@@ -2565,6 +2640,18 @@ class Data_Collection():
                 np.save(sensor_data_file, np.array(data, dtype=object))
 
         print(folder_name + " save finished. Total: ", counter)
+
+    def save_static_json_data(self, data_list, path, folder_name):
+
+        stored_path = os.path.join(path, folder_name)
+        if not os.path.exists(stored_path):
+            os.makedirs(stored_path)
+
+        f = open(f"{stored_path}/static_data.json", "w")
+        json.dump(data_list, f, indent=4)
+        f.close()
+
+        print(folder_name + " save finished.")
 
     def save_img(self, img_list, sensor, path, start_frame, end_frame, view='top'):
 
@@ -2619,12 +2706,14 @@ class Data_Collection():
                     if not os.path.exists('%s/%s/' % (path, view)):
                         os.makedirs('%s/%s/' % (path, view))
 
-                    np.save('%s/%s/%08d.npy' % (path, view, img.frame), points, allow_pickle=True)
+                    np.save('%s/%s/%08d.npy' %
+                            (path, view, img.frame), points, allow_pickle=True)
 
                 else:
                     img.save_to_disk('%s/%s/%s/%08d' %
                                      (path, modality, view, img.frame))
-        print("%s %s save finished. Total: %d" % (sensors[sensor][2], view, counter))
+        print("%s %s save finished. Total: %d" %
+              (sensors[sensor][2], view, counter))
 
     def save_data(self, path):
 
@@ -2667,14 +2756,16 @@ class Data_Collection():
             self.frame_list, self.data_list, path, self.start_frame, self.end_frame, "actors_data"))
         t_sensor_data = Process(target=self.save_np_data, args=(
             self.frame_list, self.sensor_data_list, path, self.start_frame, self.end_frame, "sensor_data"))
-        t_id_data = Process(target=self.save_np_data, args=(self.frame_list, self.id_list,
-                            path, self.start_frame, self.end_frame, "id_data"))
+        # t_id_data = Process(target=self.save_np_data, args=(self.frame_list, self.id_list,
+        #                     path, self.start_frame, self.end_frame, "id_data"))
+        t_id_data = Process(target=self.save_static_json_data,
+                            args=(self.id_list, path, "static_data"))
         t_ego_data = Process(target=self.save_json_data, args=(
             self.frame_list, self.ego_list, path, self.start_frame, self.end_frame, "ego_data"))
-        
+
         t_topology = Process(target=self.save_np_data, args=(
             self.frame_list, self.topology_list, path, self.start_frame, self.end_frame, "topology"))
-        
+
         #
 
         # self.sensor_lidar = []
@@ -2682,7 +2773,7 @@ class Data_Collection():
         # self.data_list = []
         # self.sensor_data_list = []
         # self.ego_list = []
-        # self.id_list = []
+        # self.id_list = {}
 
         start_time = time.time()
 
@@ -2720,7 +2811,7 @@ class Data_Collection():
         t_sensor_data.start()
         t_id_data.start()
         t_ego_data.start()
-        
+
         t_topology.start()
 
         # ------------------------------ #
@@ -2760,7 +2851,6 @@ class Data_Collection():
         t_ego_data.join()
         t_topology.join()
 
-
         end_time = time.time()
 
         print('sensor data save done in %s' % (end_time-start_time))
@@ -2794,10 +2884,11 @@ class Data_Collection():
         self.sensor_lidar = []
         self.data_list = []
         self.sensor_data_list = []
-        self.id_list = []
+        self.id_list = {}
 
         self.frame_list = []
         self.topology_list
+
 
 
 def game_loop(args):
@@ -2805,9 +2896,11 @@ def game_loop(args):
     pygame.font.init()
     world = None
 
-    path = os.path.join('data_collection', args.scenario_type, args.scenario_id)
+    path = os.path.join('data_collection',
+                        args.scenario_type, args.scenario_id)
 
-    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
+    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4",
+                          cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
 
     filter_dict = {}
     try:
@@ -2959,7 +3052,8 @@ def game_loop(args):
             controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                              max_throttle=1.0, max_brake=1.0, max_steering=1.0)
             try:
-                agents_dict[actor_id].set_light_state(carla.VehicleLightState.LowBeam)
+                agents_dict[actor_id].set_light_state(
+                    carla.VehicleLightState.LowBeam)
             except:
                 print('vehicle has no low beam light')
 
@@ -3033,6 +3127,9 @@ def game_loop(args):
     if not args.no_save:
         data_collection = Data_Collection()
         data_collection.set_scenario_type(args.scenario_type)
+        data_collection.set_ego_id(world)
+        data_collection.set_id_attr(world)
+        
 
     while (1):
         clock.tick_busy_loop(40)
@@ -3052,7 +3149,7 @@ def game_loop(args):
                 if args.scenario_type == "interactive" or args.scenario_type == "collision":
                     keys = list(agents_dict.keys())
                     keys.remove('player')
-                    gt_interactor_id = int(keys[0])
+                    gt_interactor_id = int(agents_dict[keys[0]].id)
                     data_collection.set_gt_interactor(gt_interactor_id)
 
             # iterate actors
@@ -3070,7 +3167,8 @@ def game_loop(args):
                     y = transform_dict[actor_id][actor_transform_index[actor_id]].location.y
                     if 'vehicle' in filter_dict[actor_id]:
 
-                        target_speed = (velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6
+                        target_speed = (
+                            velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6
                         waypoint = transform_dict[actor_id][actor_transform_index[actor_id]]
 
                         agents_dict[actor_id].apply_control(
