@@ -368,6 +368,7 @@ class World(object):
                 # self.camera_manager.sensor_lbc_img,
 
                 self.camera_manager.sensor_top,
+                self.camera_manager.sensor_ss_top,
 
                 self.camera_manager.sensor_rgb_front,
                 self.camera_manager.sensor_ss_front,
@@ -1173,6 +1174,8 @@ class RadarSensor(object):
 
 class CameraManager(object):
     def __init__(self, parent_actor, hud, gamma_correction, save_mode):
+    
+        self.ss_top = None
         self.sensor_top = None
         self.surface = None
         self._parent = parent_actor
@@ -1254,7 +1257,10 @@ class CameraManager(object):
                  z=2.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=-120.0)), Attachment.Rigid),
                 # rear right 13
                 (carla.Transform(carla.Location(x=-1.3, y=0,
-                 z=2.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=120.0)), Attachment.Rigid)
+                 z=2.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=120.0)), Attachment.Rigid),
+                # ins top 14 
+                (carla.Transform(carla.Location(x=-25.0, y=+0.0*bound_y,
+                 z=25.0), carla.Rotation(pitch=0.0)), Attachment.SpringArm),
 
             ]
         else:
@@ -1297,10 +1303,10 @@ class CameraManager(object):
         # if self.bev_bp.has_attribute('gamma'):
         #     self.bev_bp.set_attribute('gamma', str(gamma_correction))
 
-        # self.bev_seg_bp = bp_library.find('sensor.camera.instance_segmentation')
-        # self.bev_seg_bp.set_attribute('image_size_x', str(512))
-        # self.bev_seg_bp.set_attribute('image_size_y', str(512))
-        # self.bev_seg_bp.set_attribute('fov', str(50.0))
+        self.bev_seg_bp = bp_library.find('sensor.camera.instance_segmentation')
+        self.bev_seg_bp.set_attribute('image_size_x', str(512))
+        self.bev_seg_bp.set_attribute('image_size_y', str(512))
+        self.bev_seg_bp.set_attribute('fov', str(50.0))
 
         self.sensor_rgb_bp = bp_library.find('sensor.camera.rgb')
         self.sensor_rgb_bp.set_attribute('image_size_x', str(960))
@@ -1370,7 +1376,13 @@ class CameraManager(object):
                 attachment_type=self._camera_transforms[6][1])
 
             if self.save_mode:
-
+                
+                # inst top 
+                self.sensor_ss_top = self._parent.get_world().spawn_actor(
+                    self.bev_seg_bp,
+                    self._camera_transforms[14][0],
+                    attach_to=self._parent,
+                    attachment_type=self._camera_transforms[14][1])
                 # front
 
                 self.sensor_rgb_front = self._parent.get_world().spawn_actor(
@@ -1502,6 +1514,11 @@ class CameraManager(object):
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
 
             if self.save_mode:
+                
+                
+                self.sensor_ss_top.listen(
+                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_top'))
+                
                 self.sensor_rgb_front.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'rgb_front'))
                 self.sensor_rgb_left.listen(
@@ -1537,8 +1554,8 @@ class CameraManager(object):
 
                 # # self.sensor_lbc_ins.listen(lambda image: CameraManager._parse_image(
                 # #     weak_self, image, 'lbc_ins'))
-                # # self.ins_top.listen(lambda image: CameraManager._parse_image(
-                # #     weak_self, image, 'ins_top'))
+                # # self.ss_top.listen(lambda image: CameraManager._parse_image(
+                # #     weak_self, image, 'ss_top'))
 
         if notify:
             self.hud.notification(self.sensors[index][2])
@@ -1619,7 +1636,9 @@ class CameraManager(object):
 
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
-
+            
+        elif view == 'ss_top':
+            self.ss_top = image
         elif view == 'rgb_front':
             self.rgb_front = image
         elif view == 'rgb_left':
@@ -1672,110 +1691,9 @@ def record_control(control, control_list):
 
     control_list.append(np_control)
 
-
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
     return control_signal
-
-# def auto_spawn_object(world,second):
-#     this_map=world.world.get_map()
-#     new_obj=None
-#     try:
-#         bp_list=world.world.get_blueprint_library().filter('static')
-#         while True:
-#             time.sleep(second)
-#             if new_obj is not None:
-#                 new_obj.destroy()
-#                 new_obj=None
-#             if world.player.is_at_traffic_light():
-#                 continue
-#             waypoint = this_map.get_waypoint(world.player.get_location(),lane_type=carla.LaneType.Shoulder)
-#             if waypoint is None:
-#                 continue
-#             waypoint_list=waypoint.next(15)
-#             if waypoint_list:
-#                 waypoint = waypoint_list[0]
-
-#             obj_bp=random.choice(bp_list)
-#             new_obj=world.world.try_spawn_actor(obj_bp, waypoint.transform)#carla.Transform(new_obj_location, vehicle_rotation))
-#             if new_obj!=None:
-#                 print("Spawn object.")
-    # finally:
-    #     if new_obj is not None:
-    #         new_obj.destroy()
-
-
-def collect_trajectory(get_world, agent, scenario_id, period_end, stored_path, clock):
-    if not os.path.exists(stored_path + '/trajectory/'):
-        os.mkdir(stored_path + '/trajectory/')
-    filepath = stored_path + '/trajectory/' + str(scenario_id) + '.csv'
-    is_exist = os.path.isfile(filepath)
-    f = open(filepath, 'w')
-    w = csv.writer(f)
-
-    filepath_all = stored_path + '/trajectory/' + str(scenario_id) + '_all.csv'
-    is_exist_all = os.path.isfile(filepath_all)
-    f_all = open(filepath_all, 'w')
-    w_all = csv.writer(f_all)
-
-    if not is_exist:
-        w.writerow(['TIMESTAMP', 'TRACK_ID',
-                   'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
-
-    if not is_exist_all:
-        w_all.writerow(['TIMESTAMP', 'TRACK_ID',
-                        'OBJECT_TYPE', 'X', 'Y', 'CITY_NAME'])
-
-    actors = get_world.world.get_actors()
-    town_map = get_world.world.get_map()
-    agent_id = agent.id
-    period_start = 0
-    fps = clock.get_fps()
-    record_time = 0
-    time_start = time.time()
-    try:
-        while True:
-            time_end = time.time()
-            if get_world.abandon_scenario:
-                print('Abandom, killing thread.')
-                return
-            elif get_world.finish:
-                print("trajectory collection finish")
-                return
-            # 25: the landing iter
-            # 0.1s = 0.05000000074505806s * 2
-            if (time_end - time_start) > 2/fps:
-                period_start += 0.1 * fps
-                record_time += 0.1
-                time_start = time.time()
-                for actor in actors:
-                    if agent_id == actor.id:
-                        agent = actor
-                    if agent.get_location().x == 0 and agent.get_location().y == 0:
-                        return True
-                    if actor.type_id[0:7] == 'vehicle' or actor.type_id[0:6] == 'walker':
-                        x = actor.get_location().x
-                        y = actor.get_location().y
-                        id = actor.id
-                        if x == agent.get_location().x and y == agent.get_location().y:
-                            w.writerow(
-                                [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
-                            w_all.writerow(
-                                [record_time - 0.1, id, 'AGENT', str(x), str(y), town_map.name.split('/')[2]])
-                        else:
-                            if actor.type_id[0:7] == 'vehicle':
-                                w_all.writerow(
-                                    [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
-                            if ((x - agent.get_location().x)**2 + (y - agent.get_location().y)**2) < 75**2:
-                                if actor.type_id[0:7] == 'vehicle':
-                                    w.writerow(
-                                        [record_time - 0.1, id, 'vehicle', str(x), str(y), town_map.name.split('/')[2]])
-                                elif actor.type_id[0:6] == 'walker':
-                                    w.writerow(
-                                        [record_time - 0.1, id, 'walker', str(x), str(y), town_map.name.split('/')[2]])
-    except:
-        print("trajectory collection error")
-
 
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
@@ -1801,7 +1719,6 @@ def set_bp(blueprint, actor_id):
     #     print("No recommended values for 'speed' attribute")
     return blueprint
 
-
 def save_description(world, args, stored_path, weather, agents_dict, nearest_obstacle):
     vehicles = world.world.get_actors().filter('vehicle.*')
     peds = world.world.get_actors().filter('walker.*')
@@ -1819,7 +1736,6 @@ def save_description(world, args, stored_path, weather, agents_dict, nearest_obs
 
     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
         json.dump(d, f, indent=4)
-
 
 def write_actor_list(world, stored_path):
 
@@ -1901,95 +1817,6 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
 
     return nearest_obstacle, obstacle_info
 
-
-# def save_all_actor_state(actor_list, stored_path, frame, ego_id=-1):
-#     """
-#         actor_list  : carla.ActorList
-#         stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'
-#         frame       : current frame no.
-#         ego_id(int) : ego id
-#     """
-
-#     def get_xyz(method, rotation=False):
-
-#         if rotation:
-#             roll = method.roll
-#             pitch = method.pitch
-#             yaw = method.yaw
-#             return {"pitch": pitch, "yaw": yaw, "roll": roll}
-
-#         else:
-#             x = method.x
-#             y = method.y
-#             z = method.z
-
-#             # return x, y, z
-#             return {"x": x, "y": y, "z": z}
-
-#     json_path = os.path.join(stored_path, "actor_state")
-#     if not os.path.exists(json_path):
-#         os.makedirs(json_path)
-
-#     all_actor_state_list = list()
-#     ego_loc = actor_list.find(ego_id).get_location()
-
-#     for actor in actor_list:
-#         state_dict = {}
-
-#         actor_id = actor.id
-#         type_id = actor.type_id
-#         semantic_tags = actor.semantic_tags
-#         attributes = actor.attributes
-
-#         actor_loc = actor.get_location()
-
-#         location = get_xyz(actor_loc)
-#         rotation = get_xyz(actor.get_transform().rotation, True)
-
-#         if "vehicle" in type_id or "pedestrian" in type_id:
-#             acceleration = get_xyz(actor.get_acceleration())
-#             velocity = get_xyz(actor.get_velocity())
-#             angular_velocity = get_xyz(actor.get_angular_velocity())
-#             bbox = actor.bounding_box
-#             bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
-#                 bbox.location), "rotation": get_xyz(bbox.rotation, True)}
-
-#             if "vehicle" in type_id:
-#                 control = actor.get_control().__dict__
-#             elif "pedestrian" in type_id:
-#                 walker_control = actor.get_control()
-#                 control = {"direction": get_xyz(walker_control.direction),
-#                            "speed": walker_control.speed, "jump": walker_control.jump}
-#         else:
-#             acceleration = {}
-#             velocity = {}
-#             angular_velocity = {}
-#             bounding_box = {}
-#             control = {}
-
-#         distance = ego_loc.distance(actor_loc)
-
-#         state_dict = {"id": actor_id,
-#                       "type_id": type_id,
-#                       "semantic_tags": semantic_tags,
-#                       "attributes": attributes,
-#                       "location": location,
-#                       "rotation": rotation,
-#                       "acceleration": acceleration,
-#                       "velocity": velocity,
-#                       "angular_velocity": angular_velocity,
-#                       "distance": distance,
-#                       "bounding_box": bounding_box,
-#                       "control": control}
-
-#         all_actor_state_list.append(state_dict)
-
-#     json_path = os.path.join(json_path, f"{int(frame):08d}.json")
-
-#     with open(json_path, "w") as f:
-#         json.dump(all_actor_state_list, f, indent=4)
-
-
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
@@ -2022,6 +1849,8 @@ class Data_Collection():
         # self.depth_rear_left = []
         # self.depth_rear_right = []
         self.sensor_lidar = []
+        
+        self.ss_top = []
 
         self.frame_list = []
         self.data_list = []
@@ -2194,6 +2023,12 @@ class Data_Collection():
                         "pedestrian_ids": pedestrian_ids, "traffic_light_ids": traffic_light_ids, "obstacle_ids": obstacle_ids}
 
     def collect_sensor(self, frame, world):
+        
+        while True:
+            if world.camera_manager.ss_top.frame == frame:
+                
+                self.ss_top.append(world.camera_manager.ss_top)
+                break
         while True:
             if world.camera_manager.rgb_front.frame == frame:
                 self.rgb_front.append(world.camera_manager.rgb_front)
@@ -2277,6 +2112,10 @@ class Data_Collection():
             if world.camera_manager.lidar.frame == frame:
                 self.sensor_lidar.append(world.camera_manager.lidar)
                 break
+        
+
+            
+        # 
 
         # store all actor
         self.frame_list.append(frame)
@@ -2716,6 +2555,9 @@ class Data_Collection():
               (sensors[sensor][2], view, counter))
 
     def save_data(self, path):
+        
+        t_ss_top = Process(target=self.save_img, args=(self.ss_top, 10, path,
+                              self.start_frame, self.end_frame, 'ss_top'))
 
         t_rgb_front = Process(target=self.save_img, args=(self.rgb_front, 0, path,
                               self.start_frame, self.end_frame, 'rgb_front'))
@@ -2778,6 +2620,7 @@ class Data_Collection():
         start_time = time.time()
 
         # t_front.start()
+        t_ss_top.start()
         t_rgb_front.start()
         t_rgb_left.start()
         t_rgb_right.start()
@@ -2815,6 +2658,7 @@ class Data_Collection():
         t_topology.start()
 
         # ------------------------------ #
+        t_ss_top.join()
 
         t_rgb_front.join()
         t_rgb_left.join()
@@ -2859,6 +2703,7 @@ class Data_Collection():
         # empty list
 
         # self.front_img = []
+        self.ss_top = []
         self.rgb_front = []
         self.rgb_left = []
         self.rgb_right = []
