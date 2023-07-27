@@ -16,12 +16,39 @@ from numpy import random
 from carla import VehicleLightState as vls
 from agents.navigation.basic_agent import BasicAgent
 from agents.navigation.behavior_agent import BehaviorAgent
-import json
+
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+
+
+
+def check_spwan_point_in_intersection(town, pos):
+    label_list = []
+    if town in ["Town01", "Town02","Town03", "Town04", "Town05", "Town06", "Town07", "Town10HD"]:
+        
+        path = f"./intersection_label/{town}.npy"
+
+        label_list = list(np.load(path))
+        
+    for point_list in label_list:
+            
+        polygon = Polygon([[p[0], p[1]] for p in point_list])
+        point = Point([pos[0], pos[1]])
+        
+        if polygon.contains(point):
+            return True
+    
+    return False
+        
 
 
 client = carla.Client('localhost', 2000)
 # client.set_timeout(5.0)
 def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
+    
+    
+    
+    town = args.map
 
     world = client.get_world()
     map = world.get_map()
@@ -43,7 +70,21 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
     waypoint_list = []
     
     for waypoint in spawn_points:
+        
+        # if spawn point in the intersection 
+        # waypoint.location 
+        
+        x = waypoint.location.x 
+        y = waypoint.location.y
+
         point = map.get_waypoint(waypoint.location)
+        
+        if check_spwan_point_in_intersection(town, [x, y]):
+            continue
+        
+        
+
+        
         """
         d = waypoint.location.distance(actor_transform_list[0]['transform'][0].location)
         closer_node = 0
