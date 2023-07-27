@@ -1,8 +1,4 @@
 import sys
-# sys.path.append('/home/carla/carla/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg')
-# sys.path.append('/home/carla/carla/PythonAPI')
-# sys.path.append('/home/carla/carla/PythonAPI/carla/')
-# sys.path.append('/home/carla/carla/PythonAPI/carla/agents')
 
 import carla
 import numpy as np
@@ -14,13 +10,8 @@ import math
 import argparse
 from numpy import random
 from carla import VehicleLightState as vls
-from agents.navigation.basic_agent import BasicAgent
-from agents.navigation.behavior_agent import BehaviorAgent
-
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-
-
 
 def check_spwan_point_in_intersection(town, pos):
     label_list = []
@@ -39,34 +30,20 @@ def check_spwan_point_in_intersection(town, pos):
             return True
     
     return False
-        
+
+def spawn_actor_nearby(args, world, client, seeds, distance=100, v_ratio=0.3, pedestrian=10, transform_dict={}): 
 
 
-client = carla.Client('localhost', 2000)
-# client.set_timeout(5.0)
-def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, transform_dict={}): 
-    
-    
-    
-    town = args.map
+    # get world and spawn points
 
-    world = client.get_world()
     map = world.get_map()
     spawn_points = map.get_spawn_points()
 
-    """
-    topo = map.get_topology()
-    topo_dict = {}
-
-    # iterate topology list to create topology dictionary 
-    for edge in topo:
-        if topo_dict.get(edge[0].id) == None:
-            topo_dict[edge[0].id] = []
-
-        topo_dict[edge[0].id].append(edge[1].id)
-    """
-
-    #get_spawn_points() get transform
+    # waypoint_list = []
+    
+    # for waypoint in spawn_points:
+    #     waypoint_list.append(waypoint)
+    
     waypoint_list = []
     
     for waypoint in spawn_points:
@@ -74,28 +51,13 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
         # if spawn point in the intersection 
         # waypoint.location 
         
-        # x = waypoint.location.x 
-        # y = waypoint.location.y
-        # if check_spwan_point_in_intersection(town, [x, y]):
-        #     continue
+        x = waypoint.location.x 
+        y = waypoint.location.y
+        if check_spwan_point_in_intersection(args.map, [x, y]):
+            continue
 
         point = map.get_waypoint(waypoint.location)
         
-
-        
-        
-
-        
-        """
-        d = waypoint.location.distance(actor_transform_list[0]['transform'][0].location)
-        closer_node = 0
-        next_nodes = pt.next(10)
-        #distinguish whether the next waypoint is closer
-        num_of_edges = len(next_nodes)
-        for node in next_nodes:
-            if node.transform.location.distance(actor_transform_list[0]['transform'][0].location) < d:
-                closer_node += 1
-        """
         flag = True
         
         mid = len(transform_dict['player']) // 2
@@ -132,15 +94,12 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
                     break
             if flag:
                 break
-        
-        """
-        if (waypoint.location.distance(center) < distance and 
-            closer_node > num_of_edges//2) and (not flag):
-            waypoint_list.append(waypoint)
-        """
 
         if not flag:
             waypoint_list.append(waypoint)
+    
+    
+    
             
     seed_4 = seeds[4]
     random.seed(seed_4)
@@ -160,11 +119,12 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
     FutureActor = carla.command.FutureActor
     traffic_manager = client.get_trafficmanager()
     # keep distance
-    traffic_manager.set_global_distance_to_leading_vehicle(1.0)
-
-
+    traffic_manager.set_global_distance_to_leading_vehicle(3.0)
+    traffic_manager.set_synchronous_mode(True)
+    
     seed_10 = seeds[10]
     traffic_manager.set_random_device_seed(seed_10)
+    
     
     synchronous_master = False
     vehicles_list = []
@@ -183,9 +143,12 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
         seed_5 = seeds[5]
         seed_5 += 5*num_of_vehicles
         random.seed(seed_5)
-        
+
         blueprint = random.choice(blueprints)
-        
+            # print('aaaaaa')
+            # print(blueprint.get_attribute('number_of_wheels').type)
+            # if int(blueprint.get_attribute('number_of_wheels')) == 4:
+            #     break
         #print(blueprint)
         
         if blueprint.has_attribute('color'):
@@ -213,7 +176,6 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
 
         #client.get_world().spawn_actor(blueprint, transform)
         # spawn the cars and set their autopilot and light state all together
-        
         batch.append(SpawnActor(blueprint, transform)
             .then(SetAutopilot(FutureActor, True, traffic_manager.get_port()))
             .then(SetVehicleLightState(FutureActor, light_state)))
@@ -224,43 +186,12 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
         else:
             vehicles_list.append(response.actor_id)
 
-    # print(f"Spawn {len(waypoint_list)} Vehicle")
-    """
-    Apply local planner to all vehicle
-    Random choose destination and behavior type
-    """
-    """
-    behavior_type = ['aggressive', 'normal', 'cautious']
-    actors = client.get_world().get_actors()
-    map = client.get_world().get_map()
-    vehicles = []
-    agents_map = {}
+    all_vehicle_actors = world.get_actors(vehicles_list)
+    for v in all_vehicle_actors:
+        traffic_manager.ignore_lights_percentage(v, 30)
+        traffic_manager.auto_lane_change(v, True)
 
-    # set attribute of vehicles
-    for actor in actors:
-        #print(actor.type_id)
-        if actor.type_id[0:7] == 'vehicle':
-            randtype = random.choice(behavior_type)
-            agent = BehaviorAgent(actor, behavior="aggressive")
-            #agent = BasicAgent(actor)
-
-            vehicles.append(actor)
-            agents_map[actor] = agent
-            
-            coord = actor.get_location()
-            lane_now = map.get_waypoint(coord).lane_id
-            agent.set_destination(coord, coord)
-
-            # sp meams spawn point
-            # find destination which in different lane with current location
-            random.shuffle(waypoint_list)
-            for sp in waypoint_list:
-                if map.get_waypoint(sp.location).lane_id != lane_now:
-                    agent.set_destination(coord, sp.location)
-                    print("Successfully spawn {} actor with initial location {} and destination {}!".format(randtype, coord, sp.location))
-                    break
     
-    """
 
     # -------------
     # Spawn Walkers
@@ -268,58 +199,21 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
     # some settings
     percentagePedestriansRunning = 0.5      # how many pedestrians will run
     percentagePedestriansCrossing = 0.5     # how many pedestrians will walk through the road
-    
-    
-    # 1. take all the random locations to spawn
     spawn_points = []
-    '''
-    loc_list = []
-    loc_dict = {}
-    loc = world.get_random_location_from_navigation()
-    count = 1
-    
-    while loc != None:
-        count += 1
-        print(loc)
-        loc = world.get_random_location_from_navigation()
-        if loc_dict.get(loc) == None:
-            loc_dict[loc] = True
-        else:
-            print("overlap")
-        loc_list.append(loc)
-    print("count:", count) 
-    '''
-    loc_dict = {}
+
     for i in range(pedestrian):
         spawn_point = carla.Transform()
-        
-        flag = False
-        
-        # Number of try to find spawn points
-        num_try = 100000
-        # while True:
-        for j in range(num_try):
-            loc = world.get_random_location_from_navigation()
-            temp = carla.Location(int(loc.x), int(loc.y), int(loc.z))
-            if (loc.distance(transform_dict['player'][mid].location) < distance) and (loc_dict.get(temp) == None):
-                loc_dict[temp] = True
-                spawn_point.location = loc
-                spawn_points.append(spawn_point)
-                flag = True
-                break
-        #print("Pedestrian#", i, " spawn: ", flag)
+        loc = world.get_random_location_from_navigation()
+        if (loc != None):
+            spawn_point.location = loc
+            spawn_points.append(spawn_point)
 
-        #if (loc != None):
-            #spawn_point.location = loc
-            #spawn_points.append(spawn_point)
-    # 2. we spawn the walker object
     batch = []
     walker_speed = []
     n=0
     for spawn_point in spawn_points:
         
         n+=1
-
         seed_8 = seeds[8]
         seed_8 += 8*n
         random.seed(seed_8)
@@ -330,11 +224,11 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
             walker_bp.set_attribute('is_invincible', 'false')
         # set the max speed
         if walker_bp.has_attribute('speed'):
-
+            
             seed_9 = seeds[9]
             seed_9 += 9*n
             random.seed(seed_9)
-
+            
             if (random.random() > percentagePedestriansRunning):
                 # walking
                 walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])
@@ -375,7 +269,7 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
     # if not True or not synchronous_master:
     #     world.wait_for_tick()
     # else:
-    #     world.tick()
+    world.tick()
 
     # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
     # set how many pedestrians can cross the road
@@ -393,5 +287,5 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
 
     print('spawned %d vehicles and %d walkers.' % (len(vehicles_list), len(walkers_list)))
     # example of how to use parameters
-    traffic_manager.global_percentage_speed_difference(10.0)
-    return vehicles_list, all_actors,all_id
+    traffic_manager.global_percentage_speed_difference(-20.0)
+    return vehicles_list, all_actors, all_id

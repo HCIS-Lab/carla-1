@@ -39,6 +39,8 @@ from read_input import *
 from get_and_control_trafficlight import *
 from random_actors import spawn_actor_nearby
 
+
+
 import carla
 from carla import VehicleLightState as vls
 from carla import ColorConverter as cc
@@ -2933,17 +2935,20 @@ def game_loop(args):
 
     if args.random_actors != 'none':
         if args.random_actors == 'pedestrian':  # only pedestrian
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=30, v_ratio=0.0,
-                                                                   pedestrian=100, transform_dict=transform_dict)
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, world.world, client, seeds,  distance=30, v_ratio=0.0,
+                                                                   pedestrian=40, transform_dict=transform_dict)
         elif args.random_actors == 'low':
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.3,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, world.world, client, seeds,  distance=100, v_ratio=0.3,
                                                                    pedestrian=20, transform_dict=transform_dict)
         elif args.random_actors == 'mid':
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.6,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, world.world, client, seeds,  distance=100, v_ratio=0.6,
                                                                    pedestrian=45, transform_dict=transform_dict)
         elif args.random_actors == 'high':
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.8,
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, world.world, client, seeds,  distance=100, v_ratio=0.8,
                                                                    pedestrian=70, transform_dict=transform_dict)
+
+
+        
     scenario_name = scenario_name + args.random_actors + '_'
 
     # write actor list
@@ -3030,7 +3035,7 @@ def game_loop(args):
                             actor_transform_index[actor_id] += 1
 
                     elif 'pedestrian' in filter_dict[actor_id]:
-                        print("ped")
+                        # print("ped")
                         agents_dict[actor_id].apply_control(
                             ped_control_dict[actor_id][actor_transform_index[actor_id]])
                         actor_transform_index[actor_id] += 1
