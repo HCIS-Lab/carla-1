@@ -2744,8 +2744,7 @@ def game_loop(args):
     path = os.path.join('data_collection',
                         args.scenario_type, args.scenario_id)
 
-    out = cv2.VideoWriter(path+"/"+str(args.scenario_id)+".mp4",
-                          cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
+    
 
     filter_dict = {}
     try:
@@ -2819,11 +2818,17 @@ def game_loop(args):
     exec("args.weather = carla.WeatherParameters.%s" % args.weather)
     stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id,
                                'variant_scenario', weather + "_" + args.random_actors + "_")
+    
+    
 
-    # print(stored_path)
+
 
     if not os.path.exists(stored_path):
         os.makedirs(stored_path)
+
+    out = cv2.VideoWriter(stored_path+"/"+str(args.scenario_id)+".mp4",
+                          cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
+
 
     # pass seeds to the world
     world = World(client.load_world(args.map),
@@ -3100,7 +3105,13 @@ def game_loop(args):
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
-
+        
+    print(args.no_save , args.generate_random_seed , abandon_scenario)
+    if args.no_save and args.generate_random_seed and (not abandon_scenario) :
+        # save random_seed 
+        with open(f'{stored_path}/seed.txt', 'w') as f:
+            f.write(str(random_seed_int))
+        
 
     if not args.no_save and (not abandon_scenario):
         data_collection.set_end_frame(frame)
@@ -3213,13 +3224,21 @@ def main():
         choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
         required=True,
         help='enable roaming actors')
+    
+    
 
     # no_save flag
     # fast
     # only use 1 camera sensor
     argparser.add_argument(
         '--no_save',
-        default=True,
+        # default=False,
+        action='store_true',
+        help='run scenarios only')
+    
+    argparser.add_argument(
+        '--generate_random_seed',
+        # default=False,
         action='store_true',
         help='run scenarios only')
 
