@@ -74,18 +74,21 @@ do
                 ../../CarlaUE4.sh & sleep 15	
             fi
 
-            a=$(random_range 0 6)
-            b=$(random_range 7 13)
-            c=$(random_range 14 20)
-            w=($a $b $c)
+            a=$(random_range 0 3)
+            b=$(random_range 4 6)
+            c=$(random_range 7 10)
+            d=$(random_range 11 13)
+            e=$(random_range 14 17)
+            f=$(random_range 17 20)
+            w=($a $b $c $d $e $f)
             
             echo ${eachfile:$len} 
 
             if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
             then
-                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --no_save --generate_random_seed --weather ${weather[i]}  --random_actors ${random_actor[j]}
+                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --no_save --generate_random_seed --weather ${weather[${w[${i}]}]}  --random_actors ${random_actor[j]}
             else
-                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --no_save --generate_random_seed --weather ${weather[i]}   --random_actors ${random_actor[j]}
+                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --no_save --generate_random_seed --weather ${weather[${w[${i}]}]}   --random_actors ${random_actor[j]}
             fi
 
             sleep 2
