@@ -2933,17 +2933,17 @@ def game_loop(args):
 
     if args.random_actors != 'none':
         if args.random_actors == 'pedestrian':  # only pedestrian
-            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.0,
-                                                                   pedestrian=40, transform_dict=transform_dict)
+            vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=30, v_ratio=0.0,
+                                                                   pedestrian=100, transform_dict=transform_dict)
         elif args.random_actors == 'low':
             vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.3,
                                                                    pedestrian=20, transform_dict=transform_dict)
         elif args.random_actors == 'mid':
             vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.6,
-                                                                   pedestrian=35, transform_dict=transform_dict)
+                                                                   pedestrian=45, transform_dict=transform_dict)
         elif args.random_actors == 'high':
             vehicles_list, all_actors, all_id = spawn_actor_nearby(args, seeds,  distance=100, v_ratio=0.8,
-                                                                   pedestrian=50, transform_dict=transform_dict)
+                                                                   pedestrian=70, transform_dict=transform_dict)
     scenario_name = scenario_name + args.random_actors + '_'
 
     # write actor list
@@ -3005,6 +3005,8 @@ def game_loop(args):
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                     x = transform_dict[actor_id][actor_transform_index[actor_id]].location.x
                     y = transform_dict[actor_id][actor_transform_index[actor_id]].location.y
+                    
+
                     if 'vehicle' in filter_dict[actor_id]:
 
                         target_speed = (
@@ -3028,6 +3030,7 @@ def game_loop(args):
                             actor_transform_index[actor_id] += 1
 
                     elif 'pedestrian' in filter_dict[actor_id]:
+                        print("ped")
                         agents_dict[actor_id].apply_control(
                             ped_control_dict[actor_id][actor_transform_index[actor_id]])
                         actor_transform_index[actor_id] += 1
@@ -3105,8 +3108,7 @@ def game_loop(args):
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
-        
-    print(args.no_save , args.generate_random_seed , abandon_scenario)
+    
     if args.no_save and args.generate_random_seed and (not abandon_scenario) :
         # save random_seed 
         with open(f'{stored_path}/seed.txt', 'w') as f:
@@ -3214,7 +3216,7 @@ def main():
     argparser.add_argument(
         '--random_actors',
         type=str,
-        default='high',
+        default='pedestrian',
         choices=['none', 'pedestrian', 'low', 'mid', 'high'],
         help='enable roaming actors')
 

@@ -33,31 +33,63 @@ else
     echo "run default setting : interactive"
 fi
 
+
+weather=('ClearNoon' 'CloudyNoon' 'WetNoon' 'WetCloudyNoon' 'MidRainyNoon' 'HardRainNoon' 'SoftRainNoon'
+	'ClearSunset' 'CloudySunset' 'WetSunset' 'WetCloudySunset' 'MidRainSunset' 'HardRainSunset' 'SoftRainSunset'
+	'ClearNight' 'CloudyNight' 'WetNight' 'WetCloudyNight' 'MidRainyNight' 'HardRainNight' 'SoftRainNight')
+random_actor=('low' 'mid' 'high')
+
+function random_range()
+{
+    if [ "$#" -lt "2" ]; then
+        echo "Usage: random_range <low> <high>"
+        return
+    fi
+    low=$1
+    range=$(($2 - $1))
+    echo $(($low+$RANDOM % $range))
+}
+
+
+
 len=${#scenario_type}
 len=$((len + 19))
 folder=`ls -d ./data_collection/${scenario_type}/*`
 
 ../../CarlaUE4.sh &
-sleep 15
+sleep 10
 SERVICE="CarlaUE4"
 for eachfile in $folder
 do
-    if pgrep "$SERVICE" >/dev/null
-    then
-        echo "$SERVICE is running"
-    else
-        echo "$SERVICE is  stopped"
-        ../../CarlaUE4.sh & sleep 15	
-    fi
-    
-    echo ${eachfile:$len} 
 
-    if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
-    then
-        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --no_save --generate_random_seed
-    else
-        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --no_save --generate_random_seed
-    fi
+	for((i=0; i<${#weather[@]}; i++))
+	do
+        for((j=0; j<${#random_actor[@]}; j++))
+        do
+            if pgrep "$SERVICE" >/dev/null
+            then
+                echo "$SERVICE is running"
+            else
+                echo "$SERVICE is  stopped"
+                ../../CarlaUE4.sh & sleep 15	
+            fi
 
-    sleep 3
+            a=$(random_range 0 6)
+            b=$(random_range 7 13)
+            c=$(random_range 14 20)
+            w=($a $b $c)
+            
+            echo ${eachfile:$len} 
+
+            if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+            then
+                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --no_save --generate_random_seed --weather ${weather[i]} # --random_actors ${random_actor[j]}
+            else
+                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --no_save --generate_random_seed --weather ${weather[i]} #  --random_actors ${random_actor[j]}
+            fi
+
+            sleep 2
+        done
+    done
+    killall -9 -r CarlaUE4-Linux
 done

@@ -74,13 +74,14 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
         # if spawn point in the intersection 
         # waypoint.location 
         
-        x = waypoint.location.x 
-        y = waypoint.location.y
+        # x = waypoint.location.x 
+        # y = waypoint.location.y
+        # if check_spwan_point_in_intersection(town, [x, y]):
+        #     continue
 
         point = map.get_waypoint(waypoint.location)
         
-        if check_spwan_point_in_intersection(town, [x, y]):
-            continue
+
         
         
 
@@ -267,6 +268,8 @@ def spawn_actor_nearby(args, seeds, distance=100, v_ratio=0.8, pedestrian=10, tr
     # some settings
     percentagePedestriansRunning = 0.5      # how many pedestrians will run
     percentagePedestriansCrossing = 0.5     # how many pedestrians will walk through the road
+    
+    
     # 1. take all the random locations to spawn
     spawn_points = []
     '''
