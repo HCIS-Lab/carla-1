@@ -475,7 +475,10 @@ class DualControl(object):
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
                     npc_id = str(input("NPC id ? "))
-                    world.npc = world.world.get_actor(npc_id)
+                    if npc_id == "None":
+                        world.npc = None
+                    else:
+                        world.npc = world.world.get_actor(npc_id)
                     self.r = world.camera_manager.toggle_recording()
                     return self.r
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
@@ -1963,6 +1966,8 @@ def record_velocity(actor_dict, world):
 def extract_actor(actor_dict, control_dict, world):
     actor_list = [world.player, world.npc]
     for actor in actor_list:
+        if actor is None:
+            continue
         # if actor.id not in actor_dict:
         if actor.id == world.player.id:
             actor_dict['player'] = {'filter': str(world.player.type_id),
