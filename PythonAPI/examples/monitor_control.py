@@ -1933,6 +1933,8 @@ class CameraManager(object):
 def record_transform(actor_dict, world):
     actor_list = [world.player, world.npc]
     for i, actor in enumerate(actor_list):
+        if actor is None:
+            continue
         transform = actor.get_transform()
         np_transform = np.zeros(7)
         np_transform[0:3] = [transform.location.x,
@@ -1948,19 +1950,22 @@ def record_transform(actor_dict, world):
 
 def record_ped_control(control_dict, world):
     actor = world.npc
-    if 'pedestrian' in actor.type_id:
-        control = actor.get_control()
-        np_control = np.zeros(5)
-        np_control[0:5] = [control.direction.x, control.direction.y, control.direction.z,
-                           control.speed, control.jump]
-
-        control_dict[str(actor.id)]['control'].append(np_control)
+    if actor is not None:
+        if 'pedestrian' in actor.type_id:
+            control = actor.get_control()
+            np_control = np.zeros(5)
+            np_control[0:5] = [control.direction.x, control.direction.y, control.direction.z,
+                               control.speed, control.jump]
+    
+            control_dict[str(actor.id)]['control'].append(np_control)
     return control_dict
 
 
 def record_velocity(actor_dict, world):
     actor_list = [world.player, world.npc]
     for i, actor in enumerate(actor_list):
+        if actor is None:
+            continue
         velocity = actor.get_velocity()
         np_velocity = np.zeros(3)
         np_velocity = [velocity.x, velocity.y, velocity.z]
