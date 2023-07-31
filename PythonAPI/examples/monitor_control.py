@@ -1492,7 +1492,7 @@ class CameraManager(object):
             # enter your scenario id
             # and there are some format requirement need to clarify
             scenario_name_map = {'1': 'Town01', '2': 'Town02', '3': 'Town03', '4': 'Town04', '5': 'Town05',
-                                 '6': 'Town06', '7': 'Town07', '10': 'Town10HD', "A1":"A1"}
+                                 '6': 'Town06', '7': 'Town07', '10': 'Town10HD', "A1": "A1", "A6": "A6"}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
             if self.scenario_type == 'interactive':
 
@@ -1501,10 +1501,12 @@ class CameraManager(object):
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
                                                    'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
-                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking'}
+                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking', 
+                                                   'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn'}
+                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 
+                                           'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
                 scenario_name_interaction = {'0': 'False', '1':  'True'}
 
@@ -1603,7 +1605,8 @@ class CameraManager(object):
                 scenario_name_actor_type = {'0': 'None'}
                 scenario_name_actor_type_action = {'0': 'None'}
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn'}
+                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 
+                                           'gr': 'go around roundabout', 'er': 'exit roundabout'}
                 scenario_name_interaction = {'0': 'False'}
                 scenario_name_violated_rule = {'0': 'None', 'j': 'jay-walker',
                                                'rl': 'running traffic light', 's': 'driving on sidewalk', 'ss': 'stop sign'}
@@ -1689,10 +1692,10 @@ class CameraManager(object):
 
             elif self.scenario_type == 'obstacle':
                 scenario_name_my_initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
-                                                   'u': 'u-turn'}
+                                                   'u': 'u-turn', 'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
                 scenario_name_my_action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left', 'sr': 'slide_right',
-                                           'u': 'u-turn'}
+                                           'u': 'u-turn', 'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
                 obstacle_type = {'0': 'traffic cone',
                                  '1': 'street barrier', '2': 'traffic warning', '3': 'illegal parking'}
@@ -1756,10 +1759,12 @@ class CameraManager(object):
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
                                                    'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
-                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking', '0': 'None'}
+                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking', 
+                                                   'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout', '0': 'None'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'ri': 'Crash into refuge island'}
+                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 'gr': 'go around roundabout', 
+                                           'er': 'exit roundabout', 'ri': 'Crash into refuge island'}
 
                 # scenario_name_interaction = {'0': 'False', '1':  'True'}
 
@@ -1927,14 +1932,14 @@ class CameraManager(object):
 
 def record_transform(actor_dict, world):
     actor_list = [world.player, world.npc]
-    for i,actor in enumerate(actor_list):
+    for i, actor in enumerate(actor_list):
         transform = actor.get_transform()
         np_transform = np.zeros(7)
         np_transform[0:3] = [transform.location.x,
                              transform.location.y, transform.location.z]
         np_transform[3:6] = [transform.rotation.pitch,
                              transform.rotation.yaw, transform.rotation.roll]
-        if i==0:
+        if i == 0:
             actor_dict['player']['transform'].append(np_transform)
         else:
             actor_dict[str(actor.id)]['transform'].append(np_transform)
@@ -1955,11 +1960,11 @@ def record_ped_control(control_dict, world):
 
 def record_velocity(actor_dict, world):
     actor_list = [world.player, world.npc]
-    for i,actor in enumerate(actor_list):
+    for i, actor in enumerate(actor_list):
         velocity = actor.get_velocity()
         np_velocity = np.zeros(3)
         np_velocity = [velocity.x, velocity.y, velocity.z]
-        if i==0:
+        if i == 0:
             actor_dict['player']['velocity'].append(np_velocity)
         else:
             actor_dict[str(actor.id)]['velocity'].append(np_velocity)
@@ -2163,7 +2168,8 @@ def generate_obstacle(world, n, area, map, scenario_tag):
     blueprint_library = world.get_blueprint_library()
     all_wp = world.get_map().generate_waypoints(6)
     intersection_coordinators = scenario_tag_to_location(map)
-    spawn_location = [carla.Transform(location=carla.Location(*intersection_coordinators[scenario_tag]))]
+    spawn_location = [carla.Transform(location=carla.Location(
+        *intersection_coordinators[scenario_tag]))]
 
     obstacle_list = []
     trans_list = []
@@ -2345,7 +2351,8 @@ def generate_parking(world, n, map, scenario_tag):
 
     blueprint_library = world.get_blueprint_library()
     intersection_coordinators = scenario_tag_to_location(map)
-    spawn_location = [carla.Transform(location=carla.Location(*intersection_coordinators[scenario_tag]))]
+    spawn_location = [carla.Transform(location=carla.Location(
+        *intersection_coordinators[scenario_tag]))]
     parking_list = []
 
     motor_list = ['bh.crossbike', 'yamaha.yzf', 'vespa.zx125',
@@ -2766,7 +2773,8 @@ def game_loop(args):
             obstacle_list = generate_obstacle(
                 client.get_world(), args.obstacle, args.area, args.map, args.scenario_tag)
         if args.parking != 0:
-            obstacle_list = generate_parking(client.get_world(), args.parking, args.map, args.scenario_tag)
+            obstacle_list = generate_parking(
+                client.get_world(), args.parking, args.map, args.scenario_tag)
 
         lights = []
         actors = world.world.get_actors()
