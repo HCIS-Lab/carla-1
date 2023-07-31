@@ -1501,11 +1501,11 @@ class CameraManager(object):
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
                                                    'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
-                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking', 
+                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking',
                                                    'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 
+                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout',
                                            'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
                 scenario_name_interaction = {'0': 'False', '1':  'True'}
@@ -1605,7 +1605,7 @@ class CameraManager(object):
                 scenario_name_actor_type = {'0': 'None'}
                 scenario_name_actor_type_action = {'0': 'None'}
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 
+                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout',
                                            'gr': 'go around roundabout', 'er': 'exit roundabout'}
                 scenario_name_interaction = {'0': 'False'}
                 scenario_name_violated_rule = {'0': 'None', 'j': 'jay-walker',
@@ -1759,11 +1759,11 @@ class CameraManager(object):
 
                 scenario_name_actor_type_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn',
                                                    'sl': 'slide_left', 'sr': 'slide_right', 'u': 'u-turn',
-                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking', 
+                                                   'c': 'crossing', 'w': 'walking on sidewalk', 'j': 'jaywalking',
                                                    'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout', '0': 'None'}
 
                 scenario_name_my_action = {'f': 'forward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'slide_left',
-                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 'gr': 'go around roundabout', 
+                                           'sr': 'slide_right', 'u': 'u-turn', 'gi': 'go into roundabout', 'gr': 'go around roundabout',
                                            'er': 'exit roundabout', 'ri': 'Crash into refuge island'}
 
                 # scenario_name_interaction = {'0': 'False', '1':  'True'}
@@ -1956,7 +1956,7 @@ def record_ped_control(control_dict, world):
             np_control = np.zeros(5)
             np_control[0:5] = [control.direction.x, control.direction.y, control.direction.z,
                                control.speed, control.jump]
-    
+
             control_dict[str(actor.id)]['control'].append(np_control)
     return control_dict
 
@@ -2106,7 +2106,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
 
     elif scenario_type == 'obstacle':
         initial_action = {'f': 'foward', 'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left', 'sr': 'lane-change-right',
-                          'u': 'u-turn'}
+                          'u': 'u-turn', 'gi': 'go into roundabout', 'gr': 'go around roundabout', 'er': 'exit roundabout'}
 
         action = {'l': 'left_turn', 'r': 'right_turn', 'sl': 'lane-change-left', 'sr': 'lane-change-right', 'u': 'u-turn',
                   # roundabout
@@ -2172,6 +2172,8 @@ def generate_obstacle(world, n, area, map, scenario_tag):
 
     blueprint_library = world.get_blueprint_library()
     all_wp = world.get_map().generate_waypoints(6)
+    random.shuffle(all_wp)
+
     intersection_coordinators = scenario_tag_to_location(map)
     spawn_location = [carla.Transform(location=carla.Location(
         *intersection_coordinators[scenario_tag]))]
@@ -2202,7 +2204,7 @@ def generate_obstacle(world, n, area, map, scenario_tag):
                          "basic_id": actor.id,
                          "location": {"x": new_trans.location.x, "y": new_trans.location.y, "z": new_trans.location.z},
                          "rotation": {"pitch": new_trans.rotation.pitch, "yaw": new_trans.rotation.yaw, "roll": new_trans.rotation.roll}}
-        
+
         obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
@@ -2274,6 +2276,8 @@ def generate_obstacle(world, n, area, map, scenario_tag):
                 wp = all_wp[k]
                 if dist(wp.transform, spawn_location, 60):
                     continue
+                elif scenario_tag == "r1" and wp.is_junction and dist(wp.transform, trans_list, 40):
+                    pass
                 elif not wp.is_junction and dist(wp.transform, trans_list, 40) and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
                     break
 
@@ -2727,6 +2731,11 @@ def scenario_tag_to_location(town):
         intersection_coordinators = {
             'r1':
             (-15.9, -24.7, 0.0),
+        }
+    elif town == "A6":
+        intersection_coordinators = {
+            'r1':
+            (20.1, 1.3, 0.0),
         }
 
     return intersection_coordinators
