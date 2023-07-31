@@ -447,7 +447,7 @@ class DualControl(object):
                 elif event.key == K_c and pygame.key.get_mods() & KMOD_SHIFT:
                     world.next_weather(reverse=True)
                 elif event.key == K_c:
-                    npc_id = str(input("NPC id ? "))
+                    npc_id = int(input("NPC id ? "))
                     if npc_id == "None":
                         world.npc = None
                     else:
@@ -721,7 +721,7 @@ class KeyboardControl(object):
                 elif event.key == K_c and pygame.key.get_mods() & KMOD_SHIFT:
                     world.next_weather(reverse=True)
                 elif event.key == K_c:
-                    npc_id = str(input("NPC id ? "))
+                    npc_id = int(input("NPC id ? "))
                     if npc_id == "None":
                         world.npc = None
                     else:
