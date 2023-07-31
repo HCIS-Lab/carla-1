@@ -2140,7 +2140,7 @@ def save_description(stored_path, scenario_type, scenario_name, carla_map):
         d['map'] = carla_map
 
     with open(os.path.join(stored_path, 'scenario_description.json'), 'w') as f:
-        json.dump(d, f)
+        json.dump(d, f, indent=4)
 
 
 def record_traffic_lights(lights_dict, lights):
