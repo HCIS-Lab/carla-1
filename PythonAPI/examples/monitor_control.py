@@ -1486,7 +1486,7 @@ class CameraManager(object):
             # enter your scenario id
             # and there are some format requirement need to clarify
             scenario_name_map = {'1': 'Town01', '2': 'Town02', '3': 'Town03', '4': 'Town04', '5': 'Town05',
-                                 '6': 'Town06', '7': 'Town07', '10': 'Town10HD'}
+                                 '6': 'Town06', '7': 'Town07', '10': 'Town10HD', "A1":"A1"}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
             if self.scenario_type == 'interactive':
 
@@ -2701,6 +2701,11 @@ def scenario_tag_to_location(town):
             (27, 12, 0.0),
             's6':
             (-46, -23, 0.0)
+        }
+    elif town == "A1":
+        intersection_coordinators = {
+            'r1':
+            (-15.9, -24.7, 0.0),
         }
 
     return intersection_coordinators
