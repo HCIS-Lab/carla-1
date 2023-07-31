@@ -447,7 +447,11 @@ class DualControl(object):
                 elif event.key == K_c and pygame.key.get_mods() & KMOD_SHIFT:
                     world.next_weather(reverse=True)
                 elif event.key == K_c:
-                    world.next_weather()
+                    npc_id = str(input("NPC id ? "))
+                    if npc_id == "None":
+                        world.npc = None
+                    else:
+                        world.npc = world.world.get_actor(npc_id)
                 elif event.key == K_g:
                     world.toggle_radar()
                 elif event.key == K_BACKQUOTE:
@@ -474,11 +478,6 @@ class DualControl(object):
                 elif event.key > K_0 and event.key <= K_9:
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
-                    npc_id = str(input("NPC id ? "))
-                    if npc_id == "None":
-                        world.npc = None
-                    else:
-                        world.npc = world.world.get_actor(npc_id)
                     self.r = world.camera_manager.toggle_recording()
                     return self.r
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
@@ -722,7 +721,11 @@ class KeyboardControl(object):
                 elif event.key == K_c and pygame.key.get_mods() & KMOD_SHIFT:
                     world.next_weather(reverse=True)
                 elif event.key == K_c:
-                    world.next_weather()
+                    npc_id = str(input("NPC id ? "))
+                    if npc_id == "None":
+                        world.npc = None
+                    else:
+                        world.npc = world.world.get_actor(npc_id)
                 elif event.key == K_g:
                     world.toggle_radar()
                 elif event.key == K_BACKQUOTE:
