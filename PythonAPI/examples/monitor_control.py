@@ -190,6 +190,7 @@ class World(object):
         self.scenario_type = args.scenario_type
         self.hud = hud
         self.player = None
+        self.npc = None
         self.collision_sensor = None
         self.lane_invasion_sensor = None
         self.gnss_sensor = None
@@ -473,6 +474,8 @@ class DualControl(object):
                 elif event.key > K_0 and event.key <= K_9:
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
+                    npc_id = str(input("NPC id ? "))
+                    world.npc = world.world.get_actor(npc_id)
                     self.r = world.camera_manager.toggle_recording()
                     return self.r
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
@@ -1917,49 +1920,48 @@ class CameraManager(object):
 
 
 def record_transform(actor_dict, world):
-    actor_list = world.world.get_actors()
-    for actor in actor_list:
+    actor_list = [world.player, world.npc]
+    for i,actor in enumerate(actor_list):
         transform = actor.get_transform()
         np_transform = np.zeros(7)
         np_transform[0:3] = [transform.location.x,
                              transform.location.y, transform.location.z]
         np_transform[3:6] = [transform.rotation.pitch,
                              transform.rotation.yaw, transform.rotation.roll]
-        if actor.id == world.player.id:
+        if i==0:
             actor_dict['player']['transform'].append(np_transform)
-        elif 'vehicle' in str(actor.type_id) or 'pedestrian' in str(actor.type_id):
+        else:
             actor_dict[str(actor.id)]['transform'].append(np_transform)
     return actor_dict
 
 
 def record_ped_control(control_dict, world):
-    actor_list = world.world.get_actors()
-    for actor in actor_list:
-        if 'pedestrian' in actor.type_id:
-            control = actor.get_control()
-            np_control = np.zeros(5)
-            np_control[0:5] = [control.direction.x, control.direction.y, control.direction.z,
-                               control.speed, control.jump]
+    actor = world.npc
+    if 'pedestrian' in actor.type_id:
+        control = actor.get_control()
+        np_control = np.zeros(5)
+        np_control[0:5] = [control.direction.x, control.direction.y, control.direction.z,
+                           control.speed, control.jump]
 
-            control_dict[str(actor.id)]['control'].append(np_control)
+        control_dict[str(actor.id)]['control'].append(np_control)
     return control_dict
 
 
 def record_velocity(actor_dict, world):
-    actor_list = world.world.get_actors()
-    for actor in actor_list:
+    actor_list = [world.player, world.npc]
+    for i,actor in enumerate(actor_list):
         velocity = actor.get_velocity()
         np_velocity = np.zeros(3)
         np_velocity = [velocity.x, velocity.y, velocity.z]
-        if actor.id == world.player.id:
+        if i==0:
             actor_dict['player']['velocity'].append(np_velocity)
-        elif 'vehicle' in str(actor.type_id) or 'walker' in str(actor.type_id):
+        else:
             actor_dict[str(actor.id)]['velocity'].append(np_velocity)
     return actor_dict
 
 
 def extract_actor(actor_dict, control_dict, world):
-    actor_list = world.world.get_actors()
+    actor_list = [world.player, world.npc]
     for actor in actor_list:
         # if actor.id not in actor_dict:
         if actor.id == world.player.id:
