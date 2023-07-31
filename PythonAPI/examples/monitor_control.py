@@ -2200,8 +2200,9 @@ def generate_obstacle(world, n, area, map, scenario_tag):
 
         obstacle_attr = {"obstacle_type": stat_prop[id],
                          "basic_id": actor.id,
-                         "location": new_trans.location.__dict__,
-                         "rotation": new_trans.rotation.__dict__}
+                         "location": {"x": new_trans.location.x, "y": new_trans.location.y, "z": new_trans.location.z},
+                         "rotation": {"pitch": new_trans.rotation.pitch, "yaw": new_trans.rotation.yaw, "roll": new_trans.rotation.roll}}
+        
         obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
@@ -2216,8 +2217,8 @@ def generate_obstacle(world, n, area, map, scenario_tag):
 
         obstacle_attr = {"obstacle_type": stat_prop[id],
                          "basic_id": actor.id,
-                         "location": new_trans.location.__dict__,
-                         "rotation": new_trans.rotation.__dict__}
+                         "location": {"x": new_trans.location.x, "y": new_trans.location.y, "z": new_trans.location.z},
+                         "rotation": {"pitch": new_trans.rotation.pitch, "yaw": new_trans.rotation.yaw, "roll": new_trans.rotation.roll}}
         obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
@@ -2234,8 +2235,8 @@ def generate_obstacle(world, n, area, map, scenario_tag):
 
         obstacle_attr = {"obstacle_type": stat_prop[id],
                          "basic_id": actor.id,
-                         "location": new_trans.location.__dict__,
-                         "rotation": new_trans.rotation.__dict__}
+                         "location": {"x": new_trans.location.x, "y": new_trans.location.y, "z": new_trans.location.z},
+                         "rotation": {"pitch": new_trans.rotation.pitch, "yaw": new_trans.rotation.yaw, "roll": new_trans.rotation.roll}}
         obstacle_list.append(obstacle_attr)
 
         trans_list.append(new_trans)
@@ -2416,8 +2417,8 @@ def generate_parking(world, n, map, scenario_tag):
 
             parking_attr = {"obstacle_type": actor.type_id,
                             "basic_id": actor.id,
-                            "location": cur_trans.location.__dict__,
-                            "rotation": cur_trans.rotation.__dict__}
+                            "location": {"x": cur_trans.location.x, "y": cur_trans.location.y, "z": cur_trans.location.z},
+                            "rotation": {"pitch": cur_trans.rotation.pitch, "yaw": cur_trans.rotation.yaw, "roll": cur_trans.rotation.roll}}
             parking_list.append(parking_attr)
 
         except Exception:
