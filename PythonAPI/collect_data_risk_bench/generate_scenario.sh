@@ -62,7 +62,7 @@ SERVICE="CarlaUE4"
 for eachfile in $folder
 do
 
-	for((i=0; i<6; i++))
+	for((i=0; i<4; i++))
 	do
         for((j=0; j<${#random_actor[@]}; j++))
         do
