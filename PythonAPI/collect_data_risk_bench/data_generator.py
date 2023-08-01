@@ -1714,23 +1714,23 @@ def set_bp(blueprint, actor_id):
 
     return blueprint
 
-def save_description(world, args, stored_path, weather, agents_dict, nearest_obstacle):
-    vehicles = world.world.get_actors().filter('vehicle.*')
-    peds = world.world.get_actors().filter('walker.*')
-    d = dict()
-    d['num_actor'] = len(vehicles) + len(peds)
-    d['num_vehicle'] = len(vehicles)
-    d['weather'] = str(weather)
-    # d['random_objects'] = args.random_objects
-    d['random_actors'] = args.random_actors
-    d['simulation_time'] = int(world.hud.simulation_time)
-    d['nearest_obstacle'] = nearest_obstacle
+# def save_description(world, args, stored_path, weather, agents_dict, nearest_obstacle):
+#     vehicles = world.world.get_actors().filter('vehicle.*')
+#     peds = world.world.get_actors().filter('walker.*')
+#     d = dict()
+#     d['num_actor'] = len(vehicles) + len(peds)
+#     d['num_vehicle'] = len(vehicles)
+#     d['weather'] = str(weather)
+#     # d['random_objects'] = args.random_objects
+#     d['random_actors'] = args.random_actors
+#     d['simulation_time'] = int(world.hud.simulation_time)
+#     d['nearest_obstacle'] = nearest_obstacle
 
-    for key in agents_dict:
-        d[key] = agents_dict[key].id
+#     for key in agents_dict:
+#         d[key] = agents_dict[key].id
 
-    with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
-        json.dump(d, f, indent=4)
+#     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
+#         json.dump(d, f, indent=4)
 
 def write_actor_list(world, stored_path):
 
@@ -2794,14 +2794,16 @@ def game_loop(args):
     detect_end = False
     # read start position and end position 
     
-    # start_end_point.json 
-    with open(f"{path}/start_end_point.json") as f:
-        data = json.load(f)
 
-        start_position_x  = float(data["start_x"])
-        start_position_y  = float(data["start_y"])
-        end_position_x  = float(data["end_x"])
-        end_position_y  = float(data["end_y"])
+    if not args.test:
+        # start_end_point.json 
+        with open(f"{path}/start_end_point.json") as f:
+            data = json.load(f)
+
+            start_position_x  = float(data["start_x"])
+            start_position_y  = float(data["start_y"])
+            end_position_x  = float(data["end_x"])
+            end_position_y  = float(data["end_y"])
            
     
 
@@ -2821,15 +2823,17 @@ def game_loop(args):
     stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id,
                                'variant_scenario', weather + "_" + args.random_actors + "_")
     
+
     
 
-
-
-    if not os.path.exists(stored_path):
-        os.makedirs(stored_path)
-
-    out = cv2.VideoWriter(stored_path+"/"+str(args.scenario_id)+".mp4",
+    if args.test:
+        out = cv2.VideoWriter(f'data_collection/{args.scenario_type}/{args.scenario_id}/{args.scenario_id}.mp4',
                           cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
+    else:
+        if not os.path.exists(stored_path):
+            os.makedirs(stored_path)
+        out = cv2.VideoWriter(stored_path+"/"+str(args.scenario_id)+".mp4",
+                            cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
 
 
     # pass seeds to the world
@@ -2926,7 +2930,7 @@ def game_loop(args):
         actor_transform_index[actor_id] = 1
         finish[actor_id] = False
 
-    if args.scenario_type == "obstacle" and not args.no_save:
+    if args.scenario_type == "obstacle" and not args.no_save and not args.test:
         with open(os.path.join(stored_path, "obstacle_info.json"), "w")as f:
             json.dump(obstacle_info, f, indent=4)
 
@@ -2982,10 +2986,7 @@ def game_loop(args):
 
         elif iter_tick > iter_start:
             
-            
 
-            
-            
 
             if not args.no_save:
                 if args.scenario_type == "interactive" or args.scenario_type == "collision":
@@ -3082,24 +3083,26 @@ def game_loop(args):
                 
                 # check start position
                 # print("current position ", x, y)
-                if detect_start:
-                    distacne = math.sqrt((x - start_position_x)**2 + (y - start_position_y)**2)
-                    # print("start position", start_position_x, start_position_y)
-                    # print("start ", distacne)
-                    # print(" ")
-                    if distacne < 1.0:
-                        detect_start = False
-                        collection_flag = True
-                        detect_end = True
+
+                if not args.test:
+                    if detect_start:
+                        distacne = math.sqrt((x - start_position_x)**2 + (y - start_position_y)**2)
+                        # print("start position", start_position_x, start_position_y)
+                        # print("start ", distacne)
+                        # print(" ")
+                        if distacne < 1.0:
+                            detect_start = False
+                            collection_flag = True
+                            detect_end = True
+                            
+                            
+                    # check end point
                         
-                        
-                # check end point
-                    
-                if detect_end:
-                    distacne = math.sqrt((x - end_position_x)**2 + (y - end_position_y)**2)
-                    # print("end ", distacne)
-                    if distacne < 1.0:
-                        collection_flag = False
+                    if detect_end:
+                        distacne = math.sqrt((x - end_position_x)**2 + (y - end_position_y)**2)
+                        # print("end ", distacne)
+                        if distacne < 1.0:
+                            collection_flag = False
                     
                 
                 if detect_end and not collection_flag:
@@ -3114,13 +3117,13 @@ def game_loop(args):
         world.render(display)
         pygame.display.flip()
     
-    if args.no_save and args.generate_random_seed and (not abandon_scenario) :
+    if args.no_save and args.generate_random_seed and (not abandon_scenario) and not args.test :
         # save random_seed 
         with open(f'{stored_path}/seed.txt', 'w') as f:
             f.write(str(random_seed_int))
         
 
-    if not args.no_save and (not abandon_scenario):
+    if not args.no_save and not abandon_scenario and not args.test:
         data_collection.set_end_frame(frame)
         data_collection.save_data(stored_path)
 
@@ -3221,7 +3224,7 @@ def main():
     argparser.add_argument(
         '--random_actors',
         type=str,
-        default='pedestrian',
+        default='none',
         choices=['none', 'pedestrian', 'low', 'mid', 'high'],
         help='enable roaming actors')
 
@@ -3231,6 +3234,11 @@ def main():
         choices=['interactive', 'collision', 'obstacle', 'non-interactive'],
         required=True,
         help='enable roaming actors')
+
+    argparser.add_argument(
+        '--test',
+        action='store_true',
+        help='test the Scenario')
     
     
 

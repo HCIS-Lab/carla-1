@@ -52,12 +52,21 @@ do
     
     echo ${eachfile:$len} 
 
-    if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+    if [ `echo ${eachfile:$len:1} | awk -v tem="A" '{print($1==tem)? "1":"0"}'` -eq "1" ]
     then
-        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD
+        # A1, A2, A3, ...
+        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map ${eachfile:$len:2} --test
     else
-        python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1}
+        # Carla original Town XX
+        if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+        then
+            python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --test --no_save
+        else
+            python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --test --no_save
+        fi
     fi
 
     sleep 3
 done
+
+killall -9 -r CarlaUE4-Linux
