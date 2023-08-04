@@ -1494,6 +1494,7 @@ class CameraManager(object):
             scenario_name_map = {'1': 'Town01', '2': 'Town02', '3': 'Town03', '4': 'Town04', '5': 'Town05',
                                  '6': 'Town06', '7': 'Town07', '10': 'Town10HD', "A1": "A1", "A6": "A6"}
             scenario_name_is_traffic_light = {'1': 'true', '0':  'false'}
+
             if self.scenario_type == 'interactive':
 
                 scenario_name_actor_type = {
@@ -1586,19 +1587,7 @@ class CameraManager(object):
                         print("INVALID INPUT! RESTART NAMING SCENARIO.")
                         continue
 
-                    scenario_name += "_" + input_option
-                    scenario_num = 0
-                    path = os.path.join(
-                        'data_collection', self.scenario_type, scenario_name)
-                    if os.path.isdir(path):
-                        scenario_num += 1
-                        while(1):
-                            if os.path.isdir(path + '_' + str(scenario_num)):
-                                scenario_num += 1
-                            else:
-                                scenario_name = scenario_name + \
-                                    '_' + str(scenario_num)
-                                break
+                    scenario_name += "_" + input_option                    
                     break
 
             elif self.scenario_type == 'non-interactive':
@@ -1674,20 +1663,8 @@ class CameraManager(object):
                     if input_option not in scenario_name_violated_rule:
                         print("INVALID INPUT! RESTART NAMING SCENARIO.")
                         continue
-                    scenario_name += "_" + input_option
 
-                    scenario_num = 0
-                    path = os.path.join(
-                        'data_collection', self.scenario_type, scenario_name)
-                    if os.path.isdir(path):
-                        scenario_num += 1
-                        while(1):
-                            if os.path.isdir(path + '_' + str(scenario_num)):
-                                scenario_num += 1
-                            else:
-                                scenario_name = scenario_name + \
-                                    '_' + str(scenario_num)
-                                break
+                    scenario_name += "_" + input_option
                     break
 
             elif self.scenario_type == 'obstacle':
@@ -1749,9 +1726,10 @@ class CameraManager(object):
                     if input_option not in scenario_name_my_action:
                         print("INVALID INPUT! RESTART NAMING SCENARIO.")
                         continue
-                    scenario_name += "_" + input_option
 
+                    scenario_name += "_" + input_option
                     break
+            
             else:
                 # Collision
                 scenario_name_actor_type = {
@@ -1829,6 +1807,7 @@ class CameraManager(object):
                     if input_option not in scenario_name_my_action:
                         print("INVALID INPUT! RESTART NAMING SCENARIO.")
                         continue
+                    
                     scenario_name += "_" + input_option
 
                     # print("Input is_interactive:")
@@ -1849,22 +1828,26 @@ class CameraManager(object):
                     if input_option not in scenario_name_violated_rule:
                         print("INVALID INPUT! RESTART NAMING SCENARIO.")
                         continue
+                    
                     scenario_name += "_" + input_option
-                    scenario_num = 0
-                    path = os.path.join(
-                        'data_collection', self.scenario_type, scenario_name)
-                    if os.path.isdir(path):
-                        scenario_num += 1
-                        while(1):
-                            if os.path.isdir(path + '_' + str(scenario_num)):
-                                scenario_num += 1
-                            else:
-                                scenario_name = scenario_name + \
-                                    '_' + str(scenario_num)
-                                break
                     break
 
             if not restart:
+                scenario_num = 0
+                path = os.path.join(
+                    'data_collection', self.scenario_type, scenario_name)
+                
+                if os.path.isdir(path):
+                    scenario_num += 1
+                    
+                    while True:
+                        if os.path.isdir(path + '_' + str(scenario_num)):
+                            scenario_num += 1
+                        else:
+                            scenario_name = scenario_name + \
+                                '_' + str(scenario_num)
+                            break
+
                 self.scenario_id = scenario_name
                 for img in self.record_image:
                     if img.frame % 100 == 0:
@@ -2364,7 +2347,6 @@ def generate_parking(world, n, map, scenario_tag):
         *intersection_coordinators[scenario_tag]))]
     parking_list = []
 
-    print(spawn_transform[0].location)
     motor_list = ['bh.crossbike', 'yamaha.yzf', 'vespa.zx125',
                   'gazelle.omafiets', 'diamondback.century', 'harley-davidson.low_rider']
     vehicle_list = []
