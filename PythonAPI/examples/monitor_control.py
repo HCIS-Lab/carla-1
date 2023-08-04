@@ -2229,7 +2229,7 @@ def generate_obstacle(world, n, area, map, scenario_tag):
         for k, wp in enumerate(all_wp):
             if dist(wp.transform, spawn_transform, 60):
                 continue
-            if wp.is_junction and dist(wp.transform, trans_list, 30) and random.randint(0, 2) == 0:
+            if dist(wp.transform, trans_list, 30) and random.randint(0, 2) == 0:
 
                 trans = wp.transform
                 vec_0 = carla.Vector3D(0, 0, 0)
@@ -2258,8 +2258,8 @@ def generate_obstacle(world, n, area, map, scenario_tag):
                 wp = all_wp[k]
                 if dist(wp.transform, spawn_transform, 60):
                     continue
-                elif scenario_tag == "r-1" and wp.is_junction and dist(wp.transform, trans_list, 40):
-                    pass
+                elif scenario_tag == "r-1" and not dist(wp.transform, trans_list, 40):
+                    break
                 elif not wp.is_junction and dist(wp.transform, trans_list, 40) and dist((wp.next_until_lane_end(4))[-1].transform, trans_list, 40):
                     break
 
