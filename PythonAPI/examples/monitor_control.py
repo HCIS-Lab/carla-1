@@ -2916,7 +2916,7 @@ def main():
         type=float,
         help='Gamma correction of the camera (default: 2.2)')
     argparser.add_argument(
-        '-map',
+        '-m', '--map',
         default='Town03',
         type=str,
         help='map name')
