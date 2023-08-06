@@ -35,17 +35,15 @@ except IndexError:
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
 
-from read_input import *
-from get_and_control_trafficlight import *
-from random_actors import spawn_actor_nearby
-
-
+from util.read_input import *
+from util.get_and_control_trafficlight import *
+from util.random_actors import spawn_actor_nearby
 
 import carla
 from carla import VehicleLightState as vls
 from carla import ColorConverter as cc
-from carla import Transform, Location, Rotation
-from controller import VehiclePIDController
+# from carla import Transform, Location, Rotation
+from util.controller import VehiclePIDController
 
 import argparse
 import collections
@@ -1051,6 +1049,8 @@ class IMUSensor(object):
         self.accelerometer = (0.0, 0.0, 0.0)
         self.gyroscope = (0.0, 0.0, 0.0)
         self.compass = 0.0
+        self.frame = 0
+
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.imu')
         self.sensor = world.spawn_actor(
@@ -1081,19 +1081,21 @@ class IMUSensor(object):
                 sensor_data.gyroscope.y))),
             max(limits[0], min(limits[1], math.degrees(sensor_data.gyroscope.z))))
         self.compass = math.degrees(sensor_data.compass)
-        if self.recording:
-            imu = {'accelerometer_x': self.accelerometer[0], 'accelerometer_y': self.accelerometer[1],
-                   'accelerometer_z': self.accelerometer[2], 'gyroscope_x': self.gyroscope[0],
-                   'gyroscope_y': self.gyroscope[1], 'gyroscope_z': self.gyroscope[2],
-                   'compass': self.compass}
-            # self.imu_save.append([sensor_data.frame,
-            #                     self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
-            #                     self.gyroscope[0], self.gyroscope[1], self.gyroscope[2],
-            #                     self.compass])
-            if not sensor_data.frame in self.ego_dict:
-                self.ego_dict[sensor_data.frame] = {}
-            self.ego_dict[sensor_data.frame]['imu'] = imu
-            self.ego_dict[sensor_data.frame]['timestamp'] = sensor_data.timestamp
+        self.frame = sensor_data.frame
+
+        # if self.recording:
+        #     imu = {'accelerometer_x': self.accelerometer[0], 'accelerometer_y': self.accelerometer[1],
+        #            'accelerometer_z': self.accelerometer[2], 'gyroscope_x': self.gyroscope[0],
+        #            'gyroscope_y': self.gyroscope[1], 'gyroscope_z': self.gyroscope[2],
+        #            'compass': self.compass}
+        #     # self.imu_save.append([sensor_data.frame,
+        #     #                     self.accelerometer[0], self.accelerometer[1], self.accelerometer[2],
+        #     #                     self.gyroscope[0], self.gyroscope[1], self.gyroscope[2],
+        #     #                     self.compass])
+        #     if not sensor_data.frame in self.ego_dict:
+        #         self.ego_dict[sensor_data.frame] = {}
+        #     self.ego_dict[sensor_data.frame]['imu'] = imu
+        #     self.ego_dict[sensor_data.frame]['timestamp'] = sensor_data.timestamp
 
     def toggle_recording_IMU(self):
         self.recording = not self.recording
@@ -1844,7 +1846,7 @@ class Data_Collection():
         # self.depth_rear_left = []
         # self.depth_rear_right = []
         self.sensor_lidar = []
-        
+    
         self.ss_top = []
 
         self.frame_list = []
@@ -1853,7 +1855,20 @@ class Data_Collection():
         self.ego_list = []
         self.topology_list = []
 
-        self.id_list = {}
+        self.static_dict = {}
+
+        self.compass = 0
+
+        self.actor_attri_dict = {}
+
+
+    def set_attribute(self, scenario_type, scenario_id, weather, actor, random_seed, map ):
+        self.scenario_type = scenario_type
+        self.scenario_id = scenario_id
+        self.weather = weather
+        self.actor = actor 
+        self.seed = random_seed
+        self.map = map
 
     def set_start_frame(self, frame):
         self.start_frame = frame
@@ -1870,7 +1885,79 @@ class Data_Collection():
     def set_gt_interactor(self, id):
         self.gt_interactor = id
 
-    def set_id_attr(self, world):
+    # collect each frame data 
+    def collect_sensor(self, frame, world):
+        
+        while True:
+            if world.camera_manager.ss_top.frame == frame:
+                
+                self.ss_top.append(world.camera_manager.ss_top)
+                break
+        while True:
+            if world.camera_manager.rgb_front.frame == frame:
+                self.rgb_front.append(world.camera_manager.rgb_front)
+                break
+
+        while True:
+            if world.camera_manager.rgb_left.frame == frame:
+                self.rgb_left.append(world.camera_manager.rgb_left)
+                break
+        while True:
+            if world.camera_manager.rgb_right.frame == frame:
+                self.rgb_right.append(world.camera_manager.rgb_right)
+                break
+        # ss
+        while True:
+            if world.camera_manager.ss_front.frame == frame:
+                self.ss_front.append(world.camera_manager.ss_front)
+                break
+        while True:
+            if world.camera_manager.ss_left.frame == frame:
+                self.ss_left.append(world.camera_manager.ss_left)
+
+                break
+        while True:
+            if world.camera_manager.ss_right.frame == frame:
+                self.ss_right.append(world.camera_manager.ss_right)
+                break
+
+        # depth
+        while True:
+            if world.camera_manager.depth_front.frame == frame:
+                self.depth_front.append(world.camera_manager.depth_front)
+                break
+        while True:
+            if world.camera_manager.depth_left.frame == frame:
+                self.depth_left.append(world.camera_manager.depth_left)
+                break
+        while True:
+            if world.camera_manager.depth_right.frame == frame:
+                self.depth_right.append(world.camera_manager.depth_right)
+                break
+        while True:
+            if world.camera_manager.lidar.frame == frame:
+                self.sensor_lidar.append(world.camera_manager.lidar)
+                break
+
+        while True:
+            if world.imu_sensor.frame == frame:
+                self.compass = world.imu_sensor.compass
+                break
+
+
+        # store all actor
+        self.frame_list.append(frame)
+
+        self.sensor_data_list.append(self.collect_camera_data(world))
+
+        data = self.collect_actor_data(world)
+
+        self.data_list.append(data)
+        self.ego_list.append(data[self.ego_id])
+        self.topology_list.append(self.collect_topology(world))
+
+    def collect_actor_attr(self, world):
+        # Here we get all actor attributes
 
         def get_xyz(method, rotation=False):
 
@@ -1884,8 +1971,6 @@ class Data_Collection():
                 x = method.x
                 y = method.y
                 z = method.z
-
-                # return x, y, z
                 return {"x": x, "y": y, "z": z}
 
         ego_id = {}
@@ -1946,7 +2031,6 @@ class Data_Collection():
             pedestrian_ids[_id]["semantic_tags"] = semantic_tags
             pedestrian_ids[_id]["attributes"] = attributes
             pedestrian_ids[_id]["bounding_box"] = bounding_box
-
 
         lights = world.world.get_actors().filter("*traffic_light*")
         for actor in lights:
@@ -2014,110 +2098,10 @@ class Data_Collection():
             obstacle_ids[_id]["bounding_box"] = bounding_box
             obstacle_ids[_id]["cord_bounding_box"] = cord_bounding_box
 
-        self.id_list = {'ego_id': ego_id, 'interactor_id': interactor_id,  "vehicle_ids": vehicle_ids,
-                        "pedestrian_ids": pedestrian_ids, "traffic_light_ids": traffic_light_ids, "obstacle_ids": obstacle_ids}
-
-    def collect_sensor(self, frame, world):
-        
-        while True:
-            if world.camera_manager.ss_top.frame == frame:
-                
-                self.ss_top.append(world.camera_manager.ss_top)
-                break
-        while True:
-            if world.camera_manager.rgb_front.frame == frame:
-                self.rgb_front.append(world.camera_manager.rgb_front)
-                break
-
-        while True:
-            if world.camera_manager.rgb_left.frame == frame:
-                self.rgb_left.append(world.camera_manager.rgb_left)
-                break
-        while True:
-            if world.camera_manager.rgb_right.frame == frame:
-                self.rgb_right.append(world.camera_manager.rgb_right)
-                break
-        # while True:
-        #     if world.camera_manager.rgb_rear.frame == frame:
-        #         self.rgb_rear.append(world.camera_manager.rgb_rear)
-        #         break
-        # while True:
-        #     if world.camera_manager.rgb_rear_left.frame == frame:
-        #         self.rgb_rear_left.append(world.camera_manager.rgb_rear_left)
-        #         break
-        # while True:
-        #     if world.camera_manager.rgb_rear_right.frame == frame:
-        #         self.rgb_rear_right.append(world.camera_manager.rgb_rear_right)
-        #         break
-
-        # ss
-        while True:
-            if world.camera_manager.ss_front.frame == frame:
-                self.ss_front.append(world.camera_manager.ss_front)
-                break
-        while True:
-            if world.camera_manager.ss_left.frame == frame:
-                self.ss_left.append(world.camera_manager.ss_left)
-
-                break
-        while True:
-            if world.camera_manager.ss_right.frame == frame:
-                self.ss_right.append(world.camera_manager.ss_right)
-                break
-        # while True:
-        #     if world.camera_manager.ss_rear.frame == frame:
-        #         self.ss_rear.append(world.camera_manager.ss_rear)
-        #         break
-        # while True:
-        #     if world.camera_manager.ss_rear_left.frame == frame:
-        #         self.ss_rear_left.append(world.camera_manager.ss_rear_left)
-        #         break
-        # while True:
-        #     if world.camera_manager.ss_rear_right.frame == frame:
-        #         self.ss_rear_right.append(world.camera_manager.ss_rear_right)
-        #         break
-
-        # depth
-        while True:
-            if world.camera_manager.depth_front.frame == frame:
-                self.depth_front.append(world.camera_manager.depth_front)
-                break
-        while True:
-            if world.camera_manager.depth_left.frame == frame:
-                self.depth_left.append(world.camera_manager.depth_left)
-                break
-        while True:
-            if world.camera_manager.depth_right.frame == frame:
-                self.depth_right.append(world.camera_manager.depth_right)
-                break
-        # while True:
-        #     if world.camera_manager.depth_rear.frame == frame:
-        #         self.depth_rear.append(world.camera_manager.depth_rear)
-        #         break
-        # while True:
-        #     if world.camera_manager.depth_rear_left.frame == frame:
-        #         self.depth_rear_left.append(world.camera_manager.depth_rear_left)
-        #         break
-        # while True:
-        #     if world.camera_manager.depth_rear_right.frame == frame:
-        #         self.depth_rear_right.append(world.camera_manager.depth_rear_right)
-        #         break
-
-        while True:
-            if world.camera_manager.lidar.frame == frame:
-                self.sensor_lidar.append(world.camera_manager.lidar)
-                break
-
-        # store all actor
-        self.frame_list.append(frame)
-
-        self.sensor_data_list.append(self.collect_camera_data(world))
-
-        data = self.collect_actor_data(world)
-
-        self.data_list.append(data)
-        self.ego_list.append(data[self.ego_id])
-        self.topology_list.append(self.collect_topology(world))
+        self.actor_attri_dict = {"vehicle": vehicle_ids,
+                        "pedestrian": pedestrian_ids, 
+                        "traffic_light": traffic_light_ids, 
+                        "obstacle": obstacle_ids}
 
     def collect_topology(self, get_world):
         town_map = get_world.world.get_map()
@@ -2212,7 +2196,94 @@ class Data_Collection():
             print("topology collection error.")
         pass
 
+    def collect_static_actor_data(self, world):
+        id_counter = 0
+        data = {}
+        
+        static = world.world.get_level_bbs(carla.CityObjectLabel.Car)
+        for bbox in static:
+            _id = id_counter
+            id_counter+=1
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(carla.Transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id] = {}
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = "Car"
+        data["num_of_id"] = id_counter
+
+        static = world.world.get_level_bbs(carla.CityObjectLabel.Truck)
+        for bbox in static:
+            _id = id_counter
+            id_counter+=1
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(carla.Transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id] = {}
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = "Truck"
+
+        
+        static = world.world.get_level_bbs(carla.CityObjectLabel.Bus)
+        for bbox in static:
+            _id = id_counter
+            id_counter+=1
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(carla.Transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id] = {}
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = "Bus"
+
+        static = world.world.get_level_bbs(carla.CityObjectLabel.Motorcycle)
+        for bbox in static:
+            _id = id_counter
+            id_counter+=1
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(carla.Transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id] = {}
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = "Motorcycle"
+
+        static = world.world.get_level_bbs(carla.CityObjectLabel.Bicycle)
+        for bbox in static:
+            _id = id_counter
+            id_counter+=1
+
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(carla.Transform())]
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id] = {}
+            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data[_id]["type"] = "Bicycle"
+
+        data["num_of_id"] = id_counter
+
+        self.static_dict = data
+  
     def collect_actor_data(self, world):
+
+        vehicles_id_list = []
 
         def get_xyz(method, rotation=False):
 
@@ -2232,25 +2303,10 @@ class Data_Collection():
 
         ego_loc = world.player.get_location()
         data = {}
-
-        # get all bbox ( including static car)
-        # print(carla.CityObjectLabel)
-        # vehicles_bbs = world.world.get_level_bbs(carla.CityObjectLabel.Vehicle)
-
-        # for bbox in vehicles_bbs:
-        #     print(bbox)
-
-        # verts = [v for v in bbox.get_world_vertices(actor.get_transform())]
-        # counter = 0
-        # for loc in verts:
-        #     data[_id]["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
-        #     counter += 1
-
         vehicles = world.world.get_actors().filter("*vehicle*")
         for actor in vehicles:
 
             _id = actor.id
-
             actor_loc = actor.get_location()
             location = get_xyz(actor_loc)
             rotation = get_xyz(actor.get_transform().rotation, True)
@@ -2265,9 +2321,19 @@ class Data_Collection():
                 counter += 1
 
             distance = ego_loc.distance(actor_loc)
+
+            if distance < 50:
+                vehicles_id_list.append(_id)
+
             acceleration = get_xyz(actor.get_acceleration())
             velocity = get_xyz(actor.get_velocity())
             angular_velocity = get_xyz(actor.get_angular_velocity())
+
+
+            v = actor.get_velocity()
+
+
+            speed = math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
             vehicle_control = actor.get_control()
             control = {
@@ -2286,11 +2352,16 @@ class Data_Collection():
             data[_id]["distance"] = distance
             data[_id]["acceleration"] = acceleration
             data[_id]["velocity"] = velocity
+            data[_id]["speed"] = speed
             data[_id]["angular_velocity"] = angular_velocity
             data[_id]["control"] = control
-
+            if _id == self.ego_id:
+                data[_id]["compass"] = self.compass
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = "vehicle"
+            
+
+        pedestrian_id_list = []
 
         walkers = world.world.get_actors().filter("*pedestrian*")
         for actor in walkers:
@@ -2311,6 +2382,10 @@ class Data_Collection():
                 counter += 1
 
             distance = ego_loc.distance(actor_loc)
+
+            if distance < 50:
+                pedestrian_id_list.append(_id)
+
             acceleration = get_xyz(actor.get_acceleration())
             velocity = get_xyz(actor.get_velocity())
             angular_velocity = get_xyz(actor.get_angular_velocity())
@@ -2331,6 +2406,8 @@ class Data_Collection():
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = 'pedestrian'
 
+        traffic_id_list = []
+
         lights = world.world.get_actors().filter("*traffic_light*")
         for actor in lights:
 
@@ -2339,10 +2416,34 @@ class Data_Collection():
             traffic_light_state = int(actor.state)  # traffic light state
             distance = ego_loc.distance(actor_loc)
 
+            if distance < 50:
+                traffic_id_list.append(_id)
+
             data[_id] = {}
             data[_id]["state"] = traffic_light_state
+            actor_loc = actor.get_location()
+            location = get_xyz(actor_loc)
+            data[_id]["location"] = location
             data[_id]["distance"] = distance
             data[_id]["type"] = "traffic_light"
+
+            trigger = actor.trigger_volume
+                        # bbox = actor.bounding_box
+            verts = [v for v in trigger.get_world_vertices(carla.Transform())]
+
+            counter = 0
+            for loc in verts:
+                cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
+                counter += 1
+            data[_id]["tigger_cord_bounding_box"] = cord_bounding_box
+            box = trigger.extent
+            loc = trigger.location
+            ori = trigger.rotation.get_forward_vector()
+            data[_id]["trigger_loc"] = [loc.x, loc.y, loc.z]
+            data[_id]["trigger_ori"] = [ori.x, ori.y, ori.z]
+            data[_id]["trigger_box"] = [box.x, box.y]
+
+        obstacle_id_list = []
 
         obstacle = world.world.get_actors().filter("*static.prop*")
         for actor in obstacle:
@@ -2351,10 +2452,26 @@ class Data_Collection():
 
             distance = ego_loc.distance(actor_loc)
 
+            if distance < 50:
+                obstacle_id_list.append(_id)
+
             data[_id] = {}
             data[_id]["distance"] = distance
             data[_id]["type"] = "obstacle"
 
+
+        data["ego_id"] = world.player.id
+        if self.scenario_type != "non-interactive":
+            data["interactor_id"] = self.gt_interactor
+        else:
+            data["interactor_id"] = -1
+
+        data["obstacle_ids"] = obstacle_id_list
+        data["traffic_light_ids"] = traffic_id_list
+        data["vehicles_ids"] = vehicles_id_list
+        data["pedestrian_ids"] = pedestrian_id_list
+            
+    
         return data
 
     def _get_forward_speed(self, transform, velocity):
@@ -2488,26 +2605,13 @@ class Data_Collection():
 
         print(folder_name + " save finished. Total: ", counter)
 
-    def save_static_json_data(self, data_list, path, folder_name):
-
-        stored_path = os.path.join(path, folder_name)
-        if not os.path.exists(stored_path):
-            os.makedirs(stored_path)
-
-        f = open(f"{stored_path}/static_data.json", "w")
-        json.dump(data_list, f, indent=4)
-        f.close()
-
-        print(folder_name + " save finished.")
-
     def save_img(self, img_list, sensor, path, start_frame, end_frame, view='top'):
 
         sensors = [
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
-            ['sensor.camera.depth', cc.LogarithmicDepth,
-                'Camera Depth (Logarithmic Gray Scale)', {}],
+            ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)', {}],
             ['sensor.camera.semantic_segmentation', cc.Raw,
                 'Camera Semantic Segmentation (Raw)', {}],
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
@@ -2524,42 +2628,44 @@ class Data_Collection():
         modality = sensors[sensor][0].split('.')[-1]
         counter = 0
         for img in img_list:
-            if (img.frame % 1 == 0) and (img.frame >= start_frame) and (img.frame < end_frame):
+            if (img.frame >= start_frame) and (img.frame < end_frame):
 
                 counter += 1
                 frame = img.frame - start_frame
-                
-                if 'seg' in view:
+
+                if 'seg' in modality:
                     img.save_to_disk(
                         '%s/%s/%s/%08d' % (path, modality, view, frame), cc.CityScapesPalette)
-                elif 'depth' in view:
+                elif 'depth' in modality:
                     img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, frame), cc.LogarithmicDepth)
-                elif 'flow' in view:
-                    img = img.get_color_coded_flow()
-                    array = np.frombuffer(
-                        img.raw_data, dtype=np.dtype("uint8"))
-                    array = np.reshape(array, (img.height, img.width, 4))
-                    array = array[:, :, :3]
-                    array = array[:, :, ::-1]
-                    stored_path = os.path.join(path, modality, view)
-                    if not os.path.exists(stored_path):
-                        os.makedirs(stored_path)
-                    np.save('%s/%08d' % (stored_path, frame), array)
+                        '%s/%s/%s/%08d' % (path, modality, view, frame) , cc.LogarithmicDepth)
                 elif 'lidar' in view:
-
                     points = np.frombuffer(img.raw_data, dtype=np.dtype('f4'))
                     points = np.reshape(points, (int(points.shape[0] / 4), 4))
-
                     if not os.path.exists('%s/%s/' % (path, view)):
                         os.makedirs('%s/%s/' % (path, view))
-
                     np.save('%s/%s/%08d.npy' %
                             (path, view, frame), points, allow_pickle=True)
-
                 else:
-                    img.save_to_disk('%s/%s/%s/%08d' %
-                                     (path, modality, view, frame))
+                    # save rgb 
+                    # rgb 
+                    # img.save_to_disk('%s/%s/%s/%08d' %
+                    #                  (path, modality, view, frame))
+
+                    img.convert(cc.Raw)
+                    array = np.frombuffer(img.raw_data, dtype=np.dtype("uint8"))
+                    array = np.reshape(array, (img.height, img.width, 4))
+                    array = array[:, :, :3]
+                    # array = array[:, :, ::-1]
+                    if not os.path.exists('%s/%s/%s/' % (path, modality, view)):
+                        os.makedirs('%s/%s/%s/' % (path, modality, view))
+                    cv2.imwrite('%s/%s/%s/%08d.jpg' % (path, modality, view, frame), array, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    # cv2.imwrite('%s/%s/%s/%08d.png' % (path, modality, view, frame), array, [cv2.IMWRITE_PNG_COMPRESSION, 7])
+                    
+
+
+
+
         print("%s %s save finished. Total: %d" %
               (sensors[sensor][2], view, counter))
 
@@ -2574,169 +2680,103 @@ class Data_Collection():
             self.rgb_left, 0, path, self.start_frame, self.end_frame, 'left'))
         t_rgb_right = Process(target=self.save_img, args=(self.rgb_right, 0, path,
                               self.start_frame, self.end_frame, 'right'))
-        # t_rgb_rear = Process(target=self.save_img, args=(self.rgb_rear, 0, path, self.start_frame, self.end_frame, 'rgb_rear'))
-        # t_rgb_rear_left = Process(target=self.save_img, args=(self.rgb_rear_left, 0, path, self.start_frame, self.end_frame, 'rgb_rear_left'))
-        # t_rgb_rear_right = Process(target=self.save_img, args=(self.rgb_rear_right, 0, path, self.start_frame, self.end_frame, 'rgb_rear_right'))
-
         t_ss_front = Process(target=self.save_img, args=(
             self.ss_front, 10, path, self.start_frame, self.end_frame, 'front'))
         t_ss_left = Process(target=self.save_img, args=(
             self.ss_left, 10, path, self.start_frame, self.end_frame, 'left'))
         t_ss_right = Process(target=self.save_img, args=(
             self.ss_right, 10, path, self.start_frame, self.end_frame, 'right'))
-
-        # t_ss_rear = Process(target=self.save_img, args=(self.ss_rear, 10, path, self.start_frame, self.end_frame, 'ss_rear'))
-        # t_ss_rear_left = Process(target=self.save_img, args=(self.ss_rear_left, 10, path, self.start_frame, self.end_frame, 'ss_rear_left'))
-        # t_ss_rear_right = Process(target=self.save_img, args=(self.ss_rear_right, 10, path, self.start_frame, self.end_frame, 'ss_rear_right'))
-
         t_depth_front = Process(target=self.save_img, args=(self.depth_front, 1, path,
                                 self.start_frame, self.end_frame, 'front'))
         t_depth_left = Process(target=self.save_img, args=(self.depth_left, 1, path,
                                self.start_frame, self.end_frame, 'left'))
         t_depth_right = Process(target=self.save_img, args=(self.depth_right, 1, path,
                                 self.start_frame, self.end_frame, 'right'))
-
-        # t_depth_rear = Process(target=self.save_img, args=(self.depth_rear, 1, path, self.start_frame, self.end_frame, 'depth_rear'))
-        # t_depth_rear_left = Process(target=self.save_img, args=(self.depth_rear_left, 1, path, self.start_frame, self.end_frame, 'depth_rear_left'))
-        # t_depth_rear_right = Process(target=self.save_img, args=(self.depth_rear_right, 1, path, self.start_frame, self.end_frame, 'depth_rear_right'))
-
-        # lidar
-        t_lidar = Process(target=self.save_img, args=(self.sensor_lidar, 1,
+        t_lidar = Process(target=self.save_img, args=(self.sensor_lidar, 6,
                           path, self.start_frame, self.end_frame, 'lidar'))
         t_actors_data = Process(target=self.save_json_data, args=(
             self.frame_list, self.data_list, path, self.start_frame, self.end_frame, "actors_data"))
         t_sensor_data = Process(target=self.save_np_data, args=(
             self.frame_list, self.sensor_data_list, path, self.start_frame, self.end_frame, "sensor_data"))
-        # t_id_data = Process(target=self.save_np_data, args=(self.frame_list, self.id_list,
-        #                     path, self.start_frame, self.end_frame, "id_data"))
-        t_id_data = Process(target=self.save_static_json_data,
-                            args=(self.id_list, path, "static_data"))
         t_ego_data = Process(target=self.save_json_data, args=(
             self.frame_list, self.ego_list, path, self.start_frame, self.end_frame, "ego_data"))
 
         t_topology = Process(target=self.save_np_data, args=(
             self.frame_list, self.topology_list, path, self.start_frame, self.end_frame, "topology"))
 
-        # self.sensor_lidar = []
-        # self.frame_list = []
-        # self.data_list = []
-        # self.sensor_data_list = []
-        # self.ego_list = []
-        # self.id_list = {}
-
         start_time = time.time()
 
-        # t_front.start()
         t_ss_top.start()
         t_rgb_front.start()
         t_rgb_left.start()
         t_rgb_right.start()
-
-        # t_rgb_rear.start()
-        # t_rgb_rear_left.start()
-        # t_rgb_rear_right.start()
-
         t_ss_front.start()
         t_ss_left.start()
         t_ss_right.start()
-
-        # t_ss_rear.start()
-        # t_ss_rear_left.start()
-        # t_ss_rear_right.start()
-
         t_depth_front.start()
         t_depth_left.start()
         t_depth_right.start()
-
-        # t_depth_rear.start()
-        # t_depth_rear_left.start()
-        # t_depth_rear_right.start()
-
-        # t_actors_data.start()
-        # t_sensor_data.start()
-        # t_ego_data.start()
-
         t_lidar.start()
         t_actors_data.start()
         t_sensor_data.start()
-        t_id_data.start()
         t_ego_data.start()
-
         t_topology.start()
 
         # ------------------------------ #
         t_ss_top.join()
-
         t_rgb_front.join()
         t_rgb_left.join()
         t_rgb_right.join()
-
-        # t_rgb_rear.join()
-        # t_rgb_rear_left.join()
-        # t_rgb_rear_right.join()
-
         t_ss_front.join()
         t_ss_left.join()
         t_ss_right.join()
-
-        # t_ss_rear.join()
-        # t_ss_rear_left.join()
-        # t_ss_rear_right.join()
-
         t_depth_front.join()
         t_depth_left.join()
         t_depth_right.join()
-
-        # t_depth_rear.join()
-        # t_depth_rear_left.join()
-        # t_depth_rear_right.join()
-
-        # t_actors_data.join()
-        # t_sensor_data.join()
-        # t_ego_data.join()
-
         t_lidar.join()
         t_actors_data.join()
         t_sensor_data.join()
-        t_id_data.join()
         t_ego_data.join()
         t_topology.join()
 
+        with open(f"{path}/static_data.json", "w") as f:
+            json.dump(self.static_dict, f, indent=4)
+            f.close()
+            print("static_data save finished.")
+
+
+        with open(f"{path}/actor_attribute.json", "w") as f:
+            json.dump(self.actor_attri_dict, f, indent=4)
+            f.close()
+            print("actor attribute save finished.")
+
+        with open("./result.txt", "a") as f:
+            f.write(f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}")
+        
         end_time = time.time()
 
-        print('sensor data save done in %s' % (end_time-start_time))
-        print("\n")
+        print('ALL save done in %s ' % (end_time-start_time))
+        print("")
 
         # empty list
-
-        # self.front_img = []
         self.ss_top = []
         self.rgb_front = []
         self.rgb_left = []
         self.rgb_right = []
-        # self.rgb_rear = []
-        # self.rgb_rear_left = []
-        # self.rgb_rear_right = []
-
         self.ss_front = []
         self.ss_left = []
         self.ss_right = []
-        # self.ss_rear = []
-        # self.ss_rear_left = []
-        # self.ss_rear_right = []
         self.depth_front = []
         self.depth_left = []
         self.depth_right = []
-        # self.depth_rear = []
-        # self.depth_rear_left = []
-        # self.depth_rear_right = []
         self.ego_list = []
         self.sensor_lidar = []
         self.data_list = []
         self.sensor_data_list = []
-        self.id_list = {}
+        self.actor_attri_dict = {}
         self.frame_list = []
-        self.topology_list
+        self.static_dict= {}
+        self.topology_list = []
 
 def game_loop(args):
     pygame.init()
@@ -2819,6 +2859,8 @@ def game_loop(args):
     hud = HUD(args.width, args.height, client.get_world(), args)
 
     weather = args.weather
+    
+
     exec("args.weather = carla.WeatherParameters.%s" % args.weather)
     stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id,
                                'variant_scenario', weather + "_" + args.random_actors + "_")
@@ -2970,7 +3012,14 @@ def game_loop(args):
         data_collection = Data_Collection()
         data_collection.set_scenario_type(args.scenario_type)
         data_collection.set_ego_id(world)
-        data_collection.set_id_attr(world)
+        data_collection.set_attribute(args.scenario_type, args.scenario_id, weather, args.random_actors, args.random_seed, args.map)
+
+        # save for only one time 
+        data_collection.collect_actor_attr(world)
+        data_collection.collect_static_actor_data(world)
+
+        
+        
         
     while (1):
         clock.tick_busy_loop(40)
@@ -2995,8 +3044,6 @@ def game_loop(args):
                     gt_interactor_id = int(agents_dict[keys[0]].id)
                     data_collection.set_gt_interactor(gt_interactor_id)
                     
-                    
-            
 
             # iterate actors
             for actor_id, _ in filter_dict.items():
@@ -3060,15 +3107,16 @@ def game_loop(args):
                 world.abandon_scenario = True
                 break
 
-            if iter_tick == iter_toggle:
-                if not args.no_save:
-                    data_collection.set_start_frame(frame)
+            # if iter_tick == iter_toggle:
+            #     if not args.no_save:
+            #         
 
             elif iter_tick > iter_toggle:
 
                 if not args.no_save and (not abandon_scenario) and collection_flag and detect_start == False:
                     # collect data in sensor's list
                     data_collection.collect_sensor(frame, world)
+                    
 
                 view = pygame.surfarray.array3d(display)
                 #  convert from (width, height, channel) to (height, width, channel)
@@ -3094,6 +3142,7 @@ def game_loop(args):
                             detect_start = False
                             collection_flag = True
                             detect_end = True
+                            data_collection.set_start_frame(frame)
                             
                             
                     # check end point
@@ -3239,12 +3288,8 @@ def main():
         '--test',
         action='store_true',
         help='test the Scenario')
-    
-    
 
-    # no_save flag
-    # fast
-    # only use 1 camera sensor
+    # no_save flag ( Only use few camera sensor)
     argparser.add_argument(
         '--no_save',
         # default=False,
@@ -3262,6 +3307,8 @@ def main():
         default=0,
         type=int,
         help='use random_seed to replay the same behavior ')
+
+
 
     args = argparser.parse_args()
 

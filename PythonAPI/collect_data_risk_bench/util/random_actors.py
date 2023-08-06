@@ -2,12 +2,8 @@ import sys
 
 import carla
 import numpy as np
-import time
-import csv
-import os
 import logging
 import math
-import argparse
 from numpy import random
 from carla import VehicleLightState as vls
 from shapely.geometry import Point
@@ -17,7 +13,7 @@ def check_spwan_point_in_intersection(town, pos):
     label_list = []
     if town in ["Town01", "Town02","Town03", "Town04", "Town05", "Town06", "Town07", "Town10HD"]:
         
-        path = f"./intersection_label/{town}.npy"
+        path = f"./util/intersection_label/{town}.npy"
 
         label_list = list(np.load(path))
         
