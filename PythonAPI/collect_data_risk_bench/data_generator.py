@@ -1785,8 +1785,8 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
 
         obstacle_name = obstacle_attr["obstacle_type"]
 
-        if not "static" in obstacle_name:
-            continue
+        # if not "static" in obstacle_name:
+        #     continue
 
         location = obstacle_attr["location"]
         rotation = obstacle_attr["rotation"]
@@ -2303,6 +2303,7 @@ class Data_Collection():
 
         ego_loc = world.player.get_location()
         data = {}
+        
         vehicles = world.world.get_actors().filter("*vehicle*")
         for actor in vehicles:
 
@@ -2414,6 +2415,7 @@ class Data_Collection():
             _id = actor.id
 
             traffic_light_state = int(actor.state)  # traffic light state
+            actor_loc = actor.get_location()
             distance = ego_loc.distance(actor_loc)
 
             if distance < 50:
@@ -2450,8 +2452,9 @@ class Data_Collection():
 
             _id = actor.id
 
+            actor_loc = actor.get_location()
             distance = ego_loc.distance(actor_loc)
-
+            
             if distance < 50:
                 obstacle_id_list.append(_id)
 
@@ -2796,7 +2799,8 @@ def game_loop(args):
                 bp = f.readlines()[0]
                 name = name.strip('.txt')
                 f.close()
-                filter_dict[name] = bp
+                if args.scenario_type != "obstacle" or name == "player":
+                    filter_dict[name] = bp
         # print(filter_dict)
     except:
         print("檔案夾不存在。")
@@ -2935,27 +2939,27 @@ def game_loop(args):
                 except Exception:
                     transform_spawn.location.z += 1.5
 
-            if args.scenario_type == 'obstacle':
+            # if args.scenario_type == 'obstacle':
 
-                dis = ego_transform.location.distance(transform_spawn.location)
-                if dis < min_dis:
-                    nearest_obstacle = agents_dict[actor_id].id
-                    min_dis = dis
+            #     dis = ego_transform.location.distance(transform_spawn.location)
+            #     if dis < min_dis:
+            #         nearest_obstacle = agents_dict[actor_id].id
+            #         min_dis = dis
 
-                obstacle_info[agents_dict[actor_id].id] = {
-                    "obstacle_type": bp,
-                    "basic_id": -1,
-                    "location": {
-                        "x": transform_spawn.location.x,
-                        "y": transform_spawn.location.y,
-                        "z": transform_spawn.location.z
-                    },
-                    "rotation": {
-                        "pitch": transform_spawn.rotation.pitch,
-                        "yaw": transform_spawn.rotation.yaw,
-                        "roll": transform_spawn.rotation.roll
-                    }
-                }
+            #     obstacle_info[agents_dict[actor_id].id] = {
+            #         "obstacle_type": bp,
+            #         "basic_id": -1,
+            #         "location": {
+            #             "x": transform_spawn.location.x,
+            #             "y": transform_spawn.location.y,
+            #             "z": transform_spawn.location.z
+            #         },
+            #         "rotation": {
+            #             "pitch": transform_spawn.rotation.pitch,
+            #             "yaw": transform_spawn.rotation.yaw,
+            #             "roll": transform_spawn.rotation.roll
+            #         }
+            #     }
 
             # set other actor id for checking collision object's identity
             world.collision_sensor.other_actor_id = agents_dict[actor_id].id
@@ -3013,11 +3017,6 @@ def game_loop(args):
         data_collection.set_scenario_type(args.scenario_type)
         data_collection.set_ego_id(world)
         data_collection.set_attribute(args.scenario_type, args.scenario_id, weather, args.random_actors, args.random_seed, args.map)
-
-        # save for only one time 
-        data_collection.collect_actor_attr(world)
-        data_collection.collect_static_actor_data(world)
-
         
         
         
@@ -3174,6 +3173,9 @@ def game_loop(args):
 
     if not args.no_save and not abandon_scenario and not args.test:
         data_collection.set_end_frame(frame)
+        # save for only one time 
+        data_collection.collect_actor_attr(world)
+        data_collection.collect_static_actor_data(world)
         data_collection.save_data(stored_path)
 
     # to save a top view video
