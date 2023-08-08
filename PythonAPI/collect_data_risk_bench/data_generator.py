@@ -2754,7 +2754,7 @@ class Data_Collection():
             print("actor attribute save finished.")
 
         with open("./result.txt", "a") as f:
-            f.write(f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}")
+            f.write(f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}\n")
         
         end_time = time.time()
 
