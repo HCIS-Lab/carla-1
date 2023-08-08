@@ -3144,7 +3144,9 @@ def game_loop(args):
                             detect_start = False
                             collection_flag = True
                             detect_end = True
-                            data_collection.set_start_frame(frame)
+
+                            if not args.no_save:
+                                data_collection.set_start_frame(frame)
                             
                             
                     # check end point
