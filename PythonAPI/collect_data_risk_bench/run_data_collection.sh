@@ -3,7 +3,7 @@ killall -9 -r CarlaUE4-Linux
 
 sleep 5
 
-rm result.txt
+# rm result.txt
 touch result.txt
 
 SERVICE="CarlaUE4"
