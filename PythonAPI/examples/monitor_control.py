@@ -452,6 +452,30 @@ class DualControl(object):
                         world.npc = None
                     else:
                         world.npc = world.world.get_actor(npc_id)
+                elif event.key == K_f:
+                    if world.player.is_at_traffic_light():
+                        traffic_light = world.player.get_traffic_light()
+                        if traffic_light.get_state() == carla.TrafficLightState.Red:
+                            print("Set traffic light to green.")
+                            traffic_light.set_state(
+                                carla.TrafficLightState.Green)
+                        elif traffic_light.get_state() == carla.TrafficLightState.Green:
+                            print("Set traffic light to red.")
+                            traffic_light.set_state(
+                                carla.TrafficLightState.Red)
+                elif event.key == K_e:
+                    self.save_act_transform = []
+                    actors = world.world.get_actors().filter('vehicle.*')
+                    for actor in actors:
+                        self.save_act_transform.append(actor.get_transform())
+                    print("save finish")
+                elif event.key == K_k:
+                    if self.save_act_transform is not None:
+                        actors = world.world.get_actors().filter('vehicle.*')
+                        for i, actor in enumerate(actors):
+                            actor.set_transform(self.save_act_transform[i])
+                        print("set finish")
+                
                 elif event.key == K_g:
                     world.toggle_radar()
                 elif event.key == K_BACKQUOTE:
@@ -459,10 +483,14 @@ class DualControl(object):
                 elif event.key == K_n:
                     world.camera_manager.next_sensor()
                 elif event.key == K_o:
+                    if_npc = True if input("NPC or player? ") == "NPC" else False
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
                     new_location = carla.Location(xyz[0], xyz[1], xyz[2])
-                    world.player.set_location(new_location)
+                    if if_npc:
+                        world.npc.set_location(new_location)
+                    else:
+                        world.player.set_location(new_location)
                 elif event.key == K_w and (pygame.key.get_mods() & KMOD_CTRL):
                     if world.constant_velocity_enabled:
                         world.player.disable_constant_velocity()
@@ -756,10 +784,14 @@ class KeyboardControl(object):
                             traffic_light.set_state(
                                 carla.TrafficLightState.Red)
                 elif event.key == K_o:
+                    if_npc = True if input("NPC or player? ") == "NPC" else False
                     xyz = [float(s) for s in input(
                         'Enter coordinate: x , y , z  : ').split()]
                     new_location = carla.Location(xyz[0], xyz[1], xyz[2])
-                    world.player.set_location(new_location)
+                    if if_npc:
+                        world.npc.set_location(new_location)
+                    else:
+                        world.player.set_location(new_location)
                 elif event.key == K_w and (pygame.key.get_mods() & KMOD_CTRL):
                     if world.constant_velocity_enabled:
                         world.player.disable_constant_velocity()
