@@ -2288,7 +2288,9 @@ class Data_Collection():
     def collect_actor_data(self, world):
 
         vehicles_id_list = []
-
+        bike_blueprint = ["vehicle.bh.crossbike","vehicle.diamondback.century""vehicle.gazelle.omafiets"]
+        motor_blueprint = ["vehicle.harley-davidson.low_rider","vehicle.kawasaki.ninja","vehicle.yamaha.yzf"]
+        
         def get_xyz(method, rotation=False):
 
             if rotation:
@@ -2318,6 +2320,17 @@ class Data_Collection():
 
             cord_bounding_box = {}
             bbox = actor.bounding_box
+            if actor.type_id in motor_blueprint:
+                bbox.extent.x = 1.177870
+                bbox.extent.y = 0.381839
+                bbox.extent.z = 0.75
+                bbox.location = carla.Location(0, 0, bounding_box.extent.z)
+            elif actor.type_id in bike_blueprint:
+                bbox.extent.x = 0.821422
+                bbox.extent.y = 0.186258
+                bbox.extent.z = 0.9
+                bbox.location = carla.Location(0, 0, bounding_box.extent.z)
+                
             verts = [v for v in bbox.get_world_vertices(
                 actor.get_transform())]
             counter = 0
