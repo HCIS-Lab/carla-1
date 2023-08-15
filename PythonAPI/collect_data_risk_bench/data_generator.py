@@ -1295,7 +1295,7 @@ class CameraManager(object):
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
             ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
             ['sensor.other.lane_invasion', None, 'Lane lane_invasion', {}],
-            ['sensor.camera.instance_segmentation', cc.CityScapesPalette,
+            ['sensor.camera.instance_segmentation', cc.Raw,
                 'Camera Instance Segmentation (CityScapes Palette)', {}],
         ]
         world = self._parent.get_world()
