@@ -1178,7 +1178,7 @@ class RadarSensor(object):
 
 class CameraManager(object):
     def __init__(self, parent_actor, hud, gamma_correction, save_mode):
-    
+
         self.ss_top = None
         self.sensor_top = None
         self.surface = None
@@ -1210,6 +1210,7 @@ class CameraManager(object):
 
         self.lidar = None
 
+        # bound_x:2.8958897590637207, bound_y:1.581725001335144, bound_z:1.2438300251960754  (after +0.5)
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1246,23 +1247,23 @@ class CameraManager(object):
                 # sensor config for transfuser camera settings
                 #  front view 8
                 (carla.Transform(carla.Location(x=1.3, y=0,
-                 z=2.0), carla.Rotation(roll=0.0, pitch=0.0, yaw=0.0)), Attachment.Rigid),
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=0.0)), Attachment.Rigid),
                 # left view  9
                 (carla.Transform(carla.Location(x=1.3, y=0,
-                 z=2.0), carla.Rotation(roll=0.0, pitch=0.0, yaw=-60.0)), Attachment.Rigid),
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=-60.0)), Attachment.Rigid),
                 # right view 10
                 (carla.Transform(carla.Location(x=1.3, y=0,
-                 z=2.0), carla.Rotation(roll=0.0, pitch=0.0, yaw=60.0)), Attachment.Rigid),
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=60.0)), Attachment.Rigid),
                 # rear 11
                 (carla.Transform(carla.Location(x=-1.3, y=0,
-                 z=2.0), carla.Rotation(roll=0.0, pitch=0.0, yaw=180.0)), Attachment.Rigid),
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=180.0)), Attachment.Rigid),
                 # rear left 12
                 (carla.Transform(carla.Location(x=-1.3, y=0,
-                 z=2.0), carla.Rotation(roll=0.0, pitch=0.0, yaw=-120.0)), Attachment.Rigid),
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=-120.0)), Attachment.Rigid),
                 # rear right 13
                 (carla.Transform(carla.Location(x=-1.3, y=0,
-                 z=2.0), carla.Rotation(roll=0.0, pitch=0.0, yaw=120.0)), Attachment.Rigid),
-                # ins top 14 
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=120.0)), Attachment.Rigid),
+                # ins top 14
                 (carla.Transform(carla.Location(x=0.0, y=0.0,
                  z=50.0), carla.Rotation(pitch=-90.0)), Attachment.Rigid),
 
@@ -1307,7 +1308,8 @@ class CameraManager(object):
         # if self.bev_bp.has_attribute('gamma'):
         #     self.bev_bp.set_attribute('gamma', str(gamma_correction))
 
-        self.bev_seg_bp = bp_library.find('sensor.camera.instance_segmentation')
+        self.bev_seg_bp = bp_library.find(
+            'sensor.camera.instance_segmentation')
         self.bev_seg_bp.set_attribute('image_size_x', str(512))
         self.bev_seg_bp.set_attribute('image_size_y', str(512))
         self.bev_seg_bp.set_attribute('fov', str(50.0))
@@ -1380,8 +1382,8 @@ class CameraManager(object):
                 attachment_type=self._camera_transforms[6][1])
 
             if self.save_mode:
-                
-                # inst top 
+
+                # inst top
                 self.sensor_ss_top = self._parent.get_world().spawn_actor(
                     self.bev_seg_bp,
                     self._camera_transforms[14][0],
@@ -1518,11 +1520,10 @@ class CameraManager(object):
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
 
             if self.save_mode:
-                
-                
+
                 self.sensor_ss_top.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'ss_top'))
-                
+
                 self.sensor_rgb_front.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'rgb_front'))
                 self.sensor_rgb_left.listen(
@@ -1640,7 +1641,7 @@ class CameraManager(object):
 
             # render the view shown in monitor
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
-            
+
         elif view == 'ss_top':
             self.ss_top = image
         elif view == 'rgb_front':
@@ -1667,14 +1668,14 @@ class CameraManager(object):
         #     self.depth_rear_left = image
         # elif view == 'depth_rear_right':
         #     self.depth_rear_right = image
-        
+
         elif view == 'ss_front':
             self.ss_front = image
         elif view == 'ss_left':
             self.ss_left = image
         elif view == 'ss_right':
             self.ss_right = image
-            
+
         # elif view == 'ss_rear':
         #     self.ss_rear = image
         # elif view == 'ss_rear_left':
@@ -1683,6 +1684,7 @@ class CameraManager(object):
         #     self.ss_rear_right = image
         elif view == 'lidar':
             self.lidar = image
+
 
 def record_control(control, control_list):
     np_control = np.zeros(7)
@@ -1696,9 +1698,11 @@ def record_control(control, control_list):
 
     control_list.append(np_control)
 
+
 def control_with_trasform_controller(controller, transform):
     control_signal = controller.run_step(10, transform)
     return control_signal
+
 
 def set_bp(blueprint, actor_id):
     blueprint = random.choice(blueprint)
@@ -1733,6 +1737,7 @@ def set_bp(blueprint, actor_id):
 
 #     with open('%s/dynamic_description.json' % (stored_path), 'w') as f:
 #         json.dump(d, f, indent=4)
+
 
 def write_actor_list(world, stored_path):
 
@@ -1846,7 +1851,7 @@ class Data_Collection():
         # self.depth_rear_left = []
         # self.depth_rear_right = []
         self.sensor_lidar = []
-    
+
         self.ss_top = []
 
         self.frame_list = []
@@ -1861,12 +1866,11 @@ class Data_Collection():
 
         self.actor_attri_dict = {}
 
-
-    def set_attribute(self, scenario_type, scenario_id, weather, actor, random_seed, map ):
+    def set_attribute(self, scenario_type, scenario_id, weather, actor, random_seed, map):
         self.scenario_type = scenario_type
         self.scenario_id = scenario_id
         self.weather = weather
-        self.actor = actor 
+        self.actor = actor
         self.seed = random_seed
         self.map = map
 
@@ -1885,12 +1889,12 @@ class Data_Collection():
     def set_gt_interactor(self, id):
         self.gt_interactor = id
 
-    # collect each frame data 
+    # collect each frame data
     def collect_sensor(self, frame, world):
-        
+
         while True:
             if world.camera_manager.ss_top.frame == frame:
-                
+
                 self.ss_top.append(world.camera_manager.ss_top)
                 break
         while True:
@@ -1944,7 +1948,6 @@ class Data_Collection():
                 self.compass = world.imu_sensor.compass
                 break
 
-
         # store all actor
         self.frame_list.append(frame)
 
@@ -1974,8 +1977,8 @@ class Data_Collection():
                 return {"x": x, "y": y, "z": z}
 
         ego_id = {}
-        interactor_id = {}
-        interactor_id[self.gt_interactor] = {}
+        # interactor_id = {}
+        # interactor_id[self.gt_interactor] = {}
 
         _id = world.player.id
         ego_type_id = world.player.type_id
@@ -2007,7 +2010,7 @@ class Data_Collection():
             bbox = actor.bounding_box
             bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
                 bbox.location)}
-            
+
             vehicle_ids[_id] = {}
             vehicle_ids[_id]["type_id"] = type_id
             vehicle_ids[_id]["semantic_tags"] = semantic_tags
@@ -2025,7 +2028,7 @@ class Data_Collection():
             bbox = actor.bounding_box
             bounding_box = {"extent": get_xyz(bbox.extent), "location": get_xyz(
                 bbox.location)}
-            
+
             pedestrian_ids[_id] = {}
             pedestrian_ids[_id]["type_id"] = type_id
             pedestrian_ids[_id]["semantic_tags"] = semantic_tags
@@ -2099,9 +2102,11 @@ class Data_Collection():
             obstacle_ids[_id]["cord_bounding_box"] = cord_bounding_box
 
         self.actor_attri_dict = {"vehicle": vehicle_ids,
-                        "pedestrian": pedestrian_ids, 
-                        "traffic_light": traffic_light_ids, 
-                        "obstacle": obstacle_ids}
+                                 "pedestrian": pedestrian_ids,
+                                 "traffic_light": traffic_light_ids,
+                                 "obstacle": obstacle_ids,
+                                 "ego_id": world.player.id,
+                                 "interactor_id": self.gt_interactor}
 
     def collect_topology(self, get_world):
         town_map = get_world.world.get_map()
@@ -2199,11 +2204,11 @@ class Data_Collection():
     def collect_static_actor_data(self, world):
         id_counter = 0
         data = {}
-        
+
         static = world.world.get_level_bbs(carla.CityObjectLabel.Car)
         for bbox in static:
             _id = id_counter
-            id_counter+=1
+            id_counter += 1
 
             cord_bounding_box = {}
             verts = [v for v in bbox.get_world_vertices(carla.Transform())]
@@ -2219,7 +2224,7 @@ class Data_Collection():
         static = world.world.get_level_bbs(carla.CityObjectLabel.Truck)
         for bbox in static:
             _id = id_counter
-            id_counter+=1
+            id_counter += 1
 
             cord_bounding_box = {}
             verts = [v for v in bbox.get_world_vertices(carla.Transform())]
@@ -2231,11 +2236,10 @@ class Data_Collection():
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = "Truck"
 
-        
         static = world.world.get_level_bbs(carla.CityObjectLabel.Bus)
         for bbox in static:
             _id = id_counter
-            id_counter+=1
+            id_counter += 1
 
             cord_bounding_box = {}
             verts = [v for v in bbox.get_world_vertices(carla.Transform())]
@@ -2250,7 +2254,7 @@ class Data_Collection():
         static = world.world.get_level_bbs(carla.CityObjectLabel.Motorcycle)
         for bbox in static:
             _id = id_counter
-            id_counter+=1
+            id_counter += 1
 
             cord_bounding_box = {}
             verts = [v for v in bbox.get_world_vertices(carla.Transform())]
@@ -2265,7 +2269,7 @@ class Data_Collection():
         static = world.world.get_level_bbs(carla.CityObjectLabel.Bicycle)
         for bbox in static:
             _id = id_counter
-            id_counter+=1
+            id_counter += 1
 
             cord_bounding_box = {}
             verts = [v for v in bbox.get_world_vertices(carla.Transform())]
@@ -2280,7 +2284,7 @@ class Data_Collection():
         data["num_of_id"] = id_counter
 
         self.static_dict = data
-  
+
     def collect_actor_data(self, world):
 
         vehicles_id_list = []
@@ -2303,7 +2307,7 @@ class Data_Collection():
 
         ego_loc = world.player.get_location()
         data = {}
-        
+
         vehicles = world.world.get_actors().filter("*vehicle*")
         for actor in vehicles:
 
@@ -2330,9 +2334,7 @@ class Data_Collection():
             velocity = get_xyz(actor.get_velocity())
             angular_velocity = get_xyz(actor.get_angular_velocity())
 
-
             v = actor.get_velocity()
-
 
             speed = math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
@@ -2360,7 +2362,6 @@ class Data_Collection():
                 data[_id]["compass"] = self.compass
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = "vehicle"
-            
 
         pedestrian_id_list = []
 
@@ -2430,7 +2431,7 @@ class Data_Collection():
             data[_id]["type"] = "traffic_light"
 
             trigger = actor.trigger_volume
-                        # bbox = actor.bounding_box
+            # bbox = actor.bounding_box
             verts = [v for v in trigger.get_world_vertices(carla.Transform())]
 
             counter = 0
@@ -2454,7 +2455,7 @@ class Data_Collection():
 
             actor_loc = actor.get_location()
             distance = ego_loc.distance(actor_loc)
-            
+
             if distance < 50:
                 obstacle_id_list.append(_id)
 
@@ -2462,19 +2463,11 @@ class Data_Collection():
             data[_id]["distance"] = distance
             data[_id]["type"] = "obstacle"
 
-
-        data["ego_id"] = world.player.id
-        if self.scenario_type != "non-interactive":
-            data["interactor_id"] = self.gt_interactor
-        else:
-            data["interactor_id"] = -1
-
         data["obstacle_ids"] = obstacle_id_list
         data["traffic_light_ids"] = traffic_id_list
         data["vehicles_ids"] = vehicles_id_list
         data["pedestrian_ids"] = pedestrian_id_list
-            
-    
+
         return data
 
     def _get_forward_speed(self, transform, velocity):
@@ -2528,14 +2521,14 @@ class Data_Collection():
             [sensor.get_location().x, sensor.get_location().y, sensor.get_location().z])
         data["right"]["w2c"] = np.array(
             world.camera_manager.sensor_rgb_right.get_transform().get_inverse_matrix())
-        
+
         intrinsic = np.identity(3)
         intrinsic[0, 2] = 512 / 2.0
         intrinsic[1, 2] = 512 / 2.0
         intrinsic[0, 0] = intrinsic[1, 1] = 512 / (
             2.0 * np.tan(50 * np.pi / 360.0)
         )
-        
+
         data["top"] = {}
         data["top"]["extrinsic"] = world.camera_manager.sensor_ss_top.get_transform(
         ).get_matrix()
@@ -2601,7 +2594,7 @@ class Data_Collection():
             data = data_list[idx]
             if (frame >= start_frame) and (frame < end_frame):
                 frame = frame-start_frame
-                
+
                 counter += 1
                 sensor_data_file = stored_path + ("/%08d.npy" % frame)
                 np.save(sensor_data_file, np.array(data, dtype=object))
@@ -2614,7 +2607,8 @@ class Data_Collection():
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB', {}],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)', {}],
             ['sensor.camera.depth', cc.Depth, 'Camera Depth (Gray Scale)', {}],
-            ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)', {}],
+            ['sensor.camera.depth', cc.LogarithmicDepth,
+                'Camera Depth (Logarithmic Gray Scale)', {}],
             ['sensor.camera.semantic_segmentation', cc.Raw,
                 'Camera Semantic Segmentation (Raw)', {}],
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette,
@@ -2624,7 +2618,7 @@ class Data_Collection():
             ['sensor.camera.dvs', cc.Raw, 'Dynamic Vision Sensor', {}],
             ['sensor.camera.optical_flow', None, 'Optical Flow', {}],
             ['sensor.other.lane_invasion', None, 'Lane lane_invasion', {}],
-            ['sensor.camera.instance_segmentation', cc.CityScapesPalette,
+            ['sensor.camera.instance_segmentation', cc.Raw,
                 'Camera Instance Segmentation (CityScapes Palette)', {}],
         ]
 
@@ -2638,10 +2632,10 @@ class Data_Collection():
 
                 if 'seg' in modality:
                     img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, frame), cc.CityScapesPalette)
+                        '%s/%s/%s/%08d' % (path, modality, view, frame), cc.Raw)
                 elif 'depth' in modality:
                     img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, frame) , cc.LogarithmicDepth)
+                        '%s/%s/%s/%08d' % (path, modality, view, frame), cc.Depth)  # cc.LogarithmicDepth
                 elif 'lidar' in view:
                     points = np.frombuffer(img.raw_data, dtype=np.dtype('f4'))
                     points = np.reshape(points, (int(points.shape[0] / 4), 4))
@@ -2650,32 +2644,30 @@ class Data_Collection():
                     np.save('%s/%s/%08d.npy' %
                             (path, view, frame), points, allow_pickle=True)
                 else:
-                    # save rgb 
-                    # rgb 
+                    # save rgb
+                    # rgb
                     # img.save_to_disk('%s/%s/%s/%08d' %
                     #                  (path, modality, view, frame))
 
                     img.convert(cc.Raw)
-                    array = np.frombuffer(img.raw_data, dtype=np.dtype("uint8"))
+                    array = np.frombuffer(
+                        img.raw_data, dtype=np.dtype("uint8"))
                     array = np.reshape(array, (img.height, img.width, 4))
                     array = array[:, :, :3]
                     # array = array[:, :, ::-1]
                     if not os.path.exists('%s/%s/%s/' % (path, modality, view)):
                         os.makedirs('%s/%s/%s/' % (path, modality, view))
-                    cv2.imwrite('%s/%s/%s/%08d.jpg' % (path, modality, view, frame), array, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    cv2.imwrite('%s/%s/%s/%08d.jpg' % (path, modality,
+                                view, frame), array, [cv2.IMWRITE_JPEG_QUALITY, 95])
                     # cv2.imwrite('%s/%s/%s/%08d.png' % (path, modality, view, frame), array, [cv2.IMWRITE_PNG_COMPRESSION, 7])
-                    
-
-
-
 
         print("%s %s save finished. Total: %d" %
               (sensors[sensor][2], view, counter))
 
     def save_data(self, path):
-        
+
         t_ss_top = Process(target=self.save_img, args=(self.ss_top, 10, path,
-                              self.start_frame, self.end_frame, 'top'))
+                                                       self.start_frame, self.end_frame, 'top'))
 
         t_rgb_front = Process(target=self.save_img, args=(self.rgb_front, 0, path,
                               self.start_frame, self.end_frame, 'front'))
@@ -2747,15 +2739,15 @@ class Data_Collection():
             f.close()
             print("static_data save finished.")
 
-
         with open(f"{path}/actor_attribute.json", "w") as f:
             json.dump(self.actor_attri_dict, f, indent=4)
             f.close()
             print("actor attribute save finished.")
 
         with open("./result.txt", "a") as f:
-            f.write(f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}\n")
-        
+            f.write(
+                f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}\n")
+
         end_time = time.time()
 
         print('ALL save done in %s ' % (end_time-start_time))
@@ -2778,8 +2770,9 @@ class Data_Collection():
         self.sensor_data_list = []
         self.actor_attri_dict = {}
         self.frame_list = []
-        self.static_dict= {}
+        self.static_dict = {}
         self.topology_list = []
+
 
 def game_loop(args):
     pygame.init()
@@ -2788,8 +2781,6 @@ def game_loop(args):
 
     path = os.path.join('data_collection',
                         args.scenario_type, args.scenario_id)
-
-    
 
     filter_dict = {}
     try:
@@ -2832,25 +2823,21 @@ def game_loop(args):
 
     vehicles_list = []
     all_id = []
-    
+
     collection_flag = False
     detect_start = True
     detect_end = False
-    # read start position and end position 
-    
+    # read start position and end position
 
     if not args.test:
-        # start_end_point.json 
+        # start_end_point.json
         with open(f"{path}/start_end_point.json") as f:
             data = json.load(f)
 
-            start_position_x  = float(data["start_x"])
-            start_position_y  = float(data["start_y"])
-            end_position_x  = float(data["end_x"])
-            end_position_y  = float(data["end_y"])
-           
-    
-
+            start_position_x = float(data["start_x"])
+            start_position_y = float(data["start_y"])
+            end_position_x = float(data["end_x"])
+            end_position_y = float(data["end_y"])
 
     client = carla.Client(args.host, args.port)
     client.set_timeout(10.0)
@@ -2863,24 +2850,19 @@ def game_loop(args):
     hud = HUD(args.width, args.height, client.get_world(), args)
 
     weather = args.weather
-    
 
     exec("args.weather = carla.WeatherParameters.%s" % args.weather)
     stored_path = os.path.join('data_collection', args.scenario_type, args.scenario_id,
                                'variant_scenario', weather + "_" + args.random_actors + "_")
-    
-
-    
 
     if args.test:
         out = cv2.VideoWriter(f'data_collection/{args.scenario_type}/{args.scenario_id}/{args.scenario_id}.mp4',
-                          cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
+                              cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
     else:
         if not os.path.exists(stored_path):
             os.makedirs(stored_path)
         out = cv2.VideoWriter(stored_path+"/"+str(args.scenario_id)+".mp4",
-                            cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
-
+                              cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 360))
 
     # pass seeds to the world
     world = World(client.load_world(args.map),
@@ -2939,28 +2921,6 @@ def game_loop(args):
                 except Exception:
                     transform_spawn.location.z += 1.5
 
-            # if args.scenario_type == 'obstacle':
-
-            #     dis = ego_transform.location.distance(transform_spawn.location)
-            #     if dis < min_dis:
-            #         nearest_obstacle = agents_dict[actor_id].id
-            #         min_dis = dis
-
-            #     obstacle_info[agents_dict[actor_id].id] = {
-            #         "obstacle_type": bp,
-            #         "basic_id": -1,
-            #         "location": {
-            #             "x": transform_spawn.location.x,
-            #             "y": transform_spawn.location.y,
-            #             "z": transform_spawn.location.z
-            #         },
-            #         "rotation": {
-            #             "pitch": transform_spawn.rotation.pitch,
-            #             "yaw": transform_spawn.rotation.yaw,
-            #             "roll": transform_spawn.rotation.roll
-            #         }
-            #     }
-
             # set other actor id for checking collision object's identity
             world.collision_sensor.other_actor_id = agents_dict[actor_id].id
 
@@ -2997,8 +2957,6 @@ def game_loop(args):
             vehicles_list, all_actors, all_id = spawn_actor_nearby(args, world.world, client, seeds,  distance=100, v_ratio=0.8,
                                                                    pedestrian=70, transform_dict=transform_dict)
 
-
-        
     scenario_name = scenario_name + args.random_actors + '_'
 
     # write actor list
@@ -3016,10 +2974,9 @@ def game_loop(args):
         data_collection = Data_Collection()
         data_collection.set_scenario_type(args.scenario_type)
         data_collection.set_ego_id(world)
-        data_collection.set_attribute(args.scenario_type, args.scenario_id, weather, args.random_actors, args.random_seed, args.map)
-        
-        
-        
+        data_collection.set_attribute(
+            args.scenario_type, args.scenario_id, weather, args.random_actors, args.random_seed, args.map)
+
     while (1):
         clock.tick_busy_loop(40)
         frame = world.world.tick()
@@ -3033,8 +2990,6 @@ def game_loop(args):
                 ref_light, lights, world.world)
 
         elif iter_tick > iter_start:
-            
-
 
             if not args.no_save:
                 if args.scenario_type == "interactive" or args.scenario_type == "collision":
@@ -3042,7 +2997,6 @@ def game_loop(args):
                     keys.remove('player')
                     gt_interactor_id = int(agents_dict[keys[0]].id)
                     data_collection.set_gt_interactor(gt_interactor_id)
-                    
 
             # iterate actors
             for actor_id, _ in filter_dict.items():
@@ -3057,7 +3011,6 @@ def game_loop(args):
                 if actor_transform_index[actor_id] < len(transform_dict[actor_id]):
                     x = transform_dict[actor_id][actor_transform_index[actor_id]].location.x
                     y = transform_dict[actor_id][actor_transform_index[actor_id]].location.y
-                    
 
                     if 'vehicle' in filter_dict[actor_id]:
 
@@ -3108,14 +3061,13 @@ def game_loop(args):
 
             # if iter_tick == iter_toggle:
             #     if not args.no_save:
-            #         
+            #
 
             elif iter_tick > iter_toggle:
 
                 if not args.no_save and (not abandon_scenario) and collection_flag and detect_start == False:
                     # collect data in sensor's list
                     data_collection.collect_sensor(frame, world)
-                    
 
                 view = pygame.surfarray.array3d(display)
                 #  convert from (width, height, channel) to (height, width, channel)
@@ -3123,17 +3075,18 @@ def game_loop(args):
                 #  convert from rgb to bgr
                 image = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
                 out.write(image)
-                
+
                 ego_loc = world.player.get_location()
                 x = ego_loc.x
                 y = ego_loc.y
-                
+
                 # check start position
                 # print("current position ", x, y)
 
                 if not args.test:
                     if detect_start:
-                        distacne = math.sqrt((x - start_position_x)**2 + (y - start_position_y)**2)
+                        distacne = math.sqrt(
+                            (x - start_position_x)**2 + (y - start_position_y)**2)
                         # print("start position", start_position_x, start_position_y)
                         # print("start ", distacne)
                         # print(" ")
@@ -3143,38 +3096,34 @@ def game_loop(args):
                             detect_end = True
                             if not args.no_save:
                                 data_collection.set_start_frame(frame)
-                            
-                            
+
                     # check end point
-                        
+
                     if detect_end:
-                        distacne = math.sqrt((x - end_position_x)**2 + (y - end_position_y)**2)
+                        distacne = math.sqrt(
+                            (x - end_position_x)**2 + (y - end_position_y)**2)
                         # print("end ", distacne)
                         if distacne < 1.0:
                             collection_flag = False
-                    
-                
+
                 if detect_end and not collection_flag:
                     print('stop scenario ')
                     break
-           
-            
-            
+
             # cehck end position
 
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
-    
-    if args.no_save and args.generate_random_seed and (not abandon_scenario) and not args.test :
-        # save random_seed 
+
+    if args.no_save and args.generate_random_seed and (not abandon_scenario) and not args.test:
+        # save random_seed
         with open(f'{stored_path}/seed.txt', 'w') as f:
             f.write(str(random_seed_int))
-        
 
     if not args.no_save and not abandon_scenario and not args.test:
         data_collection.set_end_frame(frame)
-        # save for only one time 
+        # save for only one time
         data_collection.collect_actor_attr(world)
         data_collection.collect_static_actor_data(world)
         data_collection.save_data(stored_path)
@@ -3298,7 +3247,7 @@ def main():
         # default=False,
         action='store_true',
         help='run scenarios only')
-    
+
     argparser.add_argument(
         '--generate_random_seed',
         # default=False,
@@ -3310,8 +3259,6 @@ def main():
         default=0,
         type=int,
         help='use random_seed to replay the same behavior ')
-
-
 
     args = argparser.parse_args()
 
