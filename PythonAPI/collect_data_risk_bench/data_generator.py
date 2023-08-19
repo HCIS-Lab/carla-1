@@ -2315,8 +2315,8 @@ class Data_Collection():
     def collect_actor_data(self, world):
 
         vehicles_id_list = []
-        bike_blueprint = ["vehicle.bh.crossbike","vehicle.diamondback.century""vehicle.gazelle.omafiets"]
-        motor_blueprint = ["vehicle.harley-davidson.low_rider","vehicle.kawasaki.ninja","vehicle.yamaha.yzf"]
+        bike_blueprint = ["vehicle.bh.crossbike","vehicle.diamondback.century","vehicle.gazelle.omafiets"]
+        motor_blueprint = ["vehicle.harley-davidson.low_rider","vehicle.kawasaki.ninja","vehicle.yamaha.yzf","vehicle.vespa.zx125"]
         
         def get_xyz(method, rotation=False):
 
