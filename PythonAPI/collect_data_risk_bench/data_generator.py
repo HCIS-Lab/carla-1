@@ -1272,6 +1272,10 @@ class CameraManager(object):
                 (carla.Transform(carla.Location(x=0.0, y=0.0,
                  z=50.0), carla.Rotation(pitch=-90.0)), Attachment.Rigid),
 
+                # lidar 15 
+                (carla.Transform(carla.Location(x=1.3, y=0,
+                 z=1.3), carla.Rotation(yaw=-90.0)), Attachment.Rigid),
+
             ]
         else:
             self._camera_transforms = [
@@ -1336,7 +1340,11 @@ class CameraManager(object):
         self.sensor_depth_bp.set_attribute('fov', str(60.0))
 
         self.sensor_lidar_bp = bp_library.find('sensor.lidar.ray_cast')
-        self.sensor_lidar_bp.set_attribute('range', str(50))
+        self.sensor_lidar_bp.set_attribute('range', str(100))
+        self.sensor_lidar_bp.set_attribute('rotation_frequency', str(20))
+        self.sensor_lidar_bp.set_attribute('points_per_second', str(1200000))
+
+
 
         for item in self.sensors:
 
@@ -1512,7 +1520,7 @@ class CameraManager(object):
                 self.sensor_lidar = self._parent.get_world().spawn_actor(
                     # self.sensors[6][-1],
                     self.sensor_lidar_bp,
-                    self._camera_transforms[0][0],
+                    self._camera_transforms[15][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
 
@@ -2675,7 +2683,7 @@ class Data_Collection():
                         '%s/%s/%s/%08d' % (path, modality, view, frame), cc.Raw)
                 elif 'depth' in modality:
                     img.save_to_disk(
-                        '%s/%s/%s/%08d' % (path, modality, view, frame), cc.Depth)  # cc.LogarithmicDepth
+                        '%s/%s/%s/%08d' % (path, modality, view, frame), cc.Raw)#cc.Depth)  # cc.LogarithmicDepth
                 elif 'lidar' in view:
                     points = np.frombuffer(img.raw_data, dtype=np.dtype('f4'))
                     points = np.reshape(points, (int(points.shape[0] / 4), 4))
