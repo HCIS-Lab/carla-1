@@ -929,6 +929,9 @@ class CollisionSensor(object):
             lambda event: CollisionSensor._on_collision(weak_self, event))
         self.collision = False
 
+        self.collision_actor_id = None
+        self.collision_actor_type = None
+
     # def get_collision_history(self):
     #     history = collections.defaultdict(int)
     #     for frame, intensity in self.history:
@@ -951,6 +954,8 @@ class CollisionSensor(object):
         # if len(self.history) > 4000:
         #     self.history.pop(0)
         self.collision = True
+        self.collision_actor_id = event.other_actor.id
+        self.collision_actor_type = actor_type
         if event.other_actor.id != self.other_actor_id:
             self.wrong_collision = True
 
@@ -2201,6 +2206,28 @@ class Data_Collection():
             print("topology collection error.")
         pass
 
+
+
+    def save_collision_frame(self, frame, collision_id, type, path):
+
+
+        # path 
+        if (frame >= self.start_frame):
+            frame = frame - self.start_frame
+
+            path = f'{path}/collision_frame.json'
+
+            collision_dict =  {}
+            collision_dict["frame"] = frame
+            collision_dict["id"] = collision_id
+            collision_dict["type"] = type
+
+            f = open(path, "w")
+            json.dump(collision_dict, f, indent=4)
+            f.close()
+
+
+
     def collect_static_actor_data(self, world):
         id_counter = 0
         data = {}
@@ -2324,12 +2351,12 @@ class Data_Collection():
                 bbox.extent.x = 1.177870
                 bbox.extent.y = 0.381839
                 bbox.extent.z = 0.75
-                bbox.location = carla.Location(0, 0, bounding_box.extent.z)
+                bbox.location = carla.Location(0, 0, bbox.extent.z)
             elif actor.type_id in bike_blueprint:
                 bbox.extent.x = 0.821422
                 bbox.extent.y = 0.186258
                 bbox.extent.z = 0.9
-                bbox.location = carla.Location(0, 0, bounding_box.extent.z)
+                bbox.location = carla.Location(0, 0, bbox.extent.z)
                 
             verts = [v for v in bbox.get_world_vertices(
                 actor.get_transform())]
@@ -2340,8 +2367,8 @@ class Data_Collection():
 
             distance = ego_loc.distance(actor_loc)
 
-            if distance < 50:
-                vehicles_id_list.append(_id)
+            #if distance < 50:
+            vehicles_id_list.append(_id)
 
             acceleration = get_xyz(actor.get_acceleration())
             velocity = get_xyz(actor.get_velocity())
@@ -2398,8 +2425,8 @@ class Data_Collection():
 
             distance = ego_loc.distance(actor_loc)
 
-            if distance < 50:
-                pedestrian_id_list.append(_id)
+            #if distance < 50:
+            pedestrian_id_list.append(_id)
 
             acceleration = get_xyz(actor.get_acceleration())
             velocity = get_xyz(actor.get_velocity())
@@ -2432,8 +2459,8 @@ class Data_Collection():
             actor_loc = actor.get_location()
             distance = ego_loc.distance(actor_loc)
 
-            if distance < 50:
-                traffic_id_list.append(_id)
+            #if distance < 50:
+            traffic_id_list.append(_id)
 
             data[_id] = {}
             data[_id]["state"] = traffic_light_state
@@ -2469,8 +2496,8 @@ class Data_Collection():
             actor_loc = actor.get_location()
             distance = ego_loc.distance(actor_loc)
 
-            if distance < 50:
-                obstacle_id_list.append(_id)
+            # if distance < 50:
+            obstacle_id_list.append(_id)
 
             data[_id] = {}
             data[_id]["distance"] = distance
@@ -2989,6 +3016,11 @@ def game_loop(args):
         data_collection.set_ego_id(world)
         data_collection.set_attribute(
             args.scenario_type, args.scenario_id, weather, args.random_actors, args.random_seed, args.map)
+        
+    if args.scenario_type:
+        collision_detect_end = False
+        collision_counter = 0
+
 
     while (1):
         clock.tick_busy_loop(40)
@@ -3111,13 +3143,33 @@ def game_loop(args):
                                 data_collection.set_start_frame(frame)
 
                     # check end point
-
                     if detect_end:
-                        distacne = math.sqrt(
-                            (x - end_position_x)**2 + (y - end_position_y)**2)
-                        # print("end ", distacne)
-                        if distacne < 1.0:
-                            collection_flag = False
+                        if args.scenario_type != "collision":
+                            
+                            distacne = math.sqrt(
+                                (x - end_position_x)**2 + (y - end_position_y)**2)
+                            # print("end ", distacne)
+                            if distacne < 1.0:
+                                collection_flag = False
+                        else:
+                            # detect collision 
+
+                            if world.collision_sensor.collision and not world.collision_sensor.wrong_collision and not collision_detect_end:
+                                collision_detect_end = True 
+                                collision_counter = 0
+                                collision_id = 0
+
+                                data_collection.save_collision_frame(frame,  world.collision_sensor.collision_actor_id, world.collision_sensor.collision_actor_type, stored_path)
+
+
+                            if collision_detect_end:
+                                collision_counter+=1
+
+                            if collision_counter > 10:
+                                collection_flag = False
+
+
+
 
                 if detect_end and not collection_flag:
                     print('stop scenario ')
