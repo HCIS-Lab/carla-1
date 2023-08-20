@@ -14,7 +14,7 @@ if __name__ =="__main__":
             for basic_scenario in basic_scenario_list:
                 
                 town_id = basic_scenario.split("_")[0]
-                if town_id[0] =="A" or town_id[0] =="A":
+                if town_id[0] =="A" or town_id[0] =="B":
                     town = town_id
                 elif town_id[:2] == "10":
                     town = "Town10HD"
