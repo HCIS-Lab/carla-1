@@ -159,6 +159,8 @@ class World(object):
         self.world.apply_settings(settings)
         self.actor_role_name = args.rolename
         self.args = args
+        
+        
 
         try:
             self.map = self.world.get_map()
@@ -182,6 +184,9 @@ class World(object):
         self._gamma = args.gamma
         self.ego_data = {}
         self.save_mode = not args.no_save
+        self.inference_mode = args.inference
+        
+        
         self.restart(self.args, seeds)
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
@@ -278,7 +283,7 @@ class World(object):
         self.gnss_sensor = GnssSensor(self.player, self.ego_data)
         self.imu_sensor = IMUSensor(self.player, self.ego_data)
         self.camera_manager = CameraManager(
-            self.player, self.hud, self._gamma, self.save_mode)
+            self.player, self.hud, self._gamma, self.save_mode, self.inference_mode)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         self.camera_manager.background = True
@@ -362,53 +367,72 @@ class World(object):
     def destroy(self):
         if self.radar_sensor is not None:
             self.toggle_radar()
-        if self.save_mode:
+        
+        if self.inference_mode:
+            print("not implementation yet")
+            
+            # inference_transfuser model
             sensors = [
+                    self.camera_manager.sensor_top,
+                
+                
+                    self.camera_manager.sensor_rgb_front,
+                    self.camera_manager.sensor_rgb_left,
+                    self.camera_manager.sensor_rgb_right,
+                    self.camera_manager.sensor_lidar,
 
-                # self.camera_manager.sensor_lbc_img,
+                    self.collision_sensor.sensor,
+                    self.lane_invasion_sensor.sensor,
+                    self.gnss_sensor.sensor,
+                    self.imu_sensor.sensor
+                ]
 
-                self.camera_manager.sensor_top,
-                self.camera_manager.sensor_ss_top,
-
-                self.camera_manager.sensor_rgb_front,
-                self.camera_manager.sensor_ss_front,
-                self.camera_manager.sensor_depth_front,
-
-                self.camera_manager.sensor_rgb_left,
-                self.camera_manager.sensor_ss_left,
-                self.camera_manager.sensor_depth_left,
-
-                self.camera_manager.sensor_rgb_right,
-                self.camera_manager.sensor_ss_right,
-                self.camera_manager.sensor_depth_right,
-
-                # self.camera_manager.sensor_rgb_rear,
-                # self.camera_manager.sensor_ss_rear,
-                # self.camera_manager.sensor_depth_rear,
-                # self.camera_manager.sensor_rgb_rear_left,
-                # self.camera_manager.sensor_ss_rear_left,
-                # self.camera_manager.sensor_depth_rear_left,
-                # self.camera_manager.sensor_rgb_rear_right,
-                # self.camera_manager.sensor_ss_rear_right,
-                # self.camera_manager.sensor_depth_rear_right,
-
-                self.camera_manager.sensor_lidar,
-
-                self.collision_sensor.sensor,
-                self.lane_invasion_sensor.sensor,
-                self.gnss_sensor.sensor,
-                self.imu_sensor.sensor
-            ]
 
         else:
-            sensors = [
-                # self.camera_manager.sensor_lbc_img,
-                self.camera_manager.sensor_top,
-                self.collision_sensor.sensor,
-                self.lane_invasion_sensor.sensor,
-                self.gnss_sensor.sensor,
-                self.imu_sensor.sensor
-            ]
+            if self.save_mode:
+                sensors = [
+                    self.camera_manager.sensor_top,
+                    self.camera_manager.sensor_ss_top,
+
+                    self.camera_manager.sensor_rgb_front,
+                    self.camera_manager.sensor_ss_front,
+                    self.camera_manager.sensor_depth_front,
+
+                    self.camera_manager.sensor_rgb_left,
+                    self.camera_manager.sensor_ss_left,
+                    self.camera_manager.sensor_depth_left,
+
+                    self.camera_manager.sensor_rgb_right,
+                    self.camera_manager.sensor_ss_right,
+                    self.camera_manager.sensor_depth_right,
+
+                    # self.camera_manager.sensor_rgb_rear,
+                    # self.camera_manager.sensor_ss_rear,
+                    # self.camera_manager.sensor_depth_rear,
+                    # self.camera_manager.sensor_rgb_rear_left,
+                    # self.camera_manager.sensor_ss_rear_left,
+                    # self.camera_manager.sensor_depth_rear_left,
+                    # self.camera_manager.sensor_rgb_rear_right,
+                    # self.camera_manager.sensor_ss_rear_right,
+                    # self.camera_manager.sensor_depth_rear_right,
+
+                    self.camera_manager.sensor_lidar,
+
+                    self.collision_sensor.sensor,
+                    self.lane_invasion_sensor.sensor,
+                    self.gnss_sensor.sensor,
+                    self.imu_sensor.sensor
+                ]
+
+            else:
+                sensors = [
+                    # self.camera_manager.sensor_lbc_img,
+                    self.camera_manager.sensor_top,
+                    self.collision_sensor.sensor,
+                    self.lane_invasion_sensor.sensor,
+                    self.gnss_sensor.sensor,
+                    self.imu_sensor.sensor
+                ]
 
         for i, sensor in enumerate(sensors):
             if sensor is not None:
@@ -1182,7 +1206,7 @@ class RadarSensor(object):
 
 
 class CameraManager(object):
-    def __init__(self, parent_actor, hud, gamma_correction, save_mode):
+    def __init__(self, parent_actor, hud, gamma_correction, save_mode, inference_mode):
 
         self.ss_top = None
         self.sensor_top = None
@@ -1191,6 +1215,8 @@ class CameraManager(object):
         self.hud = hud
         self.recording = False
         self.save_mode = save_mode
+        self.inference_mode = inference_mode
+        
 
         self.rgb_front = None
         self.rgb_left = None
@@ -1393,31 +1419,14 @@ class CameraManager(object):
                 self._camera_transforms[6][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[6][1])
-
-            if self.save_mode:
-
-                # inst top
-                self.sensor_ss_top = self._parent.get_world().spawn_actor(
-                    self.bev_seg_bp,
-                    self._camera_transforms[14][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[14][1])
+            
+            
+            
+            if self.inference_mode:
+                
                 # front
-
                 self.sensor_rgb_front = self._parent.get_world().spawn_actor(
                     self.sensor_rgb_bp,
-                    self._camera_transforms[8][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-
-                self.sensor_ss_front = self._parent.get_world().spawn_actor(
-                    self.sensor_ss_bp,
-                    self._camera_transforms[8][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-
-                self.sensor_depth_front = self._parent.get_world().spawn_actor(
-                    self.sensor_depth_bp,
                     self._camera_transforms[8][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
@@ -1429,93 +1438,13 @@ class CameraManager(object):
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
 
-                self.sensor_ss_left = self._parent.get_world().spawn_actor(
-                    self.sensor_ss_bp,
-                    self._camera_transforms[9][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-
-                self.sensor_depth_left = self._parent.get_world().spawn_actor(
-                    self.sensor_depth_bp,
-                    self._camera_transforms[9][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-
+                # rgb
                 self.sensor_rgb_right = self._parent.get_world().spawn_actor(
                     self.sensor_rgb_bp,
                     self._camera_transforms[10][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
-
-                self.sensor_ss_right = self._parent.get_world().spawn_actor(
-                    self.sensor_ss_bp,
-                    self._camera_transforms[10][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-
-                self.sensor_depth_right = self._parent.get_world().spawn_actor(
-                    self.sensor_depth_bp,
-                    self._camera_transforms[10][0],
-                    attach_to=self._parent,
-                    attachment_type=self._camera_transforms[0][1])
-
-                # # rear
-                # self.sensor_rgb_rear = self._parent.get_world().spawn_actor(
-                #     self.sensor_rgb_bp,
-                #     self._camera_transforms[11][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # self.sensor_ss_rear = self._parent.get_world().spawn_actor(
-                #     self.sensor_ss_bp,
-                #     self._camera_transforms[11][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # self.sensor_depth_rear = self._parent.get_world().spawn_actor(
-                #     self.sensor_depth_bp,
-                #     self._camera_transforms[11][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # # rear left
-                # self.sensor_rgb_rear_left = self._parent.get_world().spawn_actor(
-                #     self.sensor_rgb_bp,
-                #     self._camera_transforms[12][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # self.sensor_ss_rear_left = self._parent.get_world().spawn_actor(
-                #     self.sensor_ss_bp,
-                #     self._camera_transforms[12][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # self.sensor_depth_rear_left = self._parent.get_world().spawn_actor(
-                #     self.sensor_depth_bp,
-                #     self._camera_transforms[12][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # # rear left
-                # self.sensor_rgb_rear_right = self._parent.get_world().spawn_actor(
-                #     self.sensor_rgb_bp,
-                #     self._camera_transforms[13][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # self.sensor_ss_rear_right = self._parent.get_world().spawn_actor(
-                #     self.sensor_ss_bp,
-                #     self._camera_transforms[13][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
-                # self.sensor_depth_rear_right = self._parent.get_world().spawn_actor(
-                #     self.sensor_depth_bp,
-                #     self._camera_transforms[13][0],
-                #     attach_to=self._parent,
-                #     attachment_type=self._camera_transforms[0][1])
-
+                
                 # lidar sensor
                 self.sensor_lidar = self._parent.get_world().spawn_actor(
                     # self.sensors[6][-1],
@@ -1523,6 +1452,138 @@ class CameraManager(object):
                     self._camera_transforms[15][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
+ 
+            else:
+
+                if self.save_mode:
+
+                    # inst top
+                    self.sensor_ss_top = self._parent.get_world().spawn_actor(
+                        self.bev_seg_bp,
+                        self._camera_transforms[14][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[14][1])
+                    # front
+
+                    self.sensor_rgb_front = self._parent.get_world().spawn_actor(
+                        self.sensor_rgb_bp,
+                        self._camera_transforms[8][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_ss_front = self._parent.get_world().spawn_actor(
+                        self.sensor_ss_bp,
+                        self._camera_transforms[8][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_depth_front = self._parent.get_world().spawn_actor(
+                        self.sensor_depth_bp,
+                        self._camera_transforms[8][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    # left
+                    self.sensor_rgb_left = self._parent.get_world().spawn_actor(
+                        self.sensor_rgb_bp,
+                        self._camera_transforms[9][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_ss_left = self._parent.get_world().spawn_actor(
+                        self.sensor_ss_bp,
+                        self._camera_transforms[9][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_depth_left = self._parent.get_world().spawn_actor(
+                        self.sensor_depth_bp,
+                        self._camera_transforms[9][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_rgb_right = self._parent.get_world().spawn_actor(
+                        self.sensor_rgb_bp,
+                        self._camera_transforms[10][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_ss_right = self._parent.get_world().spawn_actor(
+                        self.sensor_ss_bp,
+                        self._camera_transforms[10][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    self.sensor_depth_right = self._parent.get_world().spawn_actor(
+                        self.sensor_depth_bp,
+                        self._camera_transforms[10][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
+
+                    # # rear
+                    # self.sensor_rgb_rear = self._parent.get_world().spawn_actor(
+                    #     self.sensor_rgb_bp,
+                    #     self._camera_transforms[11][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # self.sensor_ss_rear = self._parent.get_world().spawn_actor(
+                    #     self.sensor_ss_bp,
+                    #     self._camera_transforms[11][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # self.sensor_depth_rear = self._parent.get_world().spawn_actor(
+                    #     self.sensor_depth_bp,
+                    #     self._camera_transforms[11][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # # rear left
+                    # self.sensor_rgb_rear_left = self._parent.get_world().spawn_actor(
+                    #     self.sensor_rgb_bp,
+                    #     self._camera_transforms[12][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # self.sensor_ss_rear_left = self._parent.get_world().spawn_actor(
+                    #     self.sensor_ss_bp,
+                    #     self._camera_transforms[12][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # self.sensor_depth_rear_left = self._parent.get_world().spawn_actor(
+                    #     self.sensor_depth_bp,
+                    #     self._camera_transforms[12][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # # rear left
+                    # self.sensor_rgb_rear_right = self._parent.get_world().spawn_actor(
+                    #     self.sensor_rgb_bp,
+                    #     self._camera_transforms[13][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # self.sensor_ss_rear_right = self._parent.get_world().spawn_actor(
+                    #     self.sensor_ss_bp,
+                    #     self._camera_transforms[13][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # self.sensor_depth_rear_right = self._parent.get_world().spawn_actor(
+                    #     self.sensor_depth_bp,
+                    #     self._camera_transforms[13][0],
+                    #     attach_to=self._parent,
+                    #     attachment_type=self._camera_transforms[0][1])
+
+                    # lidar sensor
+                    self.sensor_lidar = self._parent.get_world().spawn_actor(
+                        # self.sensors[6][-1],
+                        self.sensor_lidar_bp,
+                        self._camera_transforms[15][0],
+                        attach_to=self._parent,
+                        attachment_type=self._camera_transforms[0][1])
 
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
@@ -1531,49 +1592,61 @@ class CameraManager(object):
             #     lambda image: CameraManager._parse_image(weak_self, image, 'lbc_img'))
             self.sensor_top.listen(
                 lambda image: CameraManager._parse_image(weak_self, image, 'top'))
-
-            if self.save_mode:
-
-                self.sensor_ss_top.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_top'))
-
+            
+            if self.inference_mode:
+                
                 self.sensor_rgb_front.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'rgb_front'))
                 self.sensor_rgb_left.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'rgb_left'))
                 self.sensor_rgb_right.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'rgb_right'))
-                # self.sensor_rgb_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear'))
-                # self.sensor_rgb_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear_left'))
-                # self.sensor_rgb_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear_right'))
-
-                self.sensor_ss_front.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_front'))
-                self.sensor_ss_left.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_left'))
-                self.sensor_ss_right.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'ss_right'))
-                # self.sensor_ss_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear'))
-                # self.sensor_ss_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear_left'))
-                # self.sensor_ss_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear_right'))
-
-                self.sensor_depth_front.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'depth_front'))
-                self.sensor_depth_left.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
-                self.sensor_depth_right.listen(
-                    lambda image: CameraManager._parse_image(weak_self, image, 'depth_right'))
-                # self.sensor_depth_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear'))
-                # self.sensor_depth_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear_left'))
-                # self.sensor_depth_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear_right'))
-
                 self.sensor_lidar.listen(
                     lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
 
-                # # self.sensor_lbc_ins.listen(lambda image: CameraManager._parse_image(
-                # #     weak_self, image, 'lbc_ins'))
-                # # self.ss_top.listen(lambda image: CameraManager._parse_image(
-                # #     weak_self, image, 'ss_top'))
+            else:
+                if self.save_mode:
+
+                    self.sensor_ss_top.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'ss_top'))
+
+                    self.sensor_rgb_front.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'rgb_front'))
+                    self.sensor_rgb_left.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'rgb_left'))
+                    self.sensor_rgb_right.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'rgb_right'))
+                    # self.sensor_rgb_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear'))
+                    # self.sensor_rgb_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear_left'))
+                    # self.sensor_rgb_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'rgb_rear_right'))
+
+                    self.sensor_ss_front.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'ss_front'))
+                    self.sensor_ss_left.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'ss_left'))
+                    self.sensor_ss_right.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'ss_right'))
+                    # self.sensor_ss_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear'))
+                    # self.sensor_ss_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear_left'))
+                    # self.sensor_ss_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'ss_rear_right'))
+
+                    self.sensor_depth_front.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'depth_front'))
+                    self.sensor_depth_left.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'depth_left'))
+                    self.sensor_depth_right.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'depth_right'))
+                    # self.sensor_depth_rear.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear'))
+                    # self.sensor_depth_rear_left.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear_left'))
+                    # self.sensor_depth_rear_right.listen(lambda image: CameraManager._parse_image(weak_self, image, 'depth_rear_right'))
+
+                    self.sensor_lidar.listen(
+                        lambda image: CameraManager._parse_image(weak_self, image, 'lidar'))
+
+                    # # self.sensor_lbc_ins.listen(lambda image: CameraManager._parse_image(
+                    # #     weak_self, image, 'lbc_ins'))
+                    # # self.ss_top.listen(lambda image: CameraManager._parse_image(
+                    # #     weak_self, image, 'ss_top'))
 
         if notify:
             self.hud.notification(self.sensors[index][2])
@@ -1836,6 +1909,60 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
+class Inference():
+    def __init__(self) -> None:
+        
+        
+        # init model 
+        self.model = None
+    
+    
+    def run_inference(self, frame, world):
+        
+        while True:
+            if world.camera_manager.rgb_front.frame == frame:
+                self.rgb_front.append(world.camera_manager.rgb_front)
+                break
+
+        while True:
+            if world.camera_manager.rgb_left.frame == frame:
+                self.rgb_left.append(world.camera_manager.rgb_left)
+                break
+        while True:
+            if world.camera_manager.rgb_right.frame == frame:
+                self.rgb_right.append(world.camera_manager.rgb_right)
+                break
+
+        while True:
+            if world.camera_manager.lidar.frame == frame:
+                self.sensor_lidar.append(world.camera_manager.lidar)
+                break
+
+        while True:
+            if world.imu_sensor.frame == frame:
+                self.compass = world.imu_sensor.compass
+                break
+        # inference here 
+        
+        
+        # control = Model(INPUT)
+        
+        # steer = control.steering
+        # throttle = control.throttle
+        # brake = control.brake
+        
+        # return 
+        control = carla.VehicleControl()
+        control.steer = float(0.0)
+        control.throttle = float(0.0)
+        control.brake = float(True)
+        
+        return control
+        
+
+        
+
+        
 
 class Data_Collection():
     def __init__(self) -> None:
@@ -3025,6 +3152,15 @@ def game_loop(args):
         data_collection.set_attribute(
             args.scenario_type, args.scenario_id, weather, args.random_actors, args.random_seed, args.map)
         
+        
+        
+    if args.inference:
+        
+        
+        inference = Inference()
+        # load model weight
+        
+        
     if args.scenario_type:
         collision_detect_end = False
         collision_counter = 0
@@ -3066,6 +3202,10 @@ def game_loop(args):
                     y = transform_dict[actor_id][actor_transform_index[actor_id]].location.y
 
                     if 'vehicle' in filter_dict[actor_id]:
+                        
+                        if args.inference and actor_id == 'player':
+                            # Not to apply control for ego vehicle ( player )
+                            continue
 
                         target_speed = (
                             velocity_dict[actor_id][actor_transform_index[actor_id]])*3.6
@@ -3094,6 +3234,11 @@ def game_loop(args):
                         actor_transform_index[actor_id] += 1
                 else:
                     finish[actor_id] = True
+                    
+            # 
+            if args.inference:
+                control = inference.run_inference(frame, world)
+                world.player.apply_control(control)
 
             if not False in finish.values():
                 break
@@ -3320,6 +3465,12 @@ def main():
         # default=False,
         action='store_true',
         help='run scenarios only')
+    
+    argparser.add_argument(
+        '--inference',
+        # default=False,
+        action='store_true',
+        help='run end to end model ( inference mode )')
 
     argparser.add_argument(
         '--generate_random_seed',
