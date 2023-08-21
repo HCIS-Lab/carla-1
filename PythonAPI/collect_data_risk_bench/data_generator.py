@@ -1915,27 +1915,33 @@ class Inference():
         
         # init model 
         self.model = None
+        
+        self.rgb_front = None
+        self.rgb_left = None
+        self.rgb_right = None
+        self.rgb_lidar = None
+        self.compass = None
     
     
     def run_inference(self, frame, world):
         
         while True:
             if world.camera_manager.rgb_front.frame == frame:
-                self.rgb_front.append(world.camera_manager.rgb_front)
+                self.rgb_front = world.camera_manager.rgb_front
                 break
 
         while True:
             if world.camera_manager.rgb_left.frame == frame:
-                self.rgb_left.append(world.camera_manager.rgb_left)
+                self.rgb_left = world.camera_manager.rgb_left
                 break
         while True:
             if world.camera_manager.rgb_right.frame == frame:
-                self.rgb_right.append(world.camera_manager.rgb_right)
+                self.rgb_right = world.camera_manager.rgb_right
                 break
 
         while True:
             if world.camera_manager.lidar.frame == frame:
-                self.sensor_lidar.append(world.camera_manager.lidar)
+                self.sensor_lidar =  world.camera_manager.lidar
                 break
 
         while True:
