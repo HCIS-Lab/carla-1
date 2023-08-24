@@ -1422,7 +1422,9 @@ class CameraManager(object):
                  1.0*bound_y, z=1.2*bound_z)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=-2.8*bound_x, y=+0.0*bound_y,
                  z=4.6*bound_z), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-1.0, y=-1.0*bound_y, z=0.4*bound_z)), Attachment.Rigid)]
+                (carla.Transform(carla.Location(x=-1.0, y=-1.0*bound_y, z=0.4*bound_z)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=1.3, y=0,
+                 z=1.3), carla.Rotation(roll=0.0, pitch=0.0, yaw=0.0)), Attachment.Rigid),]
         else:
             self._camera_transforms = [
                 (carla.Transform(carla.Location(x=-5.5, z=2.5),
@@ -1460,6 +1462,22 @@ class CameraManager(object):
             if item[0].startswith('sensor.camera'):
                 bp.set_attribute('image_size_x', str(hud.dim[0]))
                 bp.set_attribute('image_size_y', str(hud.dim[1]))
+                bp.set_attribute('fov', str(120))
+                
+                if bp.has_attribute('lens_circle_multiplier'):
+                    bp.set_attribute('lens_circle_multiplier', str(0.0))
+                    
+
+                if bp.has_attribute('lens_circle_falloff'):
+                    bp.set_attribute('lens_circle_falloff', str(0.0))
+                    
+                if bp.has_attribute('chromatic_aberration_intensity'):
+                    bp.set_attribute('chromatic_aberration_intensity', str(3.0))
+                    
+                if bp.has_attribute('chromatic_aberration_offset'):
+                    bp.set_attribute('chromatic_aberration_offset', str(500))
+                    
+                        
                 if bp.has_attribute('gamma'):
                     bp.set_attribute('gamma', str(gamma_correction))
                 for attr_name, attr_value in item[3].items():
