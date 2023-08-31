@@ -1,83 +1,50 @@
-#!/bin/bash
-# This shell is going to create the video for each scenario_ID
-
 # kill al carla server 
 killall -9 -r CarlaUE4-Linux
 
-echo "Input the scenario_type you want to process"
-echo "Choose from the following options:"
+sleep 5
 
+# rm result.txt
+touch result.txt
 
-echo "1 - interactive"
-echo "2 - non-interactive"
-echo "3 - obstacle"
-echo "4 - collision"
-
-ds_id=1
-read -p "Enter scenario type ID to create a data video: " ds_id
-scenario_type="interactive"
-if [ ${ds_id} == 1 ]
-then
-    scenario_type="interactive"
-elif [ ${ds_id} == 2 ]
-then
-    scenario_type="non-interactive"
-elif [ ${ds_id} == 3 ]
-then
-    scenario_type="obstacle"
-elif [ ${ds_id} == 4 ]
-then
-    scenario_type="collision"
-else
-    echo "Invalid ID!!!"
-    echo "run default setting : interactive"
-fi
-
-len=${#scenario_type}
-len=$((len + 19))
-folder=`ls -d ./data_collection/${scenario_type}/*`
-
-../../CarlaUE4.sh &
-sleep 15
 SERVICE="CarlaUE4"
-for eachfile in $folder
-do
-    if pgrep "$SERVICE" >/dev/null
+
+while read F  ; do
+
+    # data format
+    # interactive 10_t3-1_1_p_c_l_1_0 Town10HD ClearSunset mid 14252
+
+    # spilt the string according to  " "
+    array=(${F// / })  
+
+    COUNTER=0
+    # while  true ; do 
+
+    echo collect ${array[0]} ${array[1]} ${array[2]} ${array[3]} ${array[4]} ${array[5]}
+
+    if grep -q "${array[0]}#${array[1]}#${array[2]}#${array[3]}#${array[4]}#${array[5]}" ./result.txt
     then
-        echo "$SERVICE is running"
+        echo "test"
+        break
     else
-        echo "$SERVICE is  stopped"
-        ../../CarlaUE4.sh & sleep 15	
-    fi
-    
-    echo ${eachfile:$len} 
+        let COUNTER=COUNTER+1
 
-
-
-    if [ `echo ${eachfile:$len:1} | awk -v tem="B" '{print($1==tem)? "1":"0"}'` -eq "1" ]
+        if [ ${COUNTER} == 5 ]
         then
-            # B3, B7, B8
-            python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map ${eachfile:$len:2} ---inference 
-        else
-
-            if [ `echo ${eachfile:$len:1} | awk -v tem="A" '{print($1==tem)? "1":"0"}'` -eq "1" ]
-            then
-                # A0, A1, A6
-                python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map ${eachfile:$len:2} --test
-            else
-                # Carla original Town XX
-                if [ `echo ${eachfile:$len:2} | awk -v tem="10" '{print($1==tem)? "1":"0"}'` -eq "1" ]
-                then
-                
-                    python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town10HD --test --inference
-                else
-                    echo "Town"
-                    python data_generator.py --scenario_type ${scenario_type} --scenario_id ${eachfile:$len} --map Town0${eachfile:$len:1} --test --inference
-            fi
+            killall -9 -r CarlaUE4-Linux
+            sleep 5
         fi
-    fi 
 
-    sleep 3
-done
+        if pgrep "$SERVICE" >/dev/null
+        then
+            echo "$SERVICE is running"
+            # python XXX
+            python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference
+        else
+            echo "$SERVICE is  stopped"
+            ../../CarlaUE4.sh & sleep 10
+            python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference
+        fi
+    fi
 
-killall -9 -r CarlaUE4-Linux
+    # done
+done <./name.txt

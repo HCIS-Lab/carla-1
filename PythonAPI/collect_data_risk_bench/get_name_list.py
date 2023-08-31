@@ -3,7 +3,7 @@ import os
 # useage: python get_name_list > name.txt
 
 if __name__ =="__main__":
-    scenario_list = ["interactive", "non-interactive", "obstacle", "collision"]
+    scenario_list = [ "obstacle" ] # "interactive" ]#, "non-interactive", "obstacle", "collision"]
 
     for scenario in scenario_list:
 
@@ -36,6 +36,7 @@ if __name__ =="__main__":
                     #     print(scenario, basic_scenario, town, weather, actor, random_seed, end=" ")
                     # else:
                     print(scenario, basic_scenario, town, weather, actor, random_seed)
+                    break
                     
         
                     
