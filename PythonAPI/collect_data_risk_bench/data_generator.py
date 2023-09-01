@@ -69,6 +69,7 @@ from multiprocessing import Process
 import xml.etree.ElementTree as ET
 import matplotlib
 matplotlib.use('Agg')
+from PIL import Image, ImageDraw
 
 try:
     import pygame
@@ -1636,9 +1637,6 @@ class CameraManager(object):
         elif view == 'lidar':
             self.lidar = image
 
-
-
-
 def record_control(control, control_list):
     np_control = np.zeros(7)
     np_control[0] = control.throttle
@@ -1804,8 +1802,6 @@ class PIDController(object):
         
 class Inference():
     def __init__(self, args, variant_path) -> None:
-
-
         from models.LBC.map_model import MapModel
 
         self.args = args
@@ -1830,14 +1826,23 @@ class Inference():
         self.net.cuda()
         self.net.eval()
 
+        self.variant_path = variant_path
+
         target = self.load_dict(os.path.join(variant_path, "target_point.pkl"))["target_point"]
         
         x=float(target[0])
         y=float(target[1])
         self.v = np.array([x, y])
 
+        self.topdown_debug_list = []
+
 
         self.ego_speed_controller = PIDController(K_P=1, K_I=0, K_D=0.0)
+
+
+        self.counter = 0 # use counter to deal with agent stuck porblem
+
+        self.mode = "mask" #'no_mask'
 
     def load_dict(self, filename_):
         with open(filename_, 'rb') as f:
@@ -2134,6 +2139,7 @@ class Inference():
                                         Loc(x=pos_3[0], y=pos_3[1]), 
                                         ])
             elif int(id) == int(interactor_id):
+                # pass
                 vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                         Loc(x=pos_1[0], y=pos_1[1]), 
                                         Loc(x=pos_2[0], y=pos_2[1]), 
@@ -2158,11 +2164,12 @@ class Inference():
             pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
             pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
             if int(id) == int(interactor_id):
-                    pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
+                
+                pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                    ])
                     
             else:
                 pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -2211,11 +2218,9 @@ class Inference():
         target += [128, 128] 
         
         target = np.clip(target, 0, 256)
-        target = torch.FloatTensor(target)
-
-        target = target.reshape((1, 2))
-
-        target_xy = target.to(device)
+        target_xy = torch.FloatTensor(target)
+        target_xy = target_xy.reshape((1, 2))
+        target_xy = target_xy.to(device)
 
         # heatmap = make_heatmap((256, 256), target) 
         # heatmap = torch.FloatTensor(heatmap).unsqueeze(0)
@@ -2255,6 +2260,25 @@ class Inference():
         # vis the result 
         # draw target point on BEV map 
 
+        topview_rgb = BirdViewProducer.as_rgb(birdview)
+        _topdown = Image.fromarray(topview_rgb)
+
+        _draw = ImageDraw.Draw(_topdown)
+
+        _draw.ellipse((target[0]-2, target[1]-2, target[0]+2, target[1]+2), (0, 0, 255))
+
+
+        for x, y in points_pred.cpu().data.numpy()[0]:
+            x = (x + 1) / 2 * 256
+            y = (y + 1) / 2 * 256
+
+            _draw.ellipse((x-2, y-2, x+2, y+2), (255, 0, 0))
+
+        _topdown = cv2.cvtColor(np.asarray(_topdown), cv2.COLOR_RGB2BGR)
+
+
+        self.topdown_debug_list.append(_topdown)
+        # draw waypoints
 
 
         # distance 
@@ -2268,6 +2292,29 @@ class Inference():
         if distance < 1.0:
             isReach = True
 
+        if self.counter > 120:
+            isReach = True
+
+        if isReach:
+            # save imgs 
+            # path result
+            # 
+            path = self.variant_path.split("data_collection/")[1].replace("/", "#")
+            
+
+            # interactive#10_i-1_1_c_f_f_1_rl#variant_scenario#ClearSunset_low_
+
+
+
+            if not os.path.exists("./results"):
+                os.makedirs("./results")
+            out = cv2.VideoWriter(f'./results/{self.mode}#{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
+            for img in self.topdown_debug_list:
+                out.write(img)
+            out.release()
+
+            
+        self.counter+=1
         return control, isReach
     
 class Data_Collection():
@@ -3394,12 +3441,6 @@ def game_loop(args):
         
         
         inference = Inference(args, stored_path)
-
-
-        # start_position_x = float(data["start_x"])
-        # start_position_y = float(data["start_y"])
-        # end_position_x = float(data["end_x"])
-        # end_position_y = float(data["end_y"])
 
         inference.set_end_position(end_position_x, end_position_y)
 
