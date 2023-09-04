@@ -3,7 +3,7 @@ import os
 # useage: python get_name_list > name.txt
 
 if __name__ =="__main__":
-    scenario_list = [ "obstacle" ] # "interactive" ]#, "non-interactive", "obstacle", "collision"]
+    scenario_list = [ "interactive" ] # "interactive" ]#, "non-interactive", "obstacle", "collision"]
 
     for scenario in scenario_list:
 

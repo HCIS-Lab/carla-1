@@ -1212,7 +1212,6 @@ class RadarSensor(object):
 # -- CameraManager -------------------------------------------------------------
 # ==============================================================================
 
-
 class CameraManager(object):
     def __init__(self, parent_actor, hud, gamma_correction, save_mode, inference_mode):
 
@@ -1225,31 +1224,18 @@ class CameraManager(object):
         self.save_mode = save_mode
         self.inference_mode = inference_mode
         
-
         self.rgb_front = None
         self.rgb_left = None
         self.rgb_right = None
-        # self.rgb_rear = None
-        # self.rgb_rear_left = None
-        # self.rgb_rear_right = None
-
         self.ss_front = None
         self.ss_left = None
         self.ss_right = None
-        # self.ss_rear = None
-        # self.ss_rear_left = None
-        # self.ss_rear_right = None
 
         self.depth_front = None
         self.depth_left = None
         self.depth_right = None
-        # self.depth_rear = None
-        # self.depth_rear_left = None
-        # self.depth_rear_right = None
-
         self.lidar = None
 
-        # bound_x:2.8958897590637207, bound_y:1.581725001335144, bound_z:1.2438300251960754  (after +0.5)
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
@@ -1282,7 +1268,6 @@ class CameraManager(object):
                 (carla.Transform(carla.Location(x=0, y=0,
                  z=100.0), carla.Rotation(pitch=-90.0)), Attachment.SpringArm),
 
-
                 # sensor config for transfuser camera settings
                 #  front view 8
                 (carla.Transform(carla.Location(x=1.3, y=0,
@@ -1309,9 +1294,6 @@ class CameraManager(object):
                 # lidar 15 
                 (carla.Transform(carla.Location(x=1.3, y=0,
                  z=1.3), carla.Rotation(yaw=-90.0)), Attachment.Rigid),
-                
-                
-
             ]
         else:
             self._camera_transforms = [
@@ -1345,13 +1327,6 @@ class CameraManager(object):
         ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
-
-        # self.bev_bp = bp_library.find('sensor.camera.rgb')
-        # self.bev_bp.set_attribute('image_size_x', str(512))
-        # self.bev_bp.set_attribute('image_size_y', str(512))
-        # self.bev_bp.set_attribute('fov', str(50.0))
-        # if self.bev_bp.has_attribute('gamma'):
-        #     self.bev_bp.set_attribute('gamma', str(gamma_correction))
 
         self.bev_seg_bp = bp_library.find(
             'sensor.camera.instance_segmentation')
@@ -1399,35 +1374,17 @@ class CameraManager(object):
         self.front_seg_bp.set_attribute('fov', str(120.0))
         self.front_seg_bp.set_attribute('lens_circle_multiplier', '0.0')
         self.front_seg_bp.set_attribute('lens_circle_falloff', '0.0')
-        # self.front_seg_bp.set_attribute('chromatic_aberration_intensity', '3.0')
-        # self.front_seg_bp.set_attribute('chromatic_aberration_offset', '500')
-        # self.front_seg_bp.set_attribute('focal_distance', str(500))
-        # if self.front_seg_bp.has_attribute('gamma'):
-        #     self.front_seg_bp.set_attribute('gamma', str(gamma_correction))
 
         self.depth_bp = bp_library.find('sensor.camera.depth')
         self.depth_bp.set_attribute('image_size_x', str(640))
         self.depth_bp.set_attribute('image_size_y', str(256))
         self.depth_bp.set_attribute('fov', str(120.0))
-        # self.depth_bp.set_attribute('c', '0.0')
         self.depth_bp.set_attribute('lens_circle_falloff', '0.0')
-        # self.depth_bp.set_attribute('chromatic_aberration_intensity', '3.0')
-        # self.depth_bp.set_attribute('chromatic_aberration_offset', '500')
-        # self.depth_bp.set_attribute('focal_distance', str(500))
-        # if self.depth_bp.has_attribute('gamma'):
-        #     self.depth_bp.set_attribute('gamma', str(gamma_correction))
-        
-        
-        
-        
-        
 
         self.sensor_lidar_bp = bp_library.find('sensor.lidar.ray_cast')
         self.sensor_lidar_bp.set_attribute('range', str(100))
         self.sensor_lidar_bp.set_attribute('rotation_frequency', str(20))
         self.sensor_lidar_bp.set_attribute('points_per_second', str(1200000))
-
-
 
         for item in self.sensors:
 
@@ -1439,13 +1396,6 @@ class CameraManager(object):
                     bp.set_attribute('gamma', str(gamma_correction))
                 for attr_name, attr_value in item[3].items():
                     bp.set_attribute(attr_name, attr_value)
-            # elif item[0].startswith('sensor.lidar'):
-            #     self.lidar_range = 50
-
-            #     for attr_name, attr_value in item[3].items():
-            #         bp.set_attribute(attr_name, attr_value)
-            #         if attr_name == 'range':
-            #             self.lidar_range = float(attr_value)
 
             item.append(bp)
         self.index = None
@@ -1471,8 +1421,6 @@ class CameraManager(object):
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[6][1])
             
-            
-            
             if self.inference_mode:
                 
                 self.sensor_rgb_front = self._parent.get_world().spawn_actor(
@@ -1486,8 +1434,6 @@ class CameraManager(object):
                     self._camera_transforms[8][0],
                     attach_to=self._parent,
                     attachment_type=self._camera_transforms[0][1])
-                
-
             else:
 
                 if self.save_mode:
@@ -1699,7 +1645,7 @@ def write_actor_list(world, stored_path):
         print('min id: {}, max id: {}'.format(min_id, max_id))
     return min_id, max_id
 
-def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
+def generate_obstacle(world, bp, src_path, ego_transform):
     """
         stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'    
     """
@@ -1709,6 +1655,12 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
 
     min_dis = float('Inf')
     nearest_obstacle = -1
+
+    obstacle_static_id_list = []
+    ill_parking_id_list = []
+
+
+    # obstacle_GT_location
 
     for obstacle_attr in obstacle_list:
 
@@ -1720,16 +1672,14 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
         """
 
         obstacle_name = obstacle_attr["obstacle_type"]
-
-        # if not "static" in obstacle_name:
-        #     continue
-
+    
         location = obstacle_attr["location"]
         rotation = obstacle_attr["rotation"]
 
         x = float(location["x"])
         y = float(location["y"])
         z = float(location["z"])
+
         pitch = float(rotation["pitch"])
         yaw = float(rotation["yaw"])
         roll = float(rotation["roll"])
@@ -1748,7 +1698,13 @@ def generate_obstacle(world, bp, src_path, ego_transform, stored_path):
 
         obstacle_info[obstacle_actor.id] = obstacle_attr
 
-    return nearest_obstacle, obstacle_info
+        if "static" in obstacle_name:
+            obstacle_static_id_list.append(obstacle_actor.id)
+        else:
+
+            ill_parking_id_list.append(obstacle_actor.id)
+
+    return nearest_obstacle, obstacle_info, obstacle_static_id_list, ill_parking_id_list
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -1776,33 +1732,18 @@ class PIDController(object):
             integral = 0.0
             derivative = 0.0
 
-        # if DEBUG:
-        #     import cv2
-
-        #     canvas = np.ones((100, 100, 3), dtype=np.uint8)
-        #     w = int(canvas.shape[1] / len(self._window))
-        #     h = 99
-
-        #     for i in range(1, len(self._window)):
-        #         y1 = (self._max - self._window[i-1]) / (self._max - self._min + 1e-8)
-        #         y2 = (self._max - self._window[i]) / (self._max - self._min + 1e-8)
-
-        #         cv2.line(
-        #                 canvas,
-        #                 ((i-1) * w, int(y1 * h)),
-        #                 ((i) * w, int(y2 * h)),
-        #                 (255, 255, 255), 2)
-
-        #     canvas = np.pad(canvas, ((5, 5), (5, 5), (0, 0)))
-
-        #     cv2.imshow('%.3f %.3f %.3f' % (self._K_P, self._K_I, self._K_D), canvas)
-        #     cv2.waitKey(1)
-
         return self._K_P * error + self._K_I * integral + self._K_D * derivative
         
 class Inference():
-    def __init__(self, args, variant_path) -> None:
+    def __init__(self, args, variant_path, weather) -> None:
         from models.LBC.map_model import MapModel
+
+        self.scenario_type = args.scenario_type
+        self.scenario_id = args.scenario_id
+        self.weather = weather
+        self.actor = args.random_actors
+        self.seed = args.random_seed
+        self.map = args.map
 
         self.args = args
         # init model 
@@ -1813,19 +1754,20 @@ class Inference():
         self.compass = None
         self.gt_interactor = -1
 
+        self.gt_obstacle_id_list = []
+
                         # self.ss_front = image
                         # self.rgb_front = image
 
         self.birdview_producer = BirdViewProducer(
-                args.map, 
+                self.args.map, 
                 PixelDimensions(width=256, height=256), 
                 pixels_per_meter=5)
 
         # load LBC model 
-        self.net = MapModel.load_from_checkpoint("./models/LBC/checkpoints/epoch=4.ckpt")
+        self.net = MapModel.load_from_checkpoint("./models/LBC/checkpoints/interactive_epoch=2.ckpt")
         self.net.cuda()
         self.net.eval()
-
         self.variant_path = variant_path
 
         target = self.load_dict(os.path.join(variant_path, "target_point.pkl"))["target_point"]
@@ -1833,16 +1775,35 @@ class Inference():
         x=float(target[0])
         y=float(target[1])
         self.v = np.array([x, y])
-
         self.topdown_debug_list = []
-
-
         self.ego_speed_controller = PIDController(K_P=1, K_I=0, K_D=0.0)
-
-
         self.counter = 0 # use counter to deal with agent stuck porblem
 
-        self.mode = "mask" #'no_mask'
+        self.min_distance = 1000 # caculate the min distance with gt interactor  
+        self.mode = "no_mask" # "no_mask"
+        self.obestacle_id_list = []
+        self.ill_parking_id_list = []
+
+        # read statis vehicle bbox
+
+        self.static_vehicle_bbox_list = []
+        with open(f"./util/static_bbox/static_{self.args.map}.json") as f:
+            data = json.load(f)
+            len_of_bbox = data["num_of_id"]
+            for index in range(len_of_bbox):
+                pos_0 = data[str(index)]["cord_bounding_box"]["cord_0"]
+                pos_1 = data[str(index)]["cord_bounding_box"]["cord_4"]
+                pos_2 = data[str(index)]["cord_bounding_box"]["cord_6"]
+                pos_3 = data[str(index)]["cord_bounding_box"]["cord_2"]
+                self.static_vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                                        ])
+
+    def set_obstacle_ids(self, obstacle_id_list, ill_parking_id_list):
+        self.obestacle_id_list = obstacle_id_list
+        self.ill_parking_id_list = ill_parking_id_list
 
     def load_dict(self, filename_):
         with open(filename_, 'rb') as f:
@@ -1855,6 +1816,49 @@ class Inference():
         self.end_position_x = x
         self.end_position_y = y
         
+    def set_gt_obstacle_ids(self, obstacle_gt_location, world):
+
+        # get obstacle gt ids
+        obstacle = world.world.get_actors().filter("*static.prop*")
+        vehicles = world.world.get_actors().filter("*vehicle*")
+
+        gt_obstacle_id_list = []
+        for loc in obstacle_gt_location:
+            x = float(loc[0])
+            y = float(loc[1])
+
+            min_distance = 100
+            gt_id = -1
+
+            for actor in obstacle:
+                _id = actor.id 
+                actor_loc = actor.get_location()
+                x_ = actor_loc.x
+                y_ = actor_loc.y
+                distance = math.sqrt((x-x_)**2 + (y-y_)**2)
+
+                if distance < min_distance:
+                    min_distance = distance
+                    gt_id = _id
+
+            for actor in vehicles:
+                _id = actor.id 
+                actor_loc = actor.get_location()
+                x_ = actor_loc.x
+                y_ = actor_loc.y
+                distance = math.sqrt((x-x_)**2 + (y-y_)**2)
+
+                if distance < min_distance:
+                    min_distance = distance
+                    gt_id = _id
+                
+            if gt_id ==-1:
+                print("error")
+
+            gt_obstacle_id_list.append(gt_id)
+
+        self.gt_obstacle_id_list = gt_obstacle_id_list
+
 
     def collect_actor_data(self, world):
         vehicles_id_list = []
@@ -1992,64 +1996,35 @@ class Inference():
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = 'pedestrian'
 
-        # traffic_id_list = []
-        # lights = world.world.get_actors().filter("*traffic_light*")
-        # for actor in lights:
-
-        #     _id = actor.id
-
-        #     traffic_light_state = int(actor.state)  # traffic light state
-        #     actor_loc = actor.get_location()
-        #     distance = ego_loc.distance(actor_loc)
-
-        #     #if distance < 50:
-        #     traffic_id_list.append(_id)
-
-        #     data[_id] = {}
-        #     data[_id]["state"] = traffic_light_state
-        #     actor_loc = actor.get_location()
-        #     location = get_xyz(actor_loc)
-        #     data[_id]["location"] = location
-        #     data[_id]["distance"] = distance
-        #     data[_id]["type"] = "traffic_light"
-
-        #     trigger = actor.trigger_volume
-        #     # bbox = actor.bounding_box
-        #     verts = [v for v in trigger.get_world_vertices(carla.Transform())]
-
-        #     counter = 0
-        #     for loc in verts:
-        #         cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
-        #         counter += 1
-        #     data[_id]["tigger_cord_bounding_box"] = cord_bounding_box
-        #     box = trigger.extent
-        #     loc = trigger.location
-        #     ori = trigger.rotation.get_forward_vector()
-        #     data[_id]["trigger_loc"] = [loc.x, loc.y, loc.z]
-        #     data[_id]["trigger_ori"] = [ori.x, ori.y, ori.z]
-        #     data[_id]["trigger_box"] = [box.x, box.y]
-
         obstacle_id_list = []
 
         obstacle = world.world.get_actors().filter("*static.prop*")
+
+        data["obstacle"]= {}
         for actor in obstacle:
 
             _id = actor.id
 
             actor_loc = actor.get_location()
             distance = ego_loc.distance(actor_loc)
+            bbox = actor.bounding_box
 
+            cord_bounding_box = {}
+            verts = [v for v in bbox.get_world_vertices(
+                actor.get_transform())]
+            
+            counter = 0
             for loc in verts:
                 cord_bounding_box["cord_"+str(counter)] = [loc.x, loc.y, loc.z]
                 counter += 1
 
-            if distance < 50:
-                obstacle_id_list.append(_id)
+            #if distance < 50:
+            obstacle_id_list.append(_id)
 
-            data[_id] = {}
-            data[_id]["distance"] = distance
-            data[_id]["type"] = "obstacle"
-            data[_id]["cord_bounding_box"] = cord_bounding_box
+            data["obstacle"][_id] = {}
+            data["obstacle"][_id]["distance"] = distance
+            data["obstacle"][_id]["type"] = "obstacle"
+            data["obstacle"][_id]["cord_bounding_box"] = cord_bounding_box
 
 
         # data["traffic_light_ids"] = traffic_id_list
@@ -2112,18 +2087,38 @@ class Inference():
         # pedestrian id list 
         pedestrian_id_list = list(actor_dict["pedestrian_ids"])
         # obstacle id list 
-        obstacle_id_list = list(actor_dict["obstacle_ids"])
+        # obstacle_id_list = list(actor_dict["obstacle_ids"])
 
-        for id in obstacle_id_list:
-            pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
-            pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
-            pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
-            pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-            obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
+        for id in self.obestacle_id_list:
+
+            
+            if id in self.gt_obstacle_id_list :
+
+                if self.mode == "mask":
+                    continue
+
+                pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+
+                obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+            else: 
+
+                pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+
+                obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
             
         for id in vehicle_id_list:
             pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
@@ -2139,18 +2134,33 @@ class Inference():
                                         Loc(x=pos_3[0], y=pos_3[1]), 
                                         ])
             elif int(id) == int(interactor_id):
-                # pass
+
+                if self.mode == "mask":
+                    continue
                 vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                         Loc(x=pos_1[0], y=pos_1[1]), 
                                         Loc(x=pos_2[0], y=pos_2[1]), 
                                         Loc(x=pos_3[0], y=pos_3[1]), 
                                         ])
-            # elif id in ill_parking_id_list:
-            #     obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-            #                         Loc(x=pos_1[0], y=pos_1[1]), 
-            #                         Loc(x=pos_2[0], y=pos_2[1]), 
-            #                         Loc(x=pos_3[0], y=pos_3[1]), 
-            #                         ])
+                          
+            elif id in self.ill_parking_id_list:
+                if id in self.gt_obstacle_id_list:
+
+                    if self.mode == "mask":
+                        continue
+
+                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ])
+
+                else:
+                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ])
             else:
                 vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                         Loc(x=pos_1[0], y=pos_1[1]), 
@@ -2164,6 +2174,9 @@ class Inference():
             pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
             pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
             if int(id) == int(interactor_id):
+
+                if self.mode == "mask":
+                    continue
                 
                 pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                     Loc(x=pos_1[0], y=pos_1[1]), 
@@ -2177,6 +2190,13 @@ class Inference():
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
+                
+
+        # static vehicle bbox 
+        # self.static_vehicle_bbox_list
+        if self.mode == "no_mask":
+            
+            vehicle_bbox_list = vehicle_bbox_list + self.static_vehicle_bbox_list
 
         birdview: BirdView = self.birdview_producer.produce(ego_pos, yaw=ego_yaw,
                                                        agent_bbox_list=agent_bbox_list, 
@@ -2227,8 +2247,6 @@ class Inference():
 
 
         with torch.no_grad():
-        
-
             points_pred = self.net.forward(topdown, target_xy)
             control = self.net.controller(points_pred).cpu().data.numpy()[0]
 
@@ -2247,9 +2265,6 @@ class Inference():
         throttle = self.ego_speed_controller.step(delta)
         throttle = np.clip(throttle, 0.0, 0.75) 
         throttle = throttle if not brake else 0.0
-
-        
-
 
         control = carla.VehicleControl()
         control.steer = float(steer)
@@ -2278,6 +2293,34 @@ class Inference():
 
 
         self.topdown_debug_list.append(_topdown)
+
+
+        # update the min_distance with Ground Truth actor or obstace 
+
+        # self.min_distance
+
+        # world.world.get_actors
+
+        if self.scenario_type == "interactive" or self.scenario_type == "collision":
+            pass
+
+           
+            interactor_location = world.world.get_actor(self.gt_interactor).get_location()
+
+            distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
+
+            if distance < self.min_distance:
+                self.min_distance = distance
+
+        elif self.scenario_type == "obstacle":
+            
+            
+            for id in self.gt_obstacle_id_list:
+                interactor_location = world.world.get_actor(id).get_location()
+                distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
+                if distance < self.min_distance:
+                    self.min_distance = distance
+
         # draw waypoints
 
 
@@ -2288,7 +2331,8 @@ class Inference():
         # ego_pos.x, ego_pos.y
         distance = math.sqrt((ego_pos.x - self.end_position_x)**2 + (ego_pos.y - self.end_position_y)**2)
         isReach = False
-        print(distance)
+        # print(distance)
+        
         if distance < 1.0:
             isReach = True
 
@@ -2296,26 +2340,26 @@ class Inference():
             isReach = True
 
         if isReach:
-            # save imgs 
-            # path result
-            # 
-            path = self.variant_path.split("data_collection/")[1].replace("/", "#")
-            
-
-            # interactive#10_i-1_1_c_f_f_1_rl#variant_scenario#ClearSunset_low_
-
-
-
-            if not os.path.exists("./results"):
-                os.makedirs("./results")
-            out = cv2.VideoWriter(f'./results/{self.mode}#{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
-            for img in self.topdown_debug_list:
-                out.write(img)
-            out.release()
+            self.save_video()
 
             
         self.counter+=1
         return control, isReach
+    
+    def save_video(self):
+        path = self.variant_path.split("data_collection/")[1].replace("/", "#")
+
+        if not os.path.exists(f"./results/{self.mode}"):
+            os.makedirs(f"./results/{self.mode}")
+        out = cv2.VideoWriter(f'./results/{self.mode}/{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
+        for img in self.topdown_debug_list:
+            out.write(img)
+        out.release()
+
+        with open("./result.txt", "a") as f:
+            f.write(
+                f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}#{self.min_distance}\n")
+
     
 class Data_Collection():
     def __init__(self) -> None:
@@ -3263,6 +3307,8 @@ def game_loop(args):
     seeds = []
     for _ in range(12):
         seeds.append(random.randint(1565169134, 2665169134))
+    
+    print(seeds)
 
     # load files for scenario reproducing
     transform_dict = {}
@@ -3298,6 +3344,7 @@ def game_loop(args):
         end_position_y = float(data["end_y"])
 
     client = carla.Client(args.host, args.port)
+    client.reload_world()
     client.set_timeout(10.0)
     display = pygame.display.set_mode(
         (args.width, args.height),
@@ -3360,8 +3407,10 @@ def game_loop(args):
     min_dis = float('Inf')
     nearest_obstacle = -1
     if args.scenario_type == 'obstacle':
-        nearest_obstacle, obstacle_info = generate_obstacle(client.get_world(), blueprint_library,
-                                                            path+"/obstacle/obstacle_list.json", ego_transform, stored_path)
+
+        # GT_obstacle_location 
+        nearest_obstacle, obstacle_info, obstacle_static_id_list, ill_parking_id_list = generate_obstacle(client.get_world(), blueprint_library,
+                                                            path+"/obstacle/obstacle_list.json", ego_transform)
 
     # set controller
     for actor_id, bp in filter_dict.items():
@@ -3440,14 +3489,15 @@ def game_loop(args):
     if args.inference:
         
         
-        inference = Inference(args, stored_path)
+        inference = Inference(args, stored_path, weather)
 
         inference.set_end_position(end_position_x, end_position_y)
 
         # load model weight
         # stored_path
 
-        
+        if args.scenario_type == 'obstacle':
+            inference.set_obstacle_ids(obstacle_static_id_list, ill_parking_id_list)
 
         gt_interactor_id = -1
         if args.scenario_type == "interactive" or args.scenario_type == "collision":
@@ -3458,7 +3508,18 @@ def game_loop(args):
 
         inference.set_scenario_type(args.scenario_type)
         inference.set_ego_id(world)
+
         
+
+
+        # only testing set has GT obstacle location
+        if args.scenario_type == "obstacle":
+            if args.map =="Town10HD" or args.map == "A6":
+                
+                obstacle_GT_location = np.load(f"{stored_path}/obstacle_location.npy")
+                inference.set_gt_obstacle_ids(obstacle_GT_location, world)
+
+            
         
     if args.scenario_type:
         collision_detect_end = False
@@ -3557,6 +3618,9 @@ def game_loop(args):
                 abandon_scenario = True
 
             if abandon_scenario:
+                if args.inference:
+                    inference.save_video()
+
                 world.abandon_scenario = True
                 break
 
