@@ -70,7 +70,7 @@ import xml.etree.ElementTree as ET
 import matplotlib
 matplotlib.use('Agg')
 from PIL import Image, ImageDraw
-
+import pandas as pd
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -1748,7 +1748,6 @@ class Inference():
         self.args = args
         # init model 
         self.model = None
-        
         self.rgb_front = None
         self.ss_front = None
         self.compass = None
@@ -1765,7 +1764,11 @@ class Inference():
                 pixels_per_meter=5)
 
         # load LBC model 
-        self.net = MapModel.load_from_checkpoint("./models/LBC/checkpoints/interactive_epoch=2.ckpt")
+        if self.scenario_type =="interactive":
+            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/interactive_epoch=2.ckpt")
+        elif self.scenario_type =="obstacle":
+            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/obstacle_epoch=2.ckpt")
+
         self.net.cuda()
         self.net.eval()
         self.variant_path = variant_path
@@ -1778,13 +1781,97 @@ class Inference():
         self.topdown_debug_list = []
         self.ego_speed_controller = PIDController(K_P=1, K_I=0, K_D=0.0)
         self.counter = 0 # use counter to deal with agent stuck porblem
-
         self.min_distance = 1000 # caculate the min distance with gt interactor  
-        self.mode = "no_mask" # "no_mask"
         self.obestacle_id_list = []
         self.ill_parking_id_list = []
 
         # read statis vehicle bbox
+
+        # self.mode = "no_mask" # "no_mask"
+
+        # KalmanFilter
+
+        self.mode = "QCNet" 
+
+        if self.mode == "KalmanFilter":
+            from models.KalmanFilter import kf_inference
+            
+            self.kf_inference = kf_inference
+            self.df_list = []
+            self.df_start_frame = 0
+        elif self.mode == "mantra":
+            self.df_list = []
+            self.df_start_frame = 0
+            from models.mantra.mantra import mantra_inference
+            self.mantra_inference = mantra_inference
+        elif self.mode == "sgan":
+            self.df_list = []
+            self.df_start_frame = 0
+            from models.sgan.social_gan import socal_gan_inference
+            from attrdict import AttrDict
+            from models.sgan.models import TrajectoryGenerator
+
+            self.socal_gan_inference = socal_gan_inference
+
+            checkpoint = torch.load("./models/weights/sgan/gan_test_with_model_all.pt")
+            args_sg = AttrDict(checkpoint['args'])
+            self.generator = TrajectoryGenerator(
+                obs_len=args_sg.obs_len,
+                pred_len=30 ,#new_args.pred_len,
+                embedding_dim=args_sg.embedding_dim,
+                encoder_h_dim=args_sg.encoder_h_dim_g,
+                decoder_h_dim=args_sg.decoder_h_dim_g,
+                mlp_dim=args_sg.mlp_dim,
+                num_layers=args_sg.num_layers,
+                noise_dim=args_sg.noise_dim,
+                noise_type=args_sg.noise_type,
+                noise_mix_type=args_sg.noise_mix_type,
+                pooling_type=args_sg.pooling_type,
+                pool_every_timestep=args_sg.pool_every_timestep,
+                dropout=args_sg.dropout,
+                bottleneck_dim=args_sg.bottleneck_dim,
+                neighborhood_size=args_sg.neighborhood_size,
+                grid_size=args_sg.grid_size,
+                batch_norm=args_sg.batch_norm)
+            self.generator.load_state_dict(checkpoint['g_state'])
+            self.generator.cuda()
+            self.generator.train()
+            self._args = AttrDict(checkpoint['args'])
+            self._args.dataset_name = "interactive" 
+            self._args.skip = 1
+            self._args.pred_len = 30 
+
+            # def socal_gan_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_list, vehicle_id_list , obstacle_id_list, _args, generator):
+        elif self.mode == "QCNet":
+            self.df_list = []
+            self.df_start_frame = 0
+
+            from models.QCNet.QCNet import QCNet_inference
+            self.QCNet_inference = QCNet_inference
+        elif self.mode == "two_stage":
+            from models.two_stage.inference import testing
+            from models.two_stage.models import GCN as Model
+            from torchvision import transforms
+
+
+            model = Model()
+            
+            checkpoint="./models/two_stage/weight.pth"
+            state_dict = torch.load(checkpoint)
+            state_dict_copy = {}
+            for key in state_dict.keys():
+                state_dict_copy[key[7:]] = state_dict[key]
+
+            model.load_state_dict(state_dict_copy)
+            
+            model = model.to('cuda')
+            model.train(False)
+
+            self.lbc_testing = testing
+
+
+
+
 
         self.static_vehicle_bbox_list = []
         with open(f"./util/static_bbox/static_{self.args.map}.json") as f:
@@ -1860,7 +1947,12 @@ class Inference():
         self.gt_obstacle_id_list = gt_obstacle_id_list
 
 
-    def collect_actor_data(self, world):
+    def collect_actor_data(self, world, frame):
+
+        if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+            if self.df_start_frame == 0:
+                self.df_start_frame = frame
+
         vehicles_id_list = []
         bike_blueprint = ["vehicle.bh.crossbike","vehicle.diamondback.century","vehicle.gazelle.omafiets"]
         motor_blueprint = ["vehicle.harley-davidson.low_rider","vehicle.kawasaki.ninja","vehicle.yamaha.yzf","vehicle.vespa.zx125"]
@@ -1887,10 +1979,14 @@ class Inference():
         vehicles = world.world.get_actors().filter("*vehicle*")
         for actor in vehicles:
 
+            
+
             _id = actor.id
             actor_loc = actor.get_location()
             location = get_xyz(actor_loc)
-            rotation = get_xyz(actor.get_transform().rotation, True)
+            transform = actor.get_transform().rotation
+            rotation = get_xyz(transform, True)
+
 
             cord_bounding_box = {}
             bbox = actor.bounding_box
@@ -1919,10 +2015,11 @@ class Inference():
                 vehicles_id_list.append(_id)
 
             acceleration = get_xyz(actor.get_acceleration())
-            velocity = get_xyz(actor.get_velocity())
+            
             angular_velocity = get_xyz(actor.get_angular_velocity())
 
             v = actor.get_velocity()
+            velocity = get_xyz(v)
 
             speed = math.sqrt(v.x**2 + v.y**2 + v.z**2)
 
@@ -1951,6 +2048,15 @@ class Inference():
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = "vehicle"
 
+
+            if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+                if _id == self.ego_id:
+                    self.df_list.append([frame, _id, 'EGO', str(actor_loc.x), str(actor_loc.y), v.x , v.y, transform.yaw])
+                elif _id == self.gt_interactor:
+                    self.df_list.append([frame, _id, 'ACTOR', str(actor_loc.x), str(actor_loc.y), v.x , v.y, transform.yaw])
+                else:
+                    self.df_list.append([frame, _id, 'vehicle', str(actor_loc.x), str(actor_loc.y), v.x , v.y, transform.yaw])
+
         pedestrian_id_list = []
 
         walkers = world.world.get_actors().filter("*pedestrian*")
@@ -1960,7 +2066,8 @@ class Inference():
 
             actor_loc = actor.get_location()
             location = get_xyz(actor_loc)
-            rotation = get_xyz(actor.get_transform().rotation, True)
+            transform = actor.get_transform().rotation
+            rotation = get_xyz(transform, True)
 
             cord_bounding_box = {}
             bbox = actor.bounding_box
@@ -1977,7 +2084,8 @@ class Inference():
                 pedestrian_id_list.append(_id)
 
             acceleration = get_xyz(actor.get_acceleration())
-            velocity = get_xyz(actor.get_velocity())
+            v = actor.get_velocity()
+            velocity = get_xyz(v)
             angular_velocity = get_xyz(actor.get_angular_velocity())
 
             walker_control = actor.get_control()
@@ -1986,7 +2094,6 @@ class Inference():
 
             data[_id] = {}
             data[_id]["location"] = location
-            # data[_id]["rotation"] = rotation
             data[_id]["distance"] = distance
             data[_id]["acceleration"] = acceleration
             data[_id]["velocity"] = velocity
@@ -1996,6 +2103,12 @@ class Inference():
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = 'pedestrian'
 
+            if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+                if _id == self.gt_interactor:
+                    self.df_list.append([frame, _id, 'ACTOR', str(actor_loc.x), str(actor_loc.y), v.x , v.y, control["direction"]["y"]])
+                else:
+                    self.df_list.append([frame, _id, 'pedestrian', str(actor_loc.x), str(actor_loc.y), v.x , v.y, control["direction"]["y"] ])
+
         obstacle_id_list = []
 
         obstacle = world.world.get_actors().filter("*static.prop*")
@@ -2004,8 +2117,12 @@ class Inference():
         for actor in obstacle:
 
             _id = actor.id
+            type_id = actor.type_id
 
             actor_loc = actor.get_location()
+            location = get_xyz(actor_loc)
+            transform = actor.get_transform().rotation
+            rotation = get_xyz(transform, True)
             distance = ego_loc.distance(actor_loc)
             bbox = actor.bounding_box
 
@@ -2025,6 +2142,9 @@ class Inference():
             data["obstacle"][_id]["distance"] = distance
             data["obstacle"][_id]["type"] = "obstacle"
             data["obstacle"][_id]["cord_bounding_box"] = cord_bounding_box
+
+            if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+                self.df_list.append([frame, _id, type_id, str(actor_loc.x), str(actor_loc.y), 0 , 0, transform.yaw])
 
 
         # data["traffic_light_ids"] = traffic_id_list
@@ -2057,22 +2177,18 @@ class Inference():
                 self.rgb_front = world.camera_manager.rgb_front
                 break
 
-        # while True:
-        #     if world.imu_sensor.frame == frame:
-        #         self.compass = world.imu_sensor.compass
-        #         break
+        # ins_front_array = torch.from_numpy(ins_front_array.copy())[:,:,:3].type(torch.int).permute((2,0,1))
+        #produce_bbx(ins_front_array, actor_list_and_position, frame)
 
-        # inference here 
-        # Get bbox for lbc Input 
 
-        actor_dict = self.collect_actor_data(world)
 
-        # print(actor_dict)
 
+
+        actor_dict = self.collect_actor_data(world, frame)
         ego_id = self.ego_id 
-
         ego_pos = Loc(x=actor_dict[ego_id]["location"]["x"], y=actor_dict[ego_id]["location"]["y"])
         ego_yaw = actor_dict[ego_id]["rotation"]["yaw"]
+
 
         # if scneario is non-interactive, obstacle --> interactor_id is -1 
         interactor_id = self.gt_interactor
@@ -2087,110 +2203,198 @@ class Inference():
         # pedestrian id list 
         pedestrian_id_list = list(actor_dict["pedestrian_ids"])
         # obstacle id list 
-        # obstacle_id_list = list(actor_dict["obstacle_ids"])
+        obstacle_id_list = list(actor_dict["obstacle_ids"])
+
+
+        if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+            # self.df_start_frame
+            vehicle_list = []
+            traj_df = pd.DataFrame(self.df_list, columns=['FRAME', 'TRACK_ID', 'OBJECT_TYPE', 'X', 'Y', 'VELOCITY_X', 'VELOCITY_Y', 'YAW'])
+
+            #print("traj_df: ", traj_df)
+            for _, remain_df in traj_df.groupby('TRACK_ID'): # actor id 
+                filter = (remain_df.FRAME > ( int(frame) - 20))
+
+                remain_df = remain_df[filter].reset_index(drop=True)
+                #print("remain_df: ", remain_df)
+                remain_df = remain_df.reset_index(drop=True)
+
+                now_df = remain_df[remain_df.FRAME == int(frame)]
+                actor_pos_x = float(now_df["X"].values[0])
+                actor_pos_y = float(now_df["Y"].values[0])
+                # actor_pos_x = float( remain_df.loc[19, 'X'])
+                # actor_pos_y = float( remain_df.loc[ int(frame), 'Y'])
+                dist_x = actor_pos_x - actor_dict[ego_id]["location"]["x"]
+                dist_y = actor_pos_y - actor_dict[ego_id]["location"]["y"]
+                remain_df["X"] = remain_df["X"].astype(float)
+                remain_df["Y"] = remain_df["Y"].astype(float)
+                #print(actor_pos_x, actor_pos_y, "dist_x", dist_x, "dist_y", dist_y)
+                if abs(dist_x) <= 37.5 and abs(dist_y) <= 37.5:
+                    vehicle_list.append(remain_df)
+            if self.mode == "KalmanFilter":
+                risky_ids = self.kf_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+            if self.mode == "mantra":
+                risky_ids = self.mantra_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+            if self.mode == "sgan":
+                risky_ids = self.socal_gan_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list, self._args, self.generator)
+            if self.mode == "QCNet":
+                risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+
+            if self.mode =="two_stage":
+                pass
+
+        # Get bbox for lbc Input 
 
         for id in self.obestacle_id_list:
-
-            
-            if id in self.gt_obstacle_id_list :
-
-                if self.mode == "mask":
-                    continue
-
-                pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
-                pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
-                pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
-                pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
-
-                obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                            Loc(x=pos_1[0], y=pos_1[1]), 
-                                            Loc(x=pos_2[0], y=pos_2[1]), 
-                                            Loc(x=pos_3[0], y=pos_3[1]), 
-                                            ])
-            else: 
-
-                pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
-                pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
-                pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
-                pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
-
-                obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                            Loc(x=pos_1[0], y=pos_1[1]), 
-                                            Loc(x=pos_2[0], y=pos_2[1]), 
-                                            Loc(x=pos_3[0], y=pos_3[1]), 
-                                            ])
-            
-        for id in vehicle_id_list:
-            pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
-            pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
-            pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
-            pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-            
-
-            if int(id) == int(ego_id):
-                agent_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
-            elif int(id) == int(interactor_id):
-
-                if self.mode == "mask":
-                    continue
-                vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
-                          
-            elif id in self.ill_parking_id_list:
-                if id in self.gt_obstacle_id_list:
+            if self.mode == "mask" or self.mode == "no_mask":
+                if id in self.gt_obstacle_id_list :
 
                     if self.mode == "mask":
                         continue
 
-                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
+                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
-                else:
                     obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+                else: 
+
+                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+
+                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
             else:
-                vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                        Loc(x=pos_1[0], y=pos_1[1]), 
-                                        Loc(x=pos_2[0], y=pos_2[1]), 
-                                        Loc(x=pos_3[0], y=pos_3[1]), 
-                                        ])
-                    
-        for id in pedestrian_id_list:
-            pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
-            pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
-            pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
-            pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-            if int(id) == int(interactor_id):
+                # risky_ids
+                if id in risky_ids:
+                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "mask":
-                    continue
+                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+        
+        for id in vehicle_id_list:
+            if self.mode == "mask" or self.mode == "no_mask":   
                 
-                pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                    Loc(x=pos_1[0], y=pos_1[1]), 
-                                    Loc(x=pos_2[0], y=pos_2[1]), 
-                                    Loc(x=pos_3[0], y=pos_3[1]), 
-                                    ])
-                    
-            else:
-                pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+                
+
+                if int(id) == int(ego_id):
+                    agent_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
-                
+                elif int(id) == int(interactor_id):
+                    if self.mode == "mask":
+                        continue
+                    vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+                            
+                elif id in self.ill_parking_id_list:
+                    if id in self.gt_obstacle_id_list:
+
+                        if self.mode == "mask":
+                            continue
+
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+
+                    else:
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+                else:
+                    vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+            else:
+                pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+                if int(id) == int(ego_id):
+                    agent_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+                if id in risky_ids:
+                    if self.scenario_type == "obstacle":
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                ])
+                    else:
+                        vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                ])
+    
+        for id in pedestrian_id_list:
+            if self.mode == "mask" or self.mode == "no_mask":
+                pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+                if int(id) == int(interactor_id):
+
+                    if self.mode == "mask":
+                        continue
+                    
+                    pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ])
+                        
+                else:
+                    pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+            else:
+                pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+                if id in risky_ids:
+                    pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
 
         # static vehicle bbox 
         # self.static_vehicle_bbox_list
@@ -3595,6 +3799,9 @@ def game_loop(args):
                         actor_transform_index[actor_id] += 1
                 else:
                     finish[actor_id] = True
+
+            if detect_start:
+                inference.collect_actor_data(world, frame)
             
             if not detect_start:
                 if args.inference:

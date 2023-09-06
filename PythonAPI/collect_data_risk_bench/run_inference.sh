@@ -2,8 +2,6 @@
 killall -9 -r CarlaUE4-Linux
 # rm ./result.txt
 sleep 5
-
-# rm result.txt
 touch result.txt
 
 SERVICE="CarlaUE4"
@@ -48,3 +46,4 @@ while read F  ; do
 
     done
 done <./name.txt
+killall -9 -r CarlaUE4-Linux
