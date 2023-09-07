@@ -478,7 +478,6 @@ class Inference():
         self.actor = args.random_actors
         self.seed = args.random_seed
         self.map = args.map
-
         self.args = args
         # init model 
         self.model = None
@@ -489,9 +488,6 @@ class Inference():
 
         self.gt_obstacle_id_list = []
 
-                        # self.ss_front = image
-                        # self.rgb_front = image
-
         self.birdview_producer = BirdViewProducer(
                 self.args.map, 
                 PixelDimensions(width=256, height=256), 
@@ -499,7 +495,7 @@ class Inference():
 
         # load LBC model 
         if self.scenario_type =="interactive":
-            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/interactive_epoch=2.ckpt")
+            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/interactive_epoch=3.ckpt")
         elif self.scenario_type =="obstacle":
             self.net = MapModel.load_from_checkpoint("./models/weights/LBC/obstacle_epoch=2.ckpt")
 
@@ -519,26 +515,20 @@ class Inference():
         self.obestacle_id_list = []
         self.ill_parking_id_list = []
 
-        # read statis vehicle bbox
+        self.mode = args.mode 
 
-        # self.mode = "no_mask" # "no_mask"
-
-        # KalmanFilter
-
-        self.mode = "no_mask" 
-
-        if self.mode == "KalmanFilter":
+        if self.mode == "Kalman_Filter":
             from models.KalmanFilter import kf_inference
             
             self.kf_inference = kf_inference
             self.df_list = []
             self.df_start_frame = 0
-        elif self.mode == "mantra":
+        elif self.mode == "MANTRA":
             self.df_list = []
             self.df_start_frame = 0
             from models.mantra.mantra import mantra_inference
             self.mantra_inference = mantra_inference
-        elif self.mode == "sgan":
+        elif self.mode == "Social-GAN":
             self.df_list = []
             self.df_start_frame = 0
             from models.sgan.social_gan import socal_gan_inference
@@ -582,31 +572,28 @@ class Inference():
 
             from models.QCNet.QCNet import QCNet_inference
             self.QCNet_inference = QCNet_inference
-        elif self.mode == "two_stage":
+        elif self.mode == "BC_two-stage": # BC_single-stage
             from models.two_stage.inference import testing
             from models.two_stage.models import GCN as Model
             from torchvision import transforms
-
-
             model = Model()
-            
             checkpoint="./models/two_stage/weight.pth"
             state_dict = torch.load(checkpoint)
             state_dict_copy = {}
             for key in state_dict.keys():
                 state_dict_copy[key[7:]] = state_dict[key]
-
             model.load_state_dict(state_dict_copy)
-            
             model = model.to('cuda')
             model.train(False)
 
             self.lbc_testing = testing
+        elif self.mode == "DSA-RNN":
+            pass
+        elif self.mode == "DSA-RNN-Supervised":
+            pass
 
 
-
-
-
+        # read static bbox 
         self.static_vehicle_bbox_list = []
         with open(f"./util/static_bbox/static_{self.args.map}.json") as f:
             data = json.load(f)
@@ -683,7 +670,7 @@ class Inference():
 
     def collect_actor_data(self, world, frame):
 
-        if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+        if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
             if self.df_start_frame == 0:
                 self.df_start_frame = frame
 
@@ -713,8 +700,7 @@ class Inference():
         vehicles = world.world.get_actors().filter("*vehicle*")
         for actor in vehicles:
 
-            
-
+        
             _id = actor.id
             actor_loc = actor.get_location()
             location = get_xyz(actor_loc)
@@ -783,7 +769,7 @@ class Inference():
             data[_id]["type"] = "vehicle"
 
 
-            if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+            if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
                 if _id == self.ego_id:
                     self.df_list.append([frame, _id, 'EGO', str(actor_loc.x), str(actor_loc.y), v.x , v.y, transform.yaw])
                 elif _id == self.gt_interactor:
@@ -837,7 +823,7 @@ class Inference():
             data[_id]["cord_bounding_box"] = cord_bounding_box
             data[_id]["type"] = 'pedestrian'
 
-            if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+            if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
                 if _id == self.gt_interactor:
                     self.df_list.append([frame, _id, 'ACTOR', str(actor_loc.x), str(actor_loc.y), v.x , v.y, control["direction"]["y"]])
                 else:
@@ -923,7 +909,6 @@ class Inference():
         ego_pos = Loc(x=actor_dict[ego_id]["location"]["x"], y=actor_dict[ego_id]["location"]["y"])
         ego_yaw = actor_dict[ego_id]["rotation"]["yaw"]
 
-
         # if scneario is non-interactive, obstacle --> interactor_id is -1 
         interactor_id = self.gt_interactor
         
@@ -939,13 +924,11 @@ class Inference():
         # obstacle id list 
         obstacle_id_list = list(actor_dict["obstacle_ids"])
 
-
-        if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
-            # self.df_start_frame
+        # trajectory based method 
+        if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
             vehicle_list = []
             traj_df = pd.DataFrame(self.df_list, columns=['FRAME', 'TRACK_ID', 'OBJECT_TYPE', 'X', 'Y', 'VELOCITY_X', 'VELOCITY_Y', 'YAW'])
 
-            #print("traj_df: ", traj_df)
             for _, remain_df in traj_df.groupby('TRACK_ID'): # actor id 
                 filter = (remain_df.FRAME > ( int(frame) - 20))
 
@@ -965,27 +948,35 @@ class Inference():
                 #print(actor_pos_x, actor_pos_y, "dist_x", dist_x, "dist_y", dist_y)
                 if abs(dist_x) <= 37.5 and abs(dist_y) <= 37.5:
                     vehicle_list.append(remain_df)
-            if self.mode == "KalmanFilter":
+            if self.mode == "Kalman_Filter":
                 risky_ids = self.kf_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
-            if self.mode == "mantra":
+            if self.mode == "MANTRA":
                 risky_ids = self.mantra_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
-            if self.mode == "sgan":
+            if self.mode == "Social-GAN":
                 risky_ids = self.socal_gan_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list, self._args, self.generator)
             if self.mode == "QCNet":
                 risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+        # vision based methods
+        elif self.mode == "DSA-RNN":
+            pass
+        elif self.mode == "DSA-RNN-Supervised":
+            pass
+        elif self.mode == "BC_single-stage":
+            pass
+        elif self.mode == "BC_two-stage":
+            pass
+        # rule based methods
+        elif self.mode == "Random":
+            pass
+        elif self.mode == "Nearest":
+            pass
 
-            if self.mode =="two_stage":
-                pass
 
         # Get bbox for lbc Input 
 
         for id in self.obestacle_id_list:
-            if self.mode == "mask" or self.mode == "no_mask":
+            if self.mode == "Ground_Truth" or self.mode == "No_mask":
                 if id in self.gt_obstacle_id_list :
-
-                    if self.mode == "mask":
-                        continue
-
                     pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
                     pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
                     pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
@@ -997,7 +988,8 @@ class Inference():
                                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                                 ])
                 else: 
-
+                    if self.mode == "Ground_Truth":
+                        continue
                     pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
                     pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
                     pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
@@ -1023,23 +1015,27 @@ class Inference():
                                                 ])
         
         for id in vehicle_id_list:
-            if self.mode == "mask" or self.mode == "no_mask":   
-                
+            # Draw ego car 
+            if int(id) == int(ego_id):
                 pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-                
 
-                if int(id) == int(ego_id):
-                    agent_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                            Loc(x=pos_1[0], y=pos_1[1]), 
-                                            Loc(x=pos_2[0], y=pos_2[1]), 
-                                            Loc(x=pos_3[0], y=pos_3[1]), 
-                                            ])
-                elif int(id) == int(interactor_id):
-                    if self.mode == "mask":
-                        continue
+                agent_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ])
+                continue
+
+            if self.mode == "Ground_Truth" or self.mode == "No_mask":   
+                pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+
+                if int(id) == int(interactor_id):
                     vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1047,24 +1043,24 @@ class Inference():
                                             ])
                             
                 elif id in self.ill_parking_id_list:
+                    
                     if id in self.gt_obstacle_id_list:
-
-                        if self.mode == "mask":
-                            continue
-
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
-
                     else:
+                        if self.mode == "Ground_Truth":
+                            continue
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
                 else:
+                    if self.mode == "Ground_Truth":
+                        continue
                     vehicle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1075,12 +1071,7 @@ class Inference():
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-                if int(id) == int(ego_id):
-                    agent_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                            Loc(x=pos_1[0], y=pos_1[1]), 
-                                            Loc(x=pos_2[0], y=pos_2[1]), 
-                                            Loc(x=pos_3[0], y=pos_3[1]), 
-                                            ])
+
                 if id in risky_ids:
                     if self.scenario_type == "obstacle":
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -1096,16 +1087,13 @@ class Inference():
                                 ])
     
         for id in pedestrian_id_list:
-            if self.mode == "mask" or self.mode == "no_mask":
+            if self.mode == "Ground_Truth" or self.mode == "No_mask":
                 pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-                if int(id) == int(interactor_id):
 
-                    if self.mode == "mask":
-                        continue
-                    
+                if int(id) == int(interactor_id):
                     pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                         Loc(x=pos_1[0], y=pos_1[1]), 
                                         Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1113,6 +1101,8 @@ class Inference():
                                         ])
                         
                 else:
+                    if self.mode == "Ground_Truth":
+                        continue
                     pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                                 Loc(x=pos_1[0], y=pos_1[1]), 
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1132,7 +1122,7 @@ class Inference():
 
         # static vehicle bbox 
         # self.static_vehicle_bbox_list
-        if self.mode == "no_mask":
+        if self.mode == "No_mask":
             
             vehicle_bbox_list = vehicle_bbox_list + self.static_vehicle_bbox_list
 
@@ -1474,11 +1464,11 @@ def game_loop(args):
     scenario_name = scenario_name + args.random_actors + '_'
 
     # write actor list
-    min_id, max_id = check_actor_list(world)
-    if max_id-min_id >= 65535:
-        print('Actor id error. Abandom.')
-        abandon_scenario = True
-        raise
+    # min_id, max_id = check_actor_list(world)
+    # if max_id-min_id >= 65535:
+    #     print('Actor id error. Abandom.')
+    #     abandon_scenario = True
+    #     raise
 
     iter_tick = 0
     iter_start = 25
@@ -1824,7 +1814,15 @@ def main():
         default=0,
         type=int,
         help='use random_seed to replay the same behavior ')
-
+    argparser.add_argument(
+            '--mode',
+            type=str,
+            choices=['No_mask', 'Ground_Truth', 'Random', 'Nearest', 
+                    'Kalman_Filter', 'Social-GAN', 'MANTRA', 'QCNet',
+                    'DSA-RNN', 'DSA-RNN-Supervised', 'BC_single-stage',
+                    'BC_two-stage' ],
+            required=True,
+            help='enable roaming actors')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
