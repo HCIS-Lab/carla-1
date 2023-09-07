@@ -60,6 +60,7 @@ from util.KeyboardControl import KeyboardControl
 from util.hud import HUD
 from util.sensors import CollisionSensor, LaneInvasionSensor, GnssSensor, IMUSensor, RadarSensor, CameraManager
 from util.data_collection import Data_Collection
+from torchvision.ops.boxes import masks_to_boxes
 
 # ==============================================================================
 # -- Global functions ----------------------------------------------------------
@@ -731,8 +732,7 @@ class Inference():
             distance = ego_loc.distance(actor_loc)
 
 
-            if distance < 50:
-                vehicles_id_list.append(_id)
+            vehicles_id_list.append(_id)
 
             acceleration = get_xyz(actor.get_acceleration())
             
@@ -800,8 +800,8 @@ class Inference():
 
             distance = ego_loc.distance(actor_loc)
 
-            if distance < 50:
-                pedestrian_id_list.append(_id)
+            
+            pedestrian_id_list.append(_id)
 
             acceleration = get_xyz(actor.get_acceleration())
             v = actor.get_velocity()
@@ -883,6 +883,49 @@ class Inference():
 
     def set_gt_interactor(self, id):
         self.gt_interactor = id
+
+
+    def get_ids(self, mask, area_threshold=400):
+        """
+            Args:
+                mask: instance image
+        """
+        obstacle_boxes,obstacle_ids = [], []
+        h,w = mask.shape[1:]
+        # print("h, w", h, w)
+        mask_2 = torch.zeros((2,h,w), device="cuda:0")
+        mask_2[0] = mask[0]
+        mask_2[1] = mask[1]+mask[2]*256
+
+        if self.scenario_type =="obstacle":
+            condition = mask[0]== 21 # Obstacle
+            obstacle_ids = torch.unique(mask_2[1,condition])
+            masks = mask_2[1] == obstacle_ids[:, None, None]
+            masks = masks*condition
+            area_condition = masks.long().sum((1,2))>=area_threshold
+            masks = masks[area_condition]
+            
+            obstacle_ids = obstacle_ids[area_condition].type(torch.int).cpu().numpy()
+            obstacle_boxes = masks_to_boxes(masks).type(torch.int16).cpu().numpy()
+            assert len(obstacle_ids) == len(obstacle_boxes)
+
+        condition = mask_2[0]== 14 # Car
+        condition += mask_2[0]== 15 # Truck
+        condition += mask_2[0]== 16 # Bus
+        condition += mask_2[0]== 12 # Pedestrian
+        condition += mask[0]== 18 # Motorcycle
+        condition += mask[0]== 19 # Bicycle
+        obj_ids = torch.unique(mask_2[1,condition])
+        masks = mask_2[1] == obj_ids[:, None, None]
+        masks = masks*condition
+        area_condition = masks.long().sum((1,2))>=area_threshold
+        masks = masks[area_condition]
+        
+        obj_ids = obj_ids[area_condition].type(torch.int).cpu().numpy()
+        boxes = masks_to_boxes(masks).type(torch.int16).cpu().numpy()
+        assert len(obj_ids) == len(boxes)
+
+        return boxes, obj_ids, obstacle_boxes, obstacle_ids
     
     def run_inference(self, frame, world):
         
@@ -899,6 +942,27 @@ class Inference():
 
         # ins_front_array = torch.from_numpy(ins_front_array.copy())[:,:,:3].type(torch.int).permute((2,0,1))
         #produce_bbx(ins_front_array, actor_list_and_position, frame)
+
+
+        instance = np.frombuffer(self.ss_front.raw_data, dtype=np.dtype("uint8"))
+        instance = np.reshape(instance, (self.ss_front.height, self.ss_front.width, 4))
+        instance = instance[:, :, :3]
+        instance_torch = torch.flip(torch.from_numpy(instance.copy()).type(torch.int).permute(2,0,1),[0])
+        # print(instance_torch.shape) # torch.Size([3, 256, 640])
+
+        instance_torch = instance_torch.to("cuda:0")
+        boxes, obj_ids, obstacle_boxes, obstacle_ids = self.get_ids(instance_torch)
+
+
+        rgb = np.frombuffer(self.rgb_front.raw_data, dtype=np.dtype("uint8"))
+        rgb = np.reshape(rgb, (self.rgb_front.height, self.rgb_front.width, 4))
+        rgb = instance[:, :, :3]
+
+        # print(boxes, obj_ids, obstacle_boxes, obstacle_ids)
+        
+        # print(self.gt_interactor)
+
+        
 
 
 
@@ -967,10 +1031,54 @@ class Inference():
             pass
         # rule based methods
         elif self.mode == "Random":
-            pass
-        elif self.mode == "Nearest":
-            pass
+            ids = list(obstacle_ids) + list(obj_ids)
 
+            for id in ids:
+                if id == (self.ego_id % 65536):
+                    ids.remove(id)
+
+                        
+            if len(ids) != 0 :
+                risky_ids = [random.choice(ids)]
+            else:
+                risky_ids = []
+        elif self.mode == "Nearest":
+            ids = list(obstacle_ids) + list(obj_ids)
+            if len(ids) == 0 :
+                risky_ids = []
+            else:
+                # risky_ids = []
+                # find nearest object 
+                min_distance = 1000
+                min_id = -1
+
+                for id in self.obestacle_id_list:
+                    id_tmp = id % 65536 
+                    if id_tmp in ids:
+                        distance = actor_dict["obstacle"][id]["distance"]
+
+                        if distance < min_distance:
+                            min_distance = distance
+                            min_id = id
+
+                for id in vehicle_id_list:
+                    if id == self.ego_id:
+                        continue
+                    id_tmp = id % 65536 
+                    if id_tmp in ids:
+                        distance = actor_dict[id]["distance"]
+                        if distance < min_distance:
+                            min_distance = distance
+                            min_id = id
+                for id in pedestrian_id_list:
+                    id_tmp = id % 65536
+                    if id_tmp in ids:
+                        distance = actor_dict[id]["distance"]
+                        if distance < min_distance:
+                            min_distance = distance
+                            min_id = id
+
+                risky_ids = [min_id]
 
         # Get bbox for lbc Input 
 
@@ -1002,12 +1110,14 @@ class Inference():
                                                 ])
             else:
                 # risky_ids
-                if id in risky_ids:
-                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
-                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
-                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
-                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+                pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
+                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    id = id % 65536
+                if id in risky_ids:
                     obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                                 Loc(x=pos_1[0], y=pos_1[1]), 
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1067,11 +1177,16 @@ class Inference():
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
             else:
+
                 pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
+                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random" :
+                    id = id % 65536
+
+                
                 if id in risky_ids:
                     if self.scenario_type == "obstacle":
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -1113,7 +1228,13 @@ class Inference():
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+
+                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    id = id % 65536
+
                 if id in risky_ids:
+                    # mod 65536
+                    
                     pedestrian_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                                 Loc(x=pos_1[0], y=pos_1[1]), 
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1170,15 +1291,9 @@ class Inference():
         target_xy = target_xy.reshape((1, 2))
         target_xy = target_xy.to(device)
 
-        # heatmap = make_heatmap((256, 256), target) 
-        # heatmap = torch.FloatTensor(heatmap).unsqueeze(0)
-
-
         with torch.no_grad():
             points_pred = self.net.forward(topdown, target_xy)
             control = self.net.controller(points_pred).cpu().data.numpy()[0]
-
-
 
         steer = control[0] 
         desired_speed = control[1] 
@@ -1223,8 +1338,6 @@ class Inference():
         self.topdown_debug_list.append(_topdown)
 
         if self.scenario_type == "interactive" or self.scenario_type == "collision":
-            pass
-
            
             interactor_location = world.world.get_actor(self.gt_interactor).get_location()
 
@@ -1234,8 +1347,7 @@ class Inference():
                 self.min_distance = distance
 
         elif self.scenario_type == "obstacle":
-            
-            
+
             for id in self.gt_obstacle_id_list:
                 interactor_location = world.world.get_actor(id).get_location()
                 distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
