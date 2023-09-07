@@ -23,7 +23,6 @@ while read F  ; do
 
         if grep -q "${array[0]}#${array[1]}#${array[2]}#${array[3]}#${array[4]}#${array[5]}" ./result.txt
         then
-            echo "test"
             break
         else
             let COUNTER=COUNTER+1
