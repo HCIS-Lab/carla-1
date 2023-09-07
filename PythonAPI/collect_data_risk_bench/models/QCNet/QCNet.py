@@ -69,7 +69,6 @@ def get_agent_features(df: pd.DataFrame, num_historical_steps: int, dim=2) -> Di
     df.loc[df.OBJECT_TYPE == 'static.prop.trafficwarning', 'OBJECT_TYPE'] = 'obstacle'
 
     num_agents = len(agent_ids)
-    print(device)
 
     # initialization
     valid_mask = torch.zeros(num_agents, num_historical_steps, dtype=torch.bool).to(device)
@@ -144,7 +143,6 @@ def inference(input_df, model, num_historical_steps=20, output_dim=2):
     data['agent'] = get_agent_features(input_df, num_historical_steps)
     #print("before:", data)
     data = HeteroData(data)
-    print("HeteroData:", data)
     data = data.to(device)
     model = model.to(device)
     #print("after:", data)
@@ -180,25 +178,41 @@ def inference(input_df, model, num_historical_steps=20, output_dim=2):
     rot_mat[:, 1, 1] = cos
     traj_eval = torch.matmul(traj_refine[eval_mask, :, :, :2],
                                 rot_mat.unsqueeze(1)) + origin_eval[:, :2].reshape(-1, 1, 1, 2)
-    traj_eval = traj_eval.cpu().numpy()
+    traj_eval = traj_eval.detach().cpu().numpy() #.cpu().numpy()
     traj_pred = traj_eval.squeeze() # shape: [n, 30, 2]
 
-    agent_ids = list(compress(list(chain(*data['agent']['id'])), eval_mask)) # shape: n
+    ##################################################################3
+    #agent_ids = list(compress(list(chain(*data['agent']['id'])), eval_mask)) # shape: n
+    agent_ids = data['agent']['id']
 
     # To dataframe
     num_agents = len(agent_ids)
     num_future_frame = traj_pred.shape[1]
     out_np_arr = np.zeros((num_agents*num_future_frame, 4)) # shape: [n*30, 4]
-    start_frame = list(input_df['track_id'].unique())[-1] + 1
-    frame_list = np.arange(start_frame, start_frame+31)
+    start_frame = list(input_df['FRAME'].unique())[-1] + 1
+    frame_list = np.arange(start_frame, start_frame+30)
     for idx, traj in enumerate(traj_pred):
         indices = list(range(idx, num_future_frame*num_agents, num_agents))
-        out_np_arr[indices][0] = frame_list
-        out_np_arr[indices][1] = agent_ids[idx]
-        out_np_arr[indices][2:] = traj
+        # print("indices:", indices)
+        # print("frame_list:", frame_list)
+        # print("out_np_arr[indices]:", out_np_arr[indices].shape, out_np_arr[indices])
+        # out_np_arr[indices][0] = frame_list
+        # out_np_arr[indices][1] = agent_ids[idx]
+        # out_np_arr[indices][2:] = traj
+        out_np_arr[indices, 0] = frame_list
+        out_np_arr[indices, 1] = agent_ids[idx]
+        out_np_arr[indices, 2:] = traj
+
 
     out_df = pd.DataFrame(data=out_np_arr, columns=['FRAME', 'TRACK_ID', 'X', 'Y'])
-    
+    out_df['FRAME'] = out_df['FRAME'].astype("int")
+    out_df['TRACK_ID'] = out_df['TRACK_ID'].astype("int").astype("str")
+    out_df = pd.concat([input_df, out_df])
+    out_df['X'] = out_df['X'].astype("float")
+    out_df['Y'] = out_df['Y'].astype("float")
+    out_df = out_df.drop(columns=['OBJECT_TYPE', 'VELOCITY_X', 'VELOCITY_Y', 'YAW'])
+    out_df = out_df.reset_index(drop=True)
+    #print("out_df:", out_df)
     return out_df
 
 def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list ):
@@ -207,10 +221,12 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
     vehicle_width = 2
     pedestrian_length = 0.8
     pedestrian_width = 0.8
+    # vehicle_length = 10
+    # vehicle_width = 10
+    # pedestrian_length = 8
+    # pedestrian_width = 8
     agent_area = [[vehicle_length, vehicle_width],
                 [pedestrian_length, pedestrian_width]]
-
-
 
 
     #config
@@ -223,13 +239,17 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
     }['QCNet'].load_from_checkpoint(checkpoint_path=ckpt_path)
     # print(pd.concat(vehicle_list))
     temp_df = inference(pd.concat(vehicle_list), model)
-
+    temp_df['TRACK_ID'] = temp_df['TRACK_ID'].astype("int")
+    #print("temp_df:", temp_df)
     vehicle_list = []
     for track_id, remain_df in temp_df.groupby('TRACK_ID'):
         vehicle_list.append(remain_df)
+        # if int(track_id) == 97712:
+        #     print(track_id, remain_df)
 
     risky_vehicle_list = []
     ego_prediction = np.zeros((future_len, 2))
+    #print("vehicle_list:", vehicle_list)
     for n in range(len(vehicle_list)):
         vl = vehicle_list[n].to_numpy()
         now_id = vl[0][1]
@@ -254,7 +274,7 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
         #ego, agent, other = 0, 0, 0
         vl = vehicle_list[val_vehicle_num].to_numpy()
         # vl : frame, id, x, y
-        #print(vl)
+        #print("vl:", vl)
         now_id = vl[0][1]
         if str(int(now_id)) in pedestrian_id_list:
             agent_type = 1
@@ -262,13 +282,6 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
             agent_type = 0
         elif int(now_id) == int(variant_ego_id):
             agent_type = 0
-
-        actor_pos_x = vl[0][2]
-        actor_pos_y = vl[0][3]
-        dist_x = actor_pos_x - ego_now_pos_x
-        dist_y = actor_pos_y - ego_now_pos_y
-        if abs(dist_x) > 37.5 or abs(dist_y) > 37.5:
-            continue
         #print(str(int(now_id)), type(obstacle_id_list[0]), obstacle_id_list)
         for pred_t in range(future_len - 1):
             if int(now_id) == int(variant_ego_id):
@@ -280,16 +293,19 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
             #print(now_id, obstacle_id_list)
             
             if str(int(now_id)) in obstacle_id_list:
-                #print("in")
-                if vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficcone01':
-                    temp = obstacle_collision(vehicle_length, vehicle_width, 0.85, 0.85, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
-                elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.streetbarrier':
-                    temp = obstacle_collision(vehicle_length, vehicle_width, 1.25, 0.375, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
-                elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficwarning':
-                    temp = obstacle_collision(vehicle_length, vehicle_width, 3, 2.33, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                print("obstacle")
+                temp = obstacle_collision(vehicle_length, vehicle_width, 2, 2, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+
+                # if vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficcone01':
+                #     temp = obstacle_collision(vehicle_length, vehicle_width, 0.85, 0.85, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                # elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.streetbarrier':
+                #     temp = obstacle_collision(vehicle_length, vehicle_width, 1.25, 0.375, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                # elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficwarning':
+                #     temp = obstacle_collision(vehicle_length, vehicle_width, 3, 2.33, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
                 if temp != None:
                     risky_vehicle_list.append(temp)
             else:
