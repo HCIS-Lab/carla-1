@@ -1038,21 +1038,24 @@ class Inference():
             bbox_id_list[counter] = id
             counter += 1
 
-        # print(len(self.rgb_list_bc_method))
-        if len(self.rgb_list_bc_method) < 6:
-            self.rgb_list_bc_method.append(camera_transforms(rgb)) 
-            self.bbox_list_bc_method.append(bbox_dict)
 
-            self.bbox_list_DSA.append(np.array(bbox_list).astype(np.float32))
-            
-            self.bbox_id_list_DSA.append(bbox_id_list)
+        if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_two-stage" or self.mode == "BC_single-stage":
 
-        else:
-            # pop first one
-            self.rgb_list_bc_method.pop(0)
-            self.bbox_list_bc_method.pop(0)
-            self.bbox_list_DSA.pop(0)
-            self.bbox_id_list_DSA.pop(0)
+            # print(len(self.rgb_list_bc_method))
+            if len(self.rgb_list_bc_method) < 6:
+                self.rgb_list_bc_method.append(camera_transforms(rgb)) 
+                self.bbox_list_bc_method.append(bbox_dict)
+
+                self.bbox_list_DSA.append(np.array(bbox_list).astype(np.float32))
+                
+                self.bbox_id_list_DSA.append(bbox_id_list)
+
+            else:
+                # pop first one
+                self.rgb_list_bc_method.pop(0)
+                self.bbox_list_bc_method.pop(0)
+                self.bbox_list_DSA.pop(0)
+                self.bbox_id_list_DSA.pop(0)
 
         if pre_get_data:
             return
@@ -1143,12 +1146,6 @@ class Inference():
                         # print("---")
                         risky_ids.append(int(id))
 
-
-
-
-
-        elif self.mode == "DSA-RNN-Supervised":
-            pass
         elif self.mode == "BC_two-stage" or self.mode == "BC_single-stage":
             tracking_results = []
             for i in range(5):
