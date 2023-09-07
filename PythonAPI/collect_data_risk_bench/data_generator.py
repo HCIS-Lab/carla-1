@@ -61,7 +61,8 @@ from util.hud import HUD
 from util.sensors import CollisionSensor, LaneInvasionSensor, GnssSensor, IMUSensor, RadarSensor, CameraManager
 from util.data_collection import Data_Collection
 from torchvision.ops.boxes import masks_to_boxes
-
+from torchvision import transforms
+        
 # ==============================================================================
 # -- Global functions ----------------------------------------------------------
 # ==============================================================================
@@ -518,6 +519,12 @@ class Inference():
 
         self.mode = args.mode 
 
+        self.rgb_list_bc_method = []
+        self.bbox_list_bc_method = []
+
+        self.bbox_list_DSA = []
+        self.bbox_id_list_DSA = []
+
         if self.mode == "Kalman_Filter":
             from models.KalmanFilter import kf_inference
             
@@ -573,25 +580,54 @@ class Inference():
 
             from models.QCNet.QCNet import QCNet_inference
             self.QCNet_inference = QCNet_inference
-        elif self.mode == "BC_two-stage": # BC_single-stage
+        elif self.mode == "BC_two-stage" or self.mode ==  "BC_single-stage":
             from models.two_stage.inference import testing
             from models.two_stage.models import GCN as Model
-            from torchvision import transforms
-            model = Model()
-            checkpoint="./models/two_stage/weight.pth"
+            
+            self.BC_model = Model()
+            checkpoint="./models/weights/two_stage/weight.pth"
             state_dict = torch.load(checkpoint)
             state_dict_copy = {}
             for key in state_dict.keys():
                 state_dict_copy[key[7:]] = state_dict[key]
-            model.load_state_dict(state_dict_copy)
-            model = model.to('cuda')
-            model.train(False)
+            self.BC_model.load_state_dict(state_dict_copy)
+            self.BC_model = self.BC_model.to('cuda')
+            self.BC_model.train(False)
 
-            self.lbc_testing = testing
-        elif self.mode == "DSA-RNN":
-            pass
+            self.BC_testing = testing
+        elif self.mode == "DSA-RNN": # "DSA-RNN-Supervised":
+            # ckpt = {'DSA_no_intention':'8_27_3_46','DSA_intention':'9_1_2_2','RRL_no_intention':'8_29_21_34','RRL_intention':'8_29_18_21'}
+            # model_names = [['DSA_no_intention','DSA_intention'],['RRL_no_intention','RRL_intention']]
+
+            from models.dsa.dsa_rnn import Baseline_SA
+            from models.dsa.backbone import Riskbench_backbone
+
+            intention  = False
+            supervised = False
+            model_path = f"./models/weights/dsa/8_27_3_46/best_model.pt"
+            object_num = 20
+            n_frame = 40
+            device = torch.device('cuda')
+            backbone = Riskbench_backbone(8,object_num,intention=intention)
+            self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised)
+            self.dsa_model.load_state_dict(torch.load(model_path,map_location=device))
+            self.dsa_model.cuda()
+            self.dsa_model.eval()
         elif self.mode == "DSA-RNN-Supervised":
-            pass
+            from models.dsa.dsa_rnn import Baseline_SA
+            from models.dsa.backbone import Riskbench_backbone
+
+            intention  = False
+            supervised = True
+            model_path = f"./models/weights/dsa/8_29_21_34/best_model.pt"
+            object_num = 20
+            n_frame = 40
+            device = torch.device('cuda')
+            backbone = Riskbench_backbone(8,object_num,intention=intention)
+            self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised)
+            self.dsa_model.load_state_dict(torch.load(model_path,map_location=device))
+            self.dsa_model.cuda()
+            self.dsa_model.eval()
 
 
         # read static bbox 
@@ -927,7 +963,7 @@ class Inference():
 
         return boxes, obj_ids, obstacle_boxes, obstacle_ids
     
-    def run_inference(self, frame, world):
+    def run_inference(self, frame, world, pre_get_data = False):
         
         
         while True:
@@ -954,19 +990,72 @@ class Inference():
         boxes, obj_ids, obstacle_boxes, obstacle_ids = self.get_ids(instance_torch)
 
 
+
         rgb = np.frombuffer(self.rgb_front.raw_data, dtype=np.dtype("uint8"))
         rgb = np.reshape(rgb, (self.rgb_front.height, self.rgb_front.width, 4))
-        rgb = instance[:, :, :3]
-
-        # print(boxes, obj_ids, obstacle_boxes, obstacle_ids)
-        
-        # print(self.gt_interactor)
-
-        
+        rgb = rgb[:, :, :3]
 
 
 
+        camera_transforms = transforms.Compose([
+        # transforms.Resize(image_resize),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+        ])
 
+
+
+        bbox_list = np.zeros((20,4))
+        bbox_id_list = np.zeros((20))
+
+        counter = 0
+
+
+        bbox_dict = {}
+
+
+        for i in range(len(obstacle_ids)):
+            if counter >= 20:
+                break
+            id = obstacle_ids[i]
+            bbox = obstacle_boxes[i]
+            bbox_dict[id] = bbox
+
+            bbox_list[counter] = bbox
+            bbox_id_list[counter] = id
+            counter += 1
+
+        for i in range(len(obj_ids)):
+            id = obj_ids[i]
+            bbox = boxes[i]
+            # remove ego car 
+            if id == (self.ego_id%65536):
+                continue
+            bbox_dict[id] = bbox
+
+            bbox_list[counter] = bbox
+            bbox_id_list[counter] = id
+            counter += 1
+
+        # print(len(self.rgb_list_bc_method))
+        if len(self.rgb_list_bc_method) < 6:
+            self.rgb_list_bc_method.append(camera_transforms(rgb)) 
+            self.bbox_list_bc_method.append(bbox_dict)
+
+            self.bbox_list_DSA.append(np.array(bbox_list).astype(np.float32))
+            
+            self.bbox_id_list_DSA.append(bbox_id_list)
+
+        else:
+            # pop first one
+            self.rgb_list_bc_method.pop(0)
+            self.bbox_list_bc_method.pop(0)
+            self.bbox_list_DSA.pop(0)
+            self.bbox_id_list_DSA.pop(0)
+
+        if pre_get_data:
+            return
 
         actor_dict = self.collect_actor_data(world, frame)
         ego_id = self.ego_id 
@@ -1021,14 +1110,103 @@ class Inference():
             if self.mode == "QCNet":
                 risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
         # vision based methods
-        elif self.mode == "DSA-RNN":
-            pass
+        elif self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised":
+
+            if self.mode == "DSA-RNN":
+                threshold = 0.2
+            else:
+                threshold = 0.8
+            #  input 
+            imgs_input = torch.stack(self.rgb_list_bc_method) # 1 5 3 H W
+            imgs_input = imgs_input.unsqueeze(0).cuda()
+
+            bbox_input = torch.from_numpy(np.array(self.bbox_list_DSA).astype(np.float32))
+            
+            bbox_input = bbox_input.unsqueeze(0).cuda()
+
+            bbox_id_input = self.bbox_id_list_DSA
+
+            risky_ids = []
+
+            with torch.no_grad():
+                _, all_alphas, _ = self.dsa_model(imgs_input, bbox_input)
+                
+                all_alphas = all_alphas[0]
+                
+                n_frame = -1
+                for score, id in zip(all_alphas[n_frame], bbox_id_input[n_frame]):
+                    score, id = score.cpu().numpy(), id
+                    if id == -1:
+                        break
+                    if round(float(score),2) > threshold: # 0.8
+                        # print(id)
+                        # print("---")
+                        risky_ids.append(int(id))
+
+
+
+
+
         elif self.mode == "DSA-RNN-Supervised":
             pass
-        elif self.mode == "BC_single-stage":
-            pass
-        elif self.mode == "BC_two-stage":
-            pass
+        elif self.mode == "BC_two-stage" or self.mode == "BC_single-stage":
+            tracking_results = []
+            for i in range(5):
+                for actor_id in self.bbox_list_bc_method[i]:
+
+                    bbox = self.bbox_list_bc_method[i][actor_id]
+                    w = bbox[2]-bbox[0]
+                    h = bbox[3]-bbox[1]
+
+                    if w*h < 100: #MIN_AREA:
+                        continue
+
+                    tracking_results.append([int(i), int(actor_id), bbox[0], bbox[1], bbox[2], bbox[3], 1, -1, -1, -1])
+            tracking = np.array(tracking_results)
+
+            two_result = []
+            single_result = []
+    
+            if tracking.shape[0] != 0:
+                t_array = tracking[:, 0]
+
+                tracking_id = tracking[np.where(t_array == 4)[0], 1]
+
+                trackers = np.zeros([5, 25, 4])
+
+                for t in range(5):
+                    current_tracking = tracking[np.where(t_array == t)[0]]
+
+                    for i, object_id in enumerate(tracking_id):
+                        current_actor_id_idx = np.where(
+                            current_tracking[:, 1] == object_id)[0]
+
+                        if len(current_actor_id_idx) != 0:
+                            # x1, y1, x2, y2
+                            bbox = current_tracking[current_actor_id_idx, 2:6]
+                            trackers[t, i, :] = bbox
+
+                # return trackers, tracking_id
+                with torch.no_grad():
+                    """
+                        single_result, two_result: Dictionary
+                        e.g.
+                        {
+                            object_id1 (str): True
+                            object_id2 (str): False
+                            object_id3 (str): True
+                            ...
+                        }
+                    """
+                    single_result, two_result = self.BC_testing(self.BC_model, self.rgb_list_bc_method, trackers, tracking_id)
+
+            if self.mode == "BC_two-stage":
+                risky_ids = two_result
+            else:
+                risky_ids = single_result
+
+
+
         # rule based methods
         elif self.mode == "Random":
             ids = list(obstacle_ids) + list(obj_ids)
@@ -1693,7 +1871,11 @@ def game_loop(args):
                     finish[actor_id] = True
 
             if detect_start:
-                inference.collect_actor_data(world, frame)
+                
+                if args.mode == "BC_two-stage" or  args.mode == "BC_single-stage" or  args.mode ==  "DSA-RNN" or  args.mode ==  "DSA-RNN-Supervised":
+                    inference.run_inference(frame, world, True)
+                else:
+                    inference.collect_actor_data(world, frame)
             
             if not detect_start:
                 if args.inference:
