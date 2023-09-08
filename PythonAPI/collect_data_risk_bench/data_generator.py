@@ -1212,11 +1212,14 @@ class Inference():
                 if id == (self.ego_id % 65536):
                     ids.remove(id)
 
-                        
             if len(ids) != 0 :
-                risky_ids = [random.choice(ids)]
+                risky_ids = []
+                for id in ids:
+                    if random.random() > 0.5:
+                        risky_ids.append(id)
             else:
                 risky_ids = []
+                
         elif self.mode == "Nearest":
             ids = list(obstacle_ids) + list(obj_ids)
             if len(ids) == 0 :
@@ -1418,7 +1421,7 @@ class Inference():
 
         # static vehicle bbox 
         # self.static_vehicle_bbox_list
-        if self.mode == "No_mask":
+        if self.mode == "No_mask" :
             
             vehicle_bbox_list = vehicle_bbox_list + self.static_vehicle_bbox_list
 
