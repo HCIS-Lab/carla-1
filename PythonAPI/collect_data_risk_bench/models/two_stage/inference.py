@@ -127,8 +127,8 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
     for actor_id, score, attn in zip(tracking_id, action_logits[1:len(tracking_id)+1], attn_weights[1:len(tracking_id)+1]):
 
         # print(str(actor_id), f"{attn.item():.4f}, {score[0].item():.4f}, {confidence_go.item():.4f}")
-        single_result[str(actor_id)] = bool(attn>0.19)
-        two_result[str(actor_id)] = bool(score[0]-confidence_go>0.03 and confidence_go<0.5)
+        single_result[str(actor_id)] = bool(attn>0.35 and confidence_go < 0.4)
+        two_result[str(actor_id)] = bool(score[0]-confidence_go>0.2 and confidence_go<0.5)
 
     return single_result, two_result
 
