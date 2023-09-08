@@ -66,7 +66,7 @@ def kf_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_lis
     pedestrian_width = 0.8
     agent_area = [[vehicle_length, vehicle_width],
                 [pedestrian_length, pedestrian_width]]
-    future_len = 60
+    future_len = 30
     risky_vehicle_list = []
     
     for val_vehicle_num in range(len(vehicle_list)):
@@ -130,9 +130,9 @@ def kf_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_lis
 
         agent_type = 0
 
-        if str(int(now_id)) in pedestrian_id_list:
+        if int(now_id) in pedestrian_id_list:
             agent_type = 1
-        elif str(int(now_id)) in vehicle_id_list:
+        elif int(now_id) in vehicle_id_list:
             agent_type = 0
 
             

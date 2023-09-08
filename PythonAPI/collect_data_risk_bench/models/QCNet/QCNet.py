@@ -215,7 +215,7 @@ def inference(input_df, model, num_historical_steps=20, output_dim=2):
     #print("out_df:", out_df)
     return out_df
 
-def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list ):
+def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict):
 
     vehicle_length = 4.7
     vehicle_width = 2
@@ -238,8 +238,22 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
         'QCNet': QCNet,
     }['QCNet'].load_from_checkpoint(checkpoint_path=ckpt_path)
     # print(pd.concat(vehicle_list))
-    temp_df = inference(pd.concat(vehicle_list), model)
+    inference_df = pd.concat(vehicle_list)
+    
+    #print("before ids:", len(list(set(inference_df['TRACK_ID'].values))), list(set(inference_df['TRACK_ID'].values)))
+    
+    #print("obstacle_dict:", obstacle_dict)
+    for track_id, rest_df in inference_df.groupby('TRACK_ID'):
+        if track_id in vehicle_id_list:
+            inference_df.loc[inference_df.OBJECT_TYPE == 'ACTOR', 'OBJECT_TYPE'] = 'vehicle'
+        elif track_id in pedestrian_id_list:
+            inference_df.loc[inference_df.OBJECT_TYPE == 'ACTOR', 'OBJECT_TYPE'] = 'pedestrian'
+    inference_df.loc[inference_df.OBJECT_TYPE == 'ACTOR', 'OBJECT_TYPE'] = 'vehicle'
+    temp_df = inference(inference_df, model)
     temp_df['TRACK_ID'] = temp_df['TRACK_ID'].astype("int")
+    
+    #print("ids:", len(list(set(temp_df['TRACK_ID'].values))), list(set(temp_df['TRACK_ID'].values)))
+    
     #print("temp_df:", temp_df)
     vehicle_list = []
     for track_id, remain_df in temp_df.groupby('TRACK_ID'):
@@ -252,7 +266,7 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
     #print("vehicle_list:", vehicle_list)
     for n in range(len(vehicle_list)):
         vl = vehicle_list[n].to_numpy()
-        now_id = vl[0][1]
+        now_id = int(vl[0][1])
         if int(now_id) == int(variant_ego_id):
             ego_now_pos_x = vl[0][2]
             ego_now_pos_y = vl[0][3]
@@ -292,11 +306,11 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
             real_pred_y_next = vl[pred_t + 21][3]
             #print(now_id, obstacle_id_list)
             
-            if str(int(now_id)) in obstacle_id_list:
-                print("obstacle")
-                temp = obstacle_collision(vehicle_length, vehicle_width, 2, 2, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
-
+            #if str(int(now_id)) in obstacle_id_list:
+            if int(now_id) in list(obstacle_dict):
+                # temp = obstacle_collision(vehicle_length, vehicle_width, 2, 2, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                  pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                
                 # if vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficcone01':
                 #     temp = obstacle_collision(vehicle_length, vehicle_width, 0.85, 0.85, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
                 #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
@@ -306,6 +320,16 @@ def QCNet_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_
                 # elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficwarning':
                 #     temp = obstacle_collision(vehicle_length, vehicle_width, 3, 2.33, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
                 #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                if obstacle_dict[now_id] == 'static.prop.trafficcone01':
+                    temp = obstacle_collision(vehicle_length, vehicle_width, 0.85, 0.85, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                elif obstacle_dict[now_id] == 'static.prop.streetbarrier':
+                    temp = obstacle_collision(vehicle_length, vehicle_width, 1.25, 0.375, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                elif obstacle_dict[now_id] == 'static.prop.trafficwarning':
+                    temp = obstacle_collision(vehicle_length, vehicle_width, 3, 2.33, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+
                 if temp != None:
                     risky_vehicle_list.append(temp)
             else:

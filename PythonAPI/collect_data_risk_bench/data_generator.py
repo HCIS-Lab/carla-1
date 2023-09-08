@@ -896,6 +896,8 @@ class Inference():
 
             data["obstacle"][_id] = {}
             data["obstacle"][_id]["distance"] = distance
+            data["obstacle"][_id]["type_id"] = type_id
+            # 
             data["obstacle"][_id]["type"] = "obstacle"
             data["obstacle"][_id]["cord_bounding_box"] = cord_bounding_box
 
@@ -1079,6 +1081,10 @@ class Inference():
         pedestrian_id_list = list(actor_dict["pedestrian_ids"])
         # obstacle id list 
         obstacle_id_list = list(actor_dict["obstacle_ids"])
+        
+        obstacle_dict = {}
+        for id in obstacle_id_list:
+            obstacle_dict[id] = actor_dict["obstacle"][id]["type_id"]
 
         # trajectory based method 
         if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
@@ -1107,11 +1113,11 @@ class Inference():
             if self.mode == "Kalman_Filter":
                 risky_ids = self.kf_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
             if self.mode == "MANTRA":
-                risky_ids = self.mantra_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+                risky_ids = self.mantra_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict)
             if self.mode == "Social-GAN":
-                risky_ids = self.socal_gan_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list, self._args, self.generator)
+                risky_ids = self.socal_gan_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict, self._args, self.generator)
             if self.mode == "QCNet":
-                risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+                risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict)
         # vision based methods
         elif self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised":
 

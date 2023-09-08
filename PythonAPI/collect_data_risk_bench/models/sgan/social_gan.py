@@ -178,7 +178,7 @@ def evaluate(args,  ego, traj_txt_list, generator, num_samples):
 
 
 
-def socal_gan_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_list, vehicle_id_list , obstacle_id_list, _args, generator):
+def socal_gan_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian_id_list, vehicle_id_list , obstacle_dict, _args, generator):
 
 
     future_len = 30 
@@ -250,16 +250,20 @@ def socal_gan_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian
     #temp_df = evaluate(_args, './sgan/temp.txt', generator, 1 )
     temp_df = evaluate(_args, ego_info, traj_txt_list, generator, 1)
 
-
-
+    temp_df['FRAME'] = temp_df['FRAME'].astype("int")
+    temp_df['TRACK_ID'] = temp_df['TRACK_ID'].astype("int")
+    temp_df['X'] = temp_df['X'].astype("float")
+    temp_df['Y'] = temp_df['Y'].astype("float")
 
 
 
     # 計算碰撞與否
 
+    #print(list(obstacle_dict))
     risky_vehicle_list = []
     vehicle_list = []
     for track_id, remain_df in temp_df.groupby('TRACK_ID'):
+        #print("ID:", track_id)
         vehicle_list.append(remain_df)
     ego_prediction = np.zeros((future_len, 2))
     for n in range(len(vehicle_list)):
@@ -285,10 +289,10 @@ def socal_gan_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian
         #ego, agent, other = 0, 0, 0
         vl = vehicle_list[val_vehicle_num].to_numpy()
         # vl : frame, id, x, y
-        now_id = vl[0][1]
-        if str(int(now_id)) in pedestrian_id_list:
+        now_id = int(vl[0][1])
+        if int(now_id) in pedestrian_id_list:
             agent_type = 1
-        elif str(int(now_id)) in vehicle_id_list:
+        elif int(now_id) in vehicle_id_list:
             agent_type = 0
         elif int(now_id) == int(variant_ego_id):
             agent_type = 0
@@ -306,16 +310,29 @@ def socal_gan_inference(vehicle_list, specific_frame, variant_ego_id, pedestrian
             real_pred_x_next = vl[pred_t + 21][2]
             real_pred_y = vl[pred_t + 20][3]
             real_pred_y_next = vl[pred_t + 21][3]
-            if str(now_id) in obstacle_id_list:
-                if vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficcone01':
+            #if str(now_id) in obstacle_id_list:
+            if int(now_id) in list(obstacle_dict):
+                #print("obstacle")
+                # if vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficcone01':
+                #     temp = obstacle_collision(vehicle_length, vehicle_width, 0.85, 0.85, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], actor_pos_x, actor_pos_y, 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                # elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.streetbarrier':
+                #     temp = obstacle_collision(vehicle_length, vehicle_width, 1.25, 0.375, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], actor_pos_x, actor_pos_y, 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                # elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficwarning':
+                #     temp = obstacle_collision(vehicle_length, vehicle_width, 3, 2.33, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
+                #                                 pred_t + 1][0], ego_prediction[pred_t + 1][1], actor_pos_x, actor_pos_y, 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                if obstacle_dict[now_id] == 'static.prop.trafficcone01':
+                    #print("static.prop.trafficcone01")
                     temp = obstacle_collision(vehicle_length, vehicle_width, 0.85, 0.85, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], actor_pos_x, actor_pos_y, 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
-                elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.streetbarrier':
+                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                elif obstacle_dict[now_id] == 'static.prop.streetbarrier':
                     temp = obstacle_collision(vehicle_length, vehicle_width, 1.25, 0.375, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], actor_pos_x, actor_pos_y, 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
-                elif vehicle_list[val_vehicle_num].OBJECT_TYPE[0] == 'static.prop.trafficwarning':
+                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                elif obstacle_dict[now_id] == 'static.prop.trafficwarning':
                     temp = obstacle_collision(vehicle_length, vehicle_width, 3, 2.33, ego_prediction[pred_t][0], ego_prediction[pred_t][1], ego_prediction[
-                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], actor_pos_x, actor_pos_y, 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+                                                pred_t + 1][0], ego_prediction[pred_t + 1][1], vl[0][2], vl[0][3], 0.0, vehicle_length, vehicle_width, specific_frame, pred_t, now_id)
+
                 if temp != None:
                     risky_vehicle_list.append(temp)
             else:
