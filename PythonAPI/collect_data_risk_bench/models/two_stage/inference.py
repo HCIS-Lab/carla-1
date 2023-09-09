@@ -121,14 +121,27 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
 
     action_logits = np.clip(action_logits, 0, 1)
 
-    single_result = {}
-    two_result = {}
+    single_result = []
+    single_score = []
+    two_result = []
+    two_score = []
 
     for actor_id, score, attn in zip(tracking_id, action_logits[1:len(tracking_id)+1], attn_weights[1:len(tracking_id)+1]):
 
-        # print(str(actor_id), f"{attn.item():.4f}, {score[0].item():.4f}, {confidence_go.item():.4f}")
-        single_result[str(actor_id)] = bool(attn>0.35 and confidence_go < 0.4)
-        two_result[str(actor_id)] = bool(score[0]-confidence_go>0.2 and confidence_go<0.5)
+        # print(str(actor_id), f"{attn.item():.4f}, {score[0].item():.4f}, {confidence_go.item():.4f}")        
+        # single_result[str(actor_id)] = bool(attn>0.19)
+        # two_result[str(actor_id)] = bool(score[0]-confidence_go>0.03 and confidence_go<0.5)
 
-    return single_result, two_result
+        if attn>0.35 and confidence_go < 0.4:
+            single_result.append(str(actor_id))
+            single_score.append(attn)
+
+        if score[0]-confidence_go>0.2 and confidence_go<0.5:
+            two_result.append(str(actor_id))
+            two_score.append(score[0]-confidence_go)
+
+        [single_score.index(max(single_score))]
+
+    return [single_result[single_score.index(max(single_score))]], \
+                [two_result[two_score.index(max(two_score))]]
 
