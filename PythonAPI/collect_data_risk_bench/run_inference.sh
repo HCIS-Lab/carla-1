@@ -117,7 +117,7 @@ while read F  ; do
             if [ ${scenario_id} == 2 ]
             then
                 python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode --obstacle_region
-            else:
+            else
                 python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode
             fi
         
