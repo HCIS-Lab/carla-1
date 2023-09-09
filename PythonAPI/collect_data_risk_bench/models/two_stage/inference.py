@@ -142,8 +142,8 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
 
         # [single_score.index(max(single_score))]
 
-    print(single_score)
-    print(two_score)
+    # print(single_score)
+    # print(two_score)
 
     if len(single_result) != 0:
         single_score = [single_result[single_score.index(max(single_score))]]

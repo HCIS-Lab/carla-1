@@ -1288,47 +1288,100 @@ class Inference():
 
         # Get bbox for lbc Input 
 
-        for id in self.obestacle_id_list:
-            if self.mode == "Ground_Truth" or self.mode == "No_mask":
-                if id in self.gt_obstacle_id_list :
-                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
-                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
-                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
-                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
-
-                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                Loc(x=pos_1[0], y=pos_1[1]), 
-                                                Loc(x=pos_2[0], y=pos_2[1]), 
-                                                Loc(x=pos_3[0], y=pos_3[1]), 
-                                                ])
-                else: 
-                    if self.mode == "Ground_Truth":
-                        continue
-                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
-                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
-                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
-                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
-
-                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                Loc(x=pos_1[0], y=pos_1[1]), 
-                                                Loc(x=pos_2[0], y=pos_2[1]), 
-                                                Loc(x=pos_3[0], y=pos_3[1]), 
-                                                ])
-            else:
-                # risky_ids
-                pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
-                pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
-                pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
-                pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
-
+        if self.args.obstacle_region:
+            
+            for id in self.gt_obstacle_id_list:
                 if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                     id = id % 65536
                 if id in risky_ids:
-                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                Loc(x=pos_1[0], y=pos_1[1]), 
-                                                Loc(x=pos_2[0], y=pos_2[1]), 
-                                                Loc(x=pos_3[0], y=pos_3[1]), 
-                                                ])
+
+                    for gt_id in self.gt_obstacle_id_list:
+                        
+                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                            Loc(x=pos_1[0], y=pos_1[1]), 
+                            Loc(x=pos_2[0], y=pos_2[1]), 
+                            Loc(x=pos_3[0], y=pos_3[1]), 
+                            ])
+
+                    break
+
+
+        else:
+
+            for id in self.obestacle_id_list:
+                if self.mode == "Ground_Truth" or self.mode == "No_mask":
+                    if id in self.gt_obstacle_id_list :
+                        pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                                    ])
+                    else: 
+                        if self.mode == "Ground_Truth":
+                            continue
+                        pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                                    ])
+                else:
+                    # risky_ids
+
+                    
+                    pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
+
+                    if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                        id = id % 65536
+                    if id in risky_ids:
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                                    ])
+                
+
+
+        # if self.args.obstacle_region:
+            
+        #     for id in vehicle_id_list:
+        #         if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+        #             id = id % 65536
+        #         if id in risky_ids:
+
+        #             for gt_id in self.gt_obstacle_id_list:
+                        
+        #                 pos_0 = actor_dict[gt_id]["cord_bounding_box"]["cord_0"]
+        #                 pos_1 = actor_dict[gt_id]["cord_bounding_box"]["cord_4"]
+        #                 pos_2 = actor_dict[gt_id]["cord_bounding_box"]["cord_6"]
+        #                 pos_3 = actor_dict[gt_id]["cord_bounding_box"]["cord_2"]
+
+        #                 obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+        #                     Loc(x=pos_1[0], y=pos_1[1]), 
+        #                     Loc(x=pos_2[0], y=pos_2[1]), 
+        #                     Loc(x=pos_3[0], y=pos_3[1]), 
+        #                     ])
+
+        #             break
+
+        # else:
         
         for id in vehicle_id_list:
             # Draw ego car 
@@ -1579,13 +1632,22 @@ class Inference():
     
     def save_video(self):
         path = self.variant_path.split("data_collection/")[1].replace("/", "#")
+
+        if self.args.obstacle_region:
         
-        if not os.path.exists(f"./{self.scenario_type}_results/{self.mode}"):
-            os.makedirs(f"./{self.scenario_type}_results/{self.mode}")
-        out = cv2.VideoWriter(f'./{self.scenario_type}_results/{self.mode}/{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
-        for img in self.topdown_debug_list:
-            out.write(img)
-        out.release()
+            if not os.path.exists(f"./{self.scenario_type}_region_results/{self.mode}"):
+                os.makedirs(f"./{self.scenario_type}_region_results/{self.mode}")
+            out = cv2.VideoWriter(f'./{self.scenario_type}_region_results/{self.mode}/{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
+            for img in self.topdown_debug_list:
+                out.write(img)
+            out.release()
+        else:
+            if not os.path.exists(f"./{self.scenario_type}_results/{self.mode}"):
+                os.makedirs(f"./{self.scenario_type}_results/{self.mode}")
+            out = cv2.VideoWriter(f'./{self.scenario_type}_results/{self.mode}/{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
+            for img in self.topdown_debug_list:
+                out.write(img)
+            out.release()
 
         with open("./result.txt", "a") as f:
             f.write(
@@ -2149,6 +2211,14 @@ def main():
                     'BC_two-stage' ],
             required=True,
             help='enable roaming actors')
+    
+
+    argparser.add_argument(
+        '--obstacle_region',
+        # default=False,
+        action='store_true',
+        help='run scenarios only')
+
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

@@ -11,9 +11,10 @@ echo "Choose from the following options:"
 echo ""
 echo " 0 - interactive"
 echo " 1 - obstacle"
+echo " 2 - obstacle region"
 echo ""
 read -p "Enter scenario type: " scenario_id
-
+echo ""
 echo "Input the method id you want to process"
 echo "Choose from the following options:"
 echo ""
@@ -38,6 +39,9 @@ if [ ${scenario_id} == 0 ]
 then
     scenario_type="interactive"
 elif [ ${scenario_id} == 1 ]
+then
+    scenario_type="obstacle"
+elif [ ${scenario_id} == 2 ]
 then
     scenario_type="obstacle"
 fi
@@ -110,8 +114,18 @@ while read F  ; do
                 echo "$SERVICE is  stopped"
                 ../../CarlaUE4.sh & sleep 10
             fi
-            python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode
+            if [ ${scenario_id} == 2 ]
+            then
+                python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode --obstacle_region
+            else:
+                python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode
+            fi
+        
         fi
     done
 done <./${scenario_type}_name.txt
-mv ./result.txt ./${scenario_type}_results/$mode.txt
+if [ ${scenario_id} == 2 ]
+then
+    mv ./result.txt ./${scenario_type}_region_results/$mode.txt
+else:
+    mv ./result.txt ./${scenario_type}_results/$mode.txt
