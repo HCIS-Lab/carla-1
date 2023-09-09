@@ -1124,12 +1124,16 @@ class Inference():
                     vehicle_list.append(remain_df)
             if self.mode == "Kalman_Filter":
                 risky_ids = self.kf_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_id_list)
+                risky_ids = risky_ids[:1]
             if self.mode == "MANTRA":
                 risky_ids = self.mantra_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict)
+                risky_ids = risky_ids[:1]
             if self.mode == "Social-GAN":
                 risky_ids = self.socal_gan_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict, self._args, self.generator)
+                risky_ids = risky_ids[:1]
             if self.mode == "QCNet":
                 risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict)
+                risky_ids = risky_ids[:1]
         # vision based methods
         elif self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised":
 
@@ -1155,14 +1159,17 @@ class Inference():
                 all_alphas = all_alphas[0]
                 
                 n_frame = -1
+                max_score = 0
                 for score, id in zip(all_alphas[n_frame], bbox_id_input[n_frame]):
                     score, id = score.cpu().numpy(), id
                     if id == -1:
                         break
-                    if round(float(score),2) > threshold: # 0.8
-                        # print(id)
-                        # print("---")
-                        risky_ids.append(int(id))
+                    score = round(float(score),2)
+                    if score > max_score:
+                        risky_ids = [int(id)]
+                        max_score = score
+                    # if round(float(score),2) > threshold: # 0.8
+                        # risky_ids.append(int(id))
 
         elif self.mode == "BC_two-stage" or self.mode == "BC_single-stage":
             tracking_results = []
