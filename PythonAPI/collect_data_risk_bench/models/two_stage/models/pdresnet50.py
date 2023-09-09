@@ -14,7 +14,7 @@ __all__ = ['PDResNet', 'pdresnet18', 'pdresnet34', 'pdresnet50', 'pdresnet101',
 model_urls = {
     'pdresnet18': '',
     'pdresnet34': '',
-    'pdresnet50': './models/two_stage/model_best.pth',
+    'pdresnet50': './models/weights/two_stage/model_best.pth',
     'inceptionresnetv2_partialConv': 'http://data.lip6.fr/cadene/pretrainedmodels/inceptionresnetv2-520b38e4.pth',
     'pdresnet101': '',
     'pdresnet152': '',
