@@ -140,8 +140,18 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
             two_result.append(str(actor_id))
             two_score.append(score[0]-confidence_go)
 
-        [single_score.index(max(single_score))]
+        # [single_score.index(max(single_score))]
 
-    return [single_result[single_score.index(max(single_score))]], \
-                [two_result[two_score.index(max(two_score))]]
+    print(single_score)
+    print(two_score)
+
+    if len(single_result) != 0:
+        single_score = [single_result[single_score.index(max(single_score))]]
+    if len(two_score) != 0:
+        two_score = [two_result[two_score.index(max(two_score))]]
+        
+
+
+    return single_score, two_score
+                
 
