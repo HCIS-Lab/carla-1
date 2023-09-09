@@ -386,10 +386,11 @@ def check_actor_list(world):
         min_id, max_id = check_row( actors, filter_str, min_id, max_id)        
     return min_id, max_id
 
-def generate_obstacle(world, bp, src_path, ego_transform):
+def generate_obstacle(world, bp, src_path, ego_transform, obstacle_GT_location):
     """
         stored_path : data_collection/{scenario_type}/{scenario_id}/{weather}+'_'+{random_actors}+'_'    
     """
+
 
     obstacle_list = json.load(open(src_path))
     obstacle_info = {}
@@ -418,6 +419,17 @@ def generate_obstacle(world, bp, src_path, ego_transform):
         x = float(location["x"])
         y = float(location["y"])
         z = float(location["z"])
+
+        # only spawn Ground truth obstacle
+        min_distance  = 1000
+        for loc in obstacle_GT_location:
+            gt_x = float(loc[0])
+            gt_y = float(loc[1])
+            distance = math.sqrt((x-gt_x)**2 + (y-gt_y)**2)
+            if distance < min_distance:
+                min_distance = distance
+        if min_distance > 1.5:
+            continue
 
         pitch = float(rotation["pitch"])
         yaw = float(rotation["yaw"])
@@ -1262,7 +1274,10 @@ class Inference():
                             min_distance = distance
                             min_id = id
 
-                risky_ids = [min_id]
+                if min_distance > 15:
+                    risky_ids = []
+                else:
+                    risky_ids = [min_id]
 
         # Get bbox for lbc Input 
 
@@ -1557,10 +1572,10 @@ class Inference():
     
     def save_video(self):
         path = self.variant_path.split("data_collection/")[1].replace("/", "#")
-
-        if not os.path.exists(f"./results/{self.mode}"):
-            os.makedirs(f"./results/{self.mode}")
-        out = cv2.VideoWriter(f'./results/{self.mode}/{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
+        
+        if not os.path.exists(f"./{self.scenario_type}_results/{self.mode}"):
+            os.makedirs(f"./{self.scenario_type}_results/{self.mode}")
+        out = cv2.VideoWriter(f'./{self.scenario_type}_results/{self.mode}/{path}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (256, 256)) 
         for img in self.topdown_debug_list:
             out.write(img)
         out.release()
@@ -1700,10 +1715,14 @@ def game_loop(args):
     min_dis = float('Inf')
     nearest_obstacle = -1
     if args.scenario_type == 'obstacle':
+        obstacle_GT_location = np.array([])
+        if args.map =="Town10HD" or args.map == "A6":    
+            obstacle_GT_location = np.load(f"{stored_path}/obstacle_location.npy")
+
 
         # GT_obstacle_location 
         nearest_obstacle, obstacle_info, obstacle_static_id_list, ill_parking_id_list = generate_obstacle(client.get_world(), blueprint_library,
-                                                            path+"/obstacle/obstacle_list.json", ego_transform)
+                                                            path+"/obstacle/obstacle_list.json", ego_transform, obstacle_GT_location)
 
     # set controller
     for actor_id, bp in filter_dict.items():
@@ -1899,10 +1918,10 @@ def game_loop(args):
 
             if world.collision_sensor.collision and args.scenario_type != 'collision':
                 print('unintentional collision, abandon scenario')
-                abandon_scenario = True
+                # abandon_scenario = True
             elif world.collision_sensor.wrong_collision:
                 print('collided with wrong object, abandon scenario')
-                abandon_scenario = True
+                # abandon_scenario = True
 
             if abandon_scenario:
                 if args.inference:

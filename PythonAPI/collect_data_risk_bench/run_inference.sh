@@ -6,6 +6,13 @@ touch result.txt
 
 SERVICE="CarlaUE4"
 
+echo "Which scenario you want to process"
+echo "Choose from the following options:"
+echo ""
+echo " 0 - interactive"
+echo " 1 - obstacle"
+echo ""
+read -p "Enter scenario type: " scenario_id
 
 echo "Input the method id you want to process"
 echo "Choose from the following options:"
@@ -26,6 +33,14 @@ echo " "
 
 read -p "Enter ID to run Planning-aware Evaluation Benchmark: " ds_id
 echo " "
+
+if [ ${scenario_id} == 0 ]
+then
+    scenario_type="interactive"
+elif [ ${scenario_id} == 1 ]
+then
+    scenario_type="obstacle"
+fi
 
 if [ ${ds_id} == 0 ]
 then
@@ -73,22 +88,21 @@ while read F  ; do
     # spilt the string according to  " "
     array=(${F// / })  
 
-    # COUNTER=0
+    COUNTER=0
     while  true ; do 
         echo inference ${array[0]} ${array[1]} ${array[2]} ${array[3]} ${array[4]} ${array[5]}
         if grep -q "${array[0]}#${array[1]}#${array[2]}#${array[3]}#${array[4]}#${array[5]}" ./result.txt
         then
             break
         else
-            #let COUNTER=COUNTER+1
-            # if [ ${COUNTER} == 10 ]
-            # then
-            #     killall -9 -r CarlaUE4-Linux
-            #     sleep 5
-            #     ../../CarlaUE4.sh & sleep 10
-            # fi
+            let COUNTER=COUNTER+1
+            if [ ${COUNTER} == 20 ]
+            then
+                killall -9 -r CarlaUE4-Linux
+                sleep 10
+            fi
 
-            # check if carla is alive
+            # check if carla be alive
             if pgrep "$SERVICE" >/dev/null
             then
                 echo "$SERVICE is running"
@@ -99,5 +113,5 @@ while read F  ; do
             python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode
         fi
     done
-done <./name.txt
-mv ./result.txt ./results/result_$mode.txt
+done <./${scenario_type}_name.txt
+mv ./result.txt ./${scenario_type}_results/$mode.txt

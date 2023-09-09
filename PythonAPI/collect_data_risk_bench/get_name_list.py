@@ -9,7 +9,7 @@ if __name__ =="__main__":
                         "--scenario_type",
                         type=str,
                         default="interactive", # "obstacle", "non-interactive", "collision"
-                        help="這是第 1 個引數，請輸入三個整數")
+                        )
 
     args = parser.parse_args()
     scenario = args.scenario_type
@@ -33,7 +33,7 @@ if __name__ =="__main__":
                 with open(f"./data_collection/{scenario}/{basic_scenario}/variant_scenario/{variant_scenario}/seed.txt") as f:
                     random_seed = int(f.readline())
                 print(scenario, basic_scenario, town, weather, actor, random_seed)
-                break
-                    
+                
+     
         
                     
