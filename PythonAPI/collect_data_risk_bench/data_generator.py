@@ -913,7 +913,7 @@ class Inference():
             data["obstacle"][_id]["type"] = "obstacle"
             data["obstacle"][_id]["cord_bounding_box"] = cord_bounding_box
 
-            if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
+            if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
                 self.df_list.append([frame, _id, type_id, str(actor_loc.x), str(actor_loc.y), 0 , 0, transform.yaw])
 
 
