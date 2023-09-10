@@ -1296,17 +1296,20 @@ class Inference():
                 if id in risky_ids:
 
                     for gt_id in self.gt_obstacle_id_list:
+                        try:
                         
-                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
-                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
-                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
-                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                            pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                            pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                            pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                            pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
 
-                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                            Loc(x=pos_1[0], y=pos_1[1]), 
-                            Loc(x=pos_2[0], y=pos_2[1]), 
-                            Loc(x=pos_3[0], y=pos_3[1]), 
-                            ])
+                            obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                ])
+                        except:
+                            pass
 
                     break
 
