@@ -14,6 +14,7 @@ echo " 1 - obstacle"
 echo " 2 - obstacle region"
 echo ""
 read -p "Enter scenario type: " scenario_id
+
 echo ""
 echo "Input the method id you want to process"
 echo "Choose from the following options:"
@@ -37,13 +38,13 @@ echo " "
 
 if [ ${scenario_id} == 0 ]
 then
-    scenario_type="interactive"
+    scenario="interactive"
 elif [ ${scenario_id} == 1 ]
 then
-    scenario_type="obstacle"
+    scenario="obstacle"
 elif [ ${scenario_id} == 2 ]
 then
-    scenario_type="obstacle"
+    scenario="obstacle"
 fi
 
 if [ ${ds_id} == 0 ]
@@ -123,9 +124,11 @@ while read F  ; do
         
         fi
     done
-done <./${scenario_type}_name.txt
+done <./${scenario}_name.txt
+
 if [ ${scenario_id} == 2 ]
 then
-    mv ./result.txt ./${scenario_type}_region_results/$mode.txt
-else:
-    mv ./result.txt ./${scenario_type}_results/$mode.txt
+    mv ./result.txt ./${scenario}_region_results/$mode.txt
+else
+    mv ./result.txt ./${scenario}_results/$mode.txt
+fi

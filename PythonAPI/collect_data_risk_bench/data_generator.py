@@ -913,6 +913,7 @@ class Inference():
             data["obstacle"][_id]["type"] = "obstacle"
             data["obstacle"][_id]["cord_bounding_box"] = cord_bounding_box
 
+            # if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
             if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
                 self.df_list.append([frame, _id, type_id, str(actor_loc.x), str(actor_loc.y), 0 , 0, transform.yaw])
 
@@ -1227,8 +1228,6 @@ class Inference():
             else:
                 risky_ids = single_result
 
-
-
         # rule based methods
         elif self.mode == "Random":
             ids = list(obstacle_ids) + list(obj_ids)
@@ -1288,30 +1287,34 @@ class Inference():
 
         # Get bbox for lbc Input 
 
+
+        
         if self.args.obstacle_region:
+            if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):
+
             
-            for id in self.gt_obstacle_id_list:
-                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
-                    id = id % 65536
-                if id in risky_ids:
+                for id in self.gt_obstacle_id_list:
+                    if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                        id = id % 65536
+                    if id in risky_ids:
 
-                    for gt_id in self.gt_obstacle_id_list:
-                        try:
-                        
-                            pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
-                            pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
-                            pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
-                            pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                        for gt_id in self.gt_obstacle_id_list:
+                            try:
+                            
+                                pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                                pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                                pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                                pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
 
-                            obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                Loc(x=pos_1[0], y=pos_1[1]), 
-                                Loc(x=pos_2[0], y=pos_2[1]), 
-                                Loc(x=pos_3[0], y=pos_3[1]), 
-                                ])
-                        except:
-                            pass
+                                obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                    ])
+                            except:
+                                pass
 
-                    break
+                        break
 
 
         else:
@@ -2206,14 +2209,13 @@ def main():
         type=int,
         help='use random_seed to replay the same behavior ')
     argparser.add_argument(
-            '--mode',
-            type=str,
-            choices=['No_mask', 'Ground_Truth', 'Random', 'Nearest', 
-                    'Kalman_Filter', 'Social-GAN', 'MANTRA', 'QCNet',
-                    'DSA-RNN', 'DSA-RNN-Supervised', 'BC_single-stage',
-                    'BC_two-stage' ],
-            required=True,
-            help='enable roaming actors')
+        '--mode',
+        type=str,
+        choices=['No_mask', 'Ground_Truth', 'Random', 'Nearest', 
+                'Kalman_Filter', 'Social-GAN', 'MANTRA', 'QCNet',
+                'DSA-RNN', 'DSA-RNN-Supervised', 'BC_single-stage',
+                'BC_two-stage' ],
+        help='enable roaming actors')
     
 
     argparser.add_argument(
