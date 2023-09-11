@@ -1290,9 +1290,7 @@ class Inference():
 
         
         if self.args.obstacle_region:
-            if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):
-
-            
+            if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):     
                 for id in self.gt_obstacle_id_list:
                     if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                         id = id % 65536
@@ -1316,9 +1314,40 @@ class Inference():
 
                         break
 
+            else:
+                for gt_id in self.gt_obstacle_id_list:
+                    try:
+                    
+                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
 
+                        obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                            Loc(x=pos_1[0], y=pos_1[1]), 
+                            Loc(x=pos_2[0], y=pos_2[1]), 
+                            Loc(x=pos_3[0], y=pos_3[1]), 
+                            ])
+                    except:
+                        pass
         else:
+            for gt_id in self.gt_obstacle_id_list:
+                try:
+                
+                    pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
 
+                    obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                        Loc(x=pos_1[0], y=pos_1[1]), 
+                        Loc(x=pos_2[0], y=pos_2[1]), 
+                        Loc(x=pos_3[0], y=pos_3[1]), 
+                        ])
+                except:
+                    continue
+
+                        
             for id in self.obestacle_id_list:
                 if self.mode == "Ground_Truth" or self.mode == "No_mask":
                     if id in self.gt_obstacle_id_list :
@@ -1363,31 +1392,6 @@ class Inference():
                                                     Loc(x=pos_3[0], y=pos_3[1]), 
                                                     ])
                 
-
-
-        # if self.args.obstacle_region:
-            
-        #     for id in vehicle_id_list:
-        #         if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
-        #             id = id % 65536
-        #         if id in risky_ids:
-
-        #             for gt_id in self.gt_obstacle_id_list:
-                        
-        #                 pos_0 = actor_dict[gt_id]["cord_bounding_box"]["cord_0"]
-        #                 pos_1 = actor_dict[gt_id]["cord_bounding_box"]["cord_4"]
-        #                 pos_2 = actor_dict[gt_id]["cord_bounding_box"]["cord_6"]
-        #                 pos_3 = actor_dict[gt_id]["cord_bounding_box"]["cord_2"]
-
-        #                 obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-        #                     Loc(x=pos_1[0], y=pos_1[1]), 
-        #                     Loc(x=pos_2[0], y=pos_2[1]), 
-        #                     Loc(x=pos_3[0], y=pos_3[1]), 
-        #                     ])
-
-        #             break
-
-        # else:
         
         for id in vehicle_id_list:
             # Draw ego car 
