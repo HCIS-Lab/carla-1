@@ -23,6 +23,8 @@ class CollisionSensor(object):
         self.hud = hud
         self.other_actor_id = 0  # init as 0 for static object
         self.wrong_collision = False
+
+        self.true_collision = False
         world = self._parent.get_world()
         bp = world.get_blueprint_library().find('sensor.other.collision')
         self.sensor = world.spawn_actor(
@@ -61,6 +63,9 @@ class CollisionSensor(object):
         self.collision = True
         self.collision_actor_id = event.other_actor.id
         self.collision_actor_type = actor_type
+
+        if event.other_actor.id == self.other_actor_id:
+            self.true_collision = True
         if event.other_actor.id != self.other_actor_id:
             self.wrong_collision = True
 

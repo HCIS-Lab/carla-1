@@ -28,9 +28,10 @@ class RGB:
 RGB_BY_MASK = {
 
     BirdViewMasks.AGENT: RGB.CHAMELEON,
-    BirdViewMasks.OBSTACLES: RGB.DARK_GRAY,    
-    BirdViewMasks.PEDESTRIANS: RGB.CHOCOLATE,
-    BirdViewMasks.VEHICLES: RGB.ORANGE,
+
+    BirdViewMasks.PEDESTRIANS: RGB.RED,  # RGB.CHOCOLATE, # 
+    BirdViewMasks.OBSTACLES: RGB.DARK_GRAY,
+    BirdViewMasks.VEHICLES: RGB.ORANGE, # 
     BirdViewMasks.ROAD_LINE: RGB.WHITE,
     BirdViewMasks.ROAD: RGB.DIM_GRAY,
     BirdViewMasks.UNLABELES: RGB.UNLABELES,
@@ -109,10 +110,10 @@ class BirdViewProducer:
         # self.road_line_mask()
         # self.crosswalk_mask()
         
-        
+    
     # draw 
     def produce(
-        self, vehicle_loc, yaw, agent_bbox_list, vehicle_bbox_list, pedestrians_bbox_list, obstacle_bbox_list, 
+        self, vehicle_loc, yaw, agent_bbox_list, vehicle_bbox_list, pedestrians_bbox_list, obstacle_bbox_list, risk_bbox_list=[], other_bbox_list=[], risk_vis=False
     ) -> BirdView:
         
         # Reusing already generated static masks for whole map
@@ -151,13 +152,24 @@ class BirdViewProducer:
         self.masks_generator.enable_local_rendering_mode(rendering_window)
         
         
-        # draw actor 
-        masks = self._render_actors_masks(agent_bbox_list, 
-                                          vehicle_bbox_list, 
-                                          pedestrians_bbox_list, 
-                                          obstacle_bbox_list, 
-                                          masks)
+
         
+        if risk_vis:
+            masks = self._render_actors_masks_risk_bench_vis(agent_bbox_list, 
+                                            risk_bbox_list, 
+                                            other_bbox_list, 
+                                            masks)
+            
+        else:
+            # draw actor 
+            masks = self._render_actors_masks(agent_bbox_list, 
+                                            vehicle_bbox_list, 
+                                            pedestrians_bbox_list, 
+                                            obstacle_bbox_list, 
+                                            masks)
+        
+
+
         # agent_bbox_list,
         # vehicle_bbox_list,
         # pedestrians_bbox_list,
@@ -175,7 +187,29 @@ class BirdViewProducer:
         return cropped_masks[ordered_indices]
     
     
-
+    def _render_actors_masks_risk_bench_vis(
+        self,
+        agent_bbox_list,
+        risk_bbox_list,
+        other_bbox_list,
+        masks: np.ndarray,
+    ) -> np.ndarray:
+        """Fill masks with ones and zeros (more precisely called as "bitmask").
+        Although numpy dtype is still the same, additional semantic meaning is being added.
+        """
+        
+        masks[BirdViewMasks.AGENT.value] = self.masks_generator.draw_bbox_mask(
+            agent_bbox_list
+        )
+        masks[BirdViewMasks.PEDESTRIANS.value] = self.masks_generator.draw_bbox_mask(
+            risk_bbox_list
+        )
+        masks[BirdViewMasks.OBSTACLES.value] = self.masks_generator.draw_bbox_mask(
+            other_bbox_list
+        )
+        
+        
+        return masks
     def _render_actors_masks(
         self,
         agent_bbox_list,

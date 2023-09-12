@@ -501,6 +501,7 @@ class Inference():
         self.gt_interactor = -1
 
         self.gt_obstacle_id_list = []
+        self.gt_obstacle_id_nearest = -1
 
         self.birdview_producer = BirdViewProducer(
                 self.args.map, 
@@ -509,9 +510,9 @@ class Inference():
 
         # load LBC model 
         if self.scenario_type =="interactive":
-            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/interactive_epoch=3.ckpt")
+            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/interactive.ckpt")
         elif self.scenario_type =="obstacle":
-            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/obstacle_epoch=2.ckpt")
+            self.net = MapModel.load_from_checkpoint("./models/weights/LBC/obstacle.ckpt")
 
         self.net.cuda()
         self.net.eval()
@@ -536,6 +537,8 @@ class Inference():
 
         self.bbox_list_DSA = []
         self.bbox_id_list_DSA = []
+
+        self.collision_flag = False
 
         if self.mode == "Kalman_Filter":
             from models.KalmanFilter import kf_inference
@@ -673,7 +676,7 @@ class Inference():
         self.end_position_x = x
         self.end_position_y = y
         
-    def set_gt_obstacle_ids(self, obstacle_gt_location, world):
+    def set_gt_obstacle_ids(self, obstacle_gt_location, world, obstacle_nearest_id):
 
         # get obstacle gt ids
         obstacle = world.world.get_actors().filter("*static.prop*")
@@ -715,6 +718,9 @@ class Inference():
             gt_obstacle_id_list.append(gt_id)
 
         self.gt_obstacle_id_list = gt_obstacle_id_list
+        self.gt_obstacle_id_nearest = obstacle_nearest_id
+
+
 
 
     def collect_actor_data(self, world, frame):
@@ -1088,6 +1094,10 @@ class Inference():
         vehicle_bbox_list = []
         agent_bbox_list = []
 
+        # for risk vis 
+        risk_bbox_list=[]
+        other_bbox_list=[]
+
         # interactive id 
         vehicle_id_list = list(actor_dict["vehicles_ids"])
         # pedestrian id list 
@@ -1280,15 +1290,27 @@ class Inference():
                             min_distance = distance
                             min_id = id
 
-                if min_distance > 15:
+                if min_distance > 10 :#15:
                     risky_ids = []
                 else:
                     risky_ids = [min_id]
 
+
+        else:
+            risky_ids = []
         # Get bbox for lbc Input 
 
-
+        print("*******************************************88")
         
+        tmp = []
+        for id in risky_ids:
+            tmp.append(int(id))
+        risky_ids = tmp
+        print(risky_ids)    
+        print(self.gt_obstacle_id_list)
+        print(self.gt_interactor)
+
+
         if self.args.obstacle_region:
             if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):     
                 for id in self.gt_obstacle_id_list:
@@ -1298,7 +1320,6 @@ class Inference():
 
                         for gt_id in self.gt_obstacle_id_list:
                             try:
-                            
                                 pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
                                 pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
                                 pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
@@ -1311,9 +1332,6 @@ class Inference():
                                     ])
                             except:
                                 pass
-
-                        break
-
             else:
                 for gt_id in self.gt_obstacle_id_list:
                     try:
@@ -1328,6 +1346,7 @@ class Inference():
                             Loc(x=pos_2[0], y=pos_2[1]), 
                             Loc(x=pos_3[0], y=pos_3[1]), 
                             ])
+                        print("append gt obstacle id ")
                     except:
                         pass
         else:
@@ -1347,8 +1366,7 @@ class Inference():
                 except:
                     continue
 
-                        
-            for id in self.obestacle_id_list:
+
                 if self.mode == "Ground_Truth" or self.mode == "No_mask":
                     if id in self.gt_obstacle_id_list :
                         pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
@@ -1376,8 +1394,6 @@ class Inference():
                                                     ])
                 else:
                     # risky_ids
-
-                    
                     pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
                     pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
                     pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
@@ -1407,7 +1423,9 @@ class Inference():
                                         Loc(x=pos_3[0], y=pos_3[1]), 
                                         ])
                 continue
+                
 
+            
             if self.mode == "Ground_Truth" or self.mode == "No_mask":   
                 pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
@@ -1420,7 +1438,7 @@ class Inference():
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
-                            
+                        
                 elif id in self.ill_parking_id_list:
                     
                     if id in self.gt_obstacle_id_list:
@@ -1469,6 +1487,7 @@ class Inference():
                                 Loc(x=pos_2[0], y=pos_2[1]), 
                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                 ])
+
     
         for id in pedestrian_id_list:
             if self.mode == "Ground_Truth" or self.mode == "No_mask":
@@ -1509,11 +1528,153 @@ class Inference():
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
                                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                                 ])
+                    
+
+
+        ### for vis ############################################
+
+        for id in pedestrian_id_list:
+            pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+            pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+            pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+            pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+            if self.mode == "No_mask":
+                risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+            elif self.mode == "Ground_Truth":
+                if int(id) == int(interactor_id):
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ])  
+                else:
+                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+            else:
+                # other method 
+                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    id = id % 65536
+
+                if id in risky_ids:
+                    # mod 65536
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+                else:
+                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+                
+        for id in vehicle_id_list:
+            if int(id) == int(ego_id):
+                continue
+            pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
+            pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
+            pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
+            pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
+
+            if self.mode == "No_mask":
+                risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+                
+            elif self.mode == "Ground_Truth":
+                if int(id) == int(interactor_id):
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ])  
+                elif id in self.gt_obstacle_id_list:
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ]) 
+                else:
+                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+            else:
+                # other method 
+                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    id = id % 65536
+
+                if id in risky_ids:
+                    # mod 65536
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+                else:
+                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+
+        for gt_id in self.gt_obstacle_id_list:
+            try:
+                pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+            except:
+               continue
+            if self.mode == "No_mask":
+                risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+            elif self.mode == "Ground_Truth":
+                risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                    ]) 
+            else:
+                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    id = id % 65536
+                if id in risky_ids:
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+                else:
+                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+               
+                
+        if self.mode == "No_mask":
+            risk_bbox_list += self.static_vehicle_bbox_list
+        else:
+            other_bbox_list += self.static_vehicle_bbox_list 
+
 
         # static vehicle bbox 
         # self.static_vehicle_bbox_list
         if self.mode == "No_mask" :
-            
             vehicle_bbox_list = vehicle_bbox_list + self.static_vehicle_bbox_list
 
         birdview: BirdView = self.birdview_producer.produce(ego_pos, yaw=ego_yaw,
@@ -1587,6 +1748,17 @@ class Inference():
         # vis the result 
         # draw target point on BEV map 
 
+
+
+        birdview: BirdView = self.birdview_producer.produce(ego_pos, yaw=ego_yaw,
+                                                agent_bbox_list=agent_bbox_list, 
+                                                vehicle_bbox_list=[],
+                                                pedestrians_bbox_list=[],
+                                                obstacle_bbox_list=[],
+                                                risk_bbox_list=risk_bbox_list,
+                                                other_bbox_list=other_bbox_list,
+                                                risk_vis=True)
+
         topview_rgb = BirdViewProducer.as_rgb(birdview)
         _topdown = Image.fromarray(topview_rgb)
 
@@ -1599,7 +1771,7 @@ class Inference():
             x = (x + 1) / 2 * 256
             y = (y + 1) / 2 * 256
 
-            _draw.ellipse((x-2, y-2, x+2, y+2), (255, 0, 0))
+            _draw.ellipse((x-2, y-2, x+2, y+2), (233, 185, 110))#(255, 0, 0))
 
         _topdown = cv2.cvtColor(np.asarray(_topdown), cv2.COLOR_RGB2BGR)
 
@@ -1617,11 +1789,12 @@ class Inference():
 
         elif self.scenario_type == "obstacle":
 
-            for id in self.gt_obstacle_id_list:
-                interactor_location = world.world.get_actor(id).get_location()
-                distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
-                if distance < self.min_distance:
-                    self.min_distance = distance
+            #for id in self.gt_obstacle_id_list:
+            id = self.gt_obstacle_id_nearest
+            interactor_location = world.world.get_actor(id).get_location()
+            distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
+            if distance < self.min_distance:
+                self.min_distance = distance
 
         # draw waypoints
         distance = math.sqrt((ego_pos.x - self.end_position_x)**2 + (ego_pos.y - self.end_position_y)**2)
@@ -1661,7 +1834,7 @@ class Inference():
 
         with open("./result.txt", "a") as f:
             f.write(
-                f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}#{self.min_distance}\n")
+                f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}#{self.min_distance}#{self.collision_flag}\n")
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -1800,7 +1973,7 @@ def game_loop(args):
 
 
         # GT_obstacle_location 
-        nearest_obstacle, obstacle_info, obstacle_static_id_list, ill_parking_id_list = generate_obstacle(client.get_world(), blueprint_library,
+        nearest_obstacle_id, obstacle_info, obstacle_static_id_list, ill_parking_id_list = generate_obstacle(client.get_world(), blueprint_library,
                                                             path+"/obstacle/obstacle_list.json", ego_transform, obstacle_GT_location)
 
     # set controller
@@ -1883,12 +2056,18 @@ def game_loop(args):
         if args.scenario_type == 'obstacle':
             inference.set_obstacle_ids(obstacle_static_id_list, ill_parking_id_list)
 
+            # nearest_obstacle
+
+
         gt_interactor_id = -1
         if args.scenario_type == "interactive" or args.scenario_type == "collision":
             keys = list(agents_dict.keys())
             keys.remove('player')
             gt_interactor_id = int(agents_dict[keys[0]].id)
-            inference.set_gt_interactor(gt_interactor_id)
+            inference.set_gt_interactor(gt_interactor_id )
+            world.collision_sensor.other_actor_id = gt_interactor_id
+
+        
 
         inference.set_scenario_type(args.scenario_type)
         inference.set_ego_id(world)
@@ -1898,8 +2077,11 @@ def game_loop(args):
             if args.map =="Town10HD" or args.map == "A6":
                 
                 obstacle_GT_location = np.load(f"{stored_path}/obstacle_location.npy")
-                inference.set_gt_obstacle_ids(obstacle_GT_location, world)
-            
+                inference.set_gt_obstacle_ids(obstacle_GT_location, world, nearest_obstacle_id)
+
+                world.collision_sensor.other_actor_id = nearest_obstacle_id
+
+
     if args.scenario_type:
         collision_detect_end = False
         collision_counter = 0
@@ -1995,12 +2177,24 @@ def game_loop(args):
             if controller.parse_events(client, world, clock) == 1:
                 return
 
+
+# 
+            if world.collision_sensor.true_collision and args.scenario_type != 'collision':
+                print('true_collision, abandon scenario')
+                inference.collision_flag = True
+                abandon_scenario = True
+
+
             if world.collision_sensor.collision and args.scenario_type != 'collision':
                 print('unintentional collision, abandon scenario')
-                # abandon_scenario = True
+
+            
             elif world.collision_sensor.wrong_collision:
                 print('collided with wrong object, abandon scenario')
+                
                 # abandon_scenario = True
+
+
 
             if abandon_scenario:
                 if args.inference:
