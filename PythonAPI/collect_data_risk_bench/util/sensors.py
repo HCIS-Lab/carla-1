@@ -22,6 +22,7 @@ class CollisionSensor(object):
         self._parent = parent_actor
         self.hud = hud
         self.other_actor_id = 0  # init as 0 for static object
+        self.other_actor_ids = []  # init as 0 for static object
         self.wrong_collision = False
 
         self.true_collision = False
@@ -64,7 +65,11 @@ class CollisionSensor(object):
         self.collision_actor_id = event.other_actor.id
         self.collision_actor_type = actor_type
 
-        if event.other_actor.id == self.other_actor_id:
+        
+
+        if event.other_actor.id in self.other_actor_ids:
+            self.true_collision = True
+        if event.other_actor.id == self.other_actor_id: 
             self.true_collision = True
         if event.other_actor.id != self.other_actor_id:
             self.wrong_collision = True

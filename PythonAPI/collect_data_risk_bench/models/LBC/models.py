@@ -14,6 +14,8 @@ class RawController(torch.nn.Module):
 
                 torch.nn.BatchNorm1d(k),
                 torch.nn.Linear(k, k), torch.nn.ReLU(),
+                
+                # torch.nn.Dropout(0.5),
 
                 torch.nn.BatchNorm1d(k),
                 torch.nn.Linear(k, 2))

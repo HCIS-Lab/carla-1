@@ -14,11 +14,11 @@ class RGB:
     VIOLET = (173, 127, 168)
     ORANGE = (252, 175, 62)
     CHOCOLATE = (233, 185, 110)
-    CHAMELEON = (138, 226, 52)
+    CHAMELEON = (51,115,182) #(138, 226, 52)
     SKY_BLUE = (114, 159, 207)
     DIM_GRAY = (105, 105, 105)
-    DARK_GRAY = (50, 50, 50)
-    RED = (255, 0, 0)
+    DARK_GRAY = (129,214,82) #(50, 50, 50)
+    RED = (255, 0, 0) # risk object 
     GREEN = (0, 255, 0)
     YELLOW = (255, 255, 0)
     WHITE = (255, 255, 255)
@@ -29,8 +29,9 @@ RGB_BY_MASK = {
 
     BirdViewMasks.AGENT: RGB.CHAMELEON,
 
-    BirdViewMasks.PEDESTRIANS: RGB.RED,  # RGB.CHOCOLATE, # 
+    BirdViewMasks.PEDESTRIANS: RGB.RED,  # RGB.CHOCOLATE, # risk object 
     BirdViewMasks.OBSTACLES: RGB.DARK_GRAY,
+
     BirdViewMasks.VEHICLES: RGB.ORANGE, # 
     BirdViewMasks.ROAD_LINE: RGB.WHITE,
     BirdViewMasks.ROAD: RGB.DIM_GRAY,
@@ -199,13 +200,13 @@ class BirdViewProducer:
         """
         
         masks[BirdViewMasks.AGENT.value] = self.masks_generator.draw_bbox_mask(
-            agent_bbox_list
+            agent_bbox_list, fill_flag= True
         )
         masks[BirdViewMasks.PEDESTRIANS.value] = self.masks_generator.draw_bbox_mask(
-            risk_bbox_list
+            risk_bbox_list,  fill_flag= True
         )
         masks[BirdViewMasks.OBSTACLES.value] = self.masks_generator.draw_bbox_mask(
-            other_bbox_list
+            other_bbox_list,  fill_flag= False
         )
         
         

@@ -133,11 +133,11 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
         # two_result[str(actor_id)] = bool(score[0]-confidence_go>0.03 and confidence_go<0.5)
 
         if attn>0.35 and confidence_go < 0.4:
-            single_result.append(str(actor_id))
+            single_result.append(int(actor_id))
             single_score.append(attn)
 
         if score[0]-confidence_go>0.2 and confidence_go<0.5:
-            two_result.append(str(actor_id))
+            two_result.append(int(actor_id))
             two_score.append(score[0]-confidence_go)
 
         # [single_score.index(max(single_score))]

@@ -614,7 +614,7 @@ class Inference():
             # ckpt = {'DSA_no_intention':'8_27_3_46','DSA_intention':'9_1_2_2','RRL_no_intention':'8_29_21_34','RRL_intention':'8_29_18_21'}
             # model_names = [['DSA_no_intention','DSA_intention'],['RRL_no_intention','RRL_intention']]
 
-            from models.dsa.dsa_rnn import Baseline_SA
+            from models.dsa.DSA_RRL import Baseline_SA
             from models.dsa.backbone import Riskbench_backbone
 
             intention  = False
@@ -623,23 +623,27 @@ class Inference():
             object_num = 20
             n_frame = 40
             device = torch.device('cuda')
+
             backbone = Riskbench_backbone(8,object_num,intention=intention)
-            self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised)
+            self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised, state= False)
+            # 
+            # self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised,state=state)
+
             self.dsa_model.load_state_dict(torch.load(model_path,map_location=device))
             self.dsa_model.cuda()
             self.dsa_model.eval()
         elif self.mode == "DSA-RNN-Supervised":
-            from models.dsa.dsa_rnn import Baseline_SA
+            from models.dsa.DSA_RRL import Baseline_SA
             from models.dsa.backbone import Riskbench_backbone
 
             intention  = False
             supervised = True
-            model_path = f"./models/weights/dsa/8_29_21_34/best_model.pt"
+            model_path = f"./models/weights/dsa/9_12_0_56/best_model.pt"
             object_num = 20
             n_frame = 40
             device = torch.device('cuda')
             backbone = Riskbench_backbone(8,object_num,intention=intention)
-            self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised)
+            self.dsa_model = Baseline_SA(backbone,n_frame,object_num,intention=intention,supervised=supervised, state= False)
             self.dsa_model.load_state_dict(torch.load(model_path,map_location=device))
             self.dsa_model.cuda()
             self.dsa_model.eval()
@@ -720,10 +724,14 @@ class Inference():
         self.gt_obstacle_id_list = gt_obstacle_id_list
         self.gt_obstacle_id_nearest = obstacle_nearest_id
 
+        return gt_obstacle_id_list
+
 
 
 
     def collect_actor_data(self, world, frame):
+
+        all_id_list = []
 
         if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
             if self.df_start_frame == 0:
@@ -784,6 +792,12 @@ class Inference():
                 counter += 1
 
             distance = ego_loc.distance(actor_loc)
+
+
+            if distance < 35:
+                if _id != self.ego_id:
+                    all_id_list.append(_id)
+
 
 
             vehicles_id_list.append(_id)
@@ -854,6 +868,10 @@ class Inference():
 
             distance = ego_loc.distance(actor_loc)
 
+            if distance < 35:
+                
+                all_id_list.append(_id)
+
             
             pedestrian_id_list.append(_id)
 
@@ -898,6 +916,11 @@ class Inference():
             transform = actor.get_transform().rotation
             rotation = get_xyz(transform, True)
             distance = ego_loc.distance(actor_loc)
+
+
+            if distance < 35:
+                all_id_list.append(_id)
+
             bbox = actor.bounding_box
 
             cord_bounding_box = {}
@@ -929,6 +952,7 @@ class Inference():
         data["obstacle_ids"] = obstacle_id_list
         data["vehicles_ids"] = vehicles_id_list
         data["pedestrian_ids"] = pedestrian_id_list
+        data["all_ids"] = all_id_list
 
         return data
     
@@ -1088,6 +1112,8 @@ class Inference():
 
         # if scneario is non-interactive, obstacle --> interactor_id is -1 
         interactor_id = self.gt_interactor
+
+        all_ids_list = actor_dict["all_ids"]
         
         obstacle_bbox_list = []
         pedestrian_bbox_list = []
@@ -1240,17 +1266,19 @@ class Inference():
 
         # rule based methods
         elif self.mode == "Random":
-            ids = list(obstacle_ids) + list(obj_ids)
+            # ids = list(obstacle_ids) + list(obj_ids)
 
-            for id in ids:
-                if id == (self.ego_id % 65536):
-                    ids.remove(id)
+            # for id in ids:
+            #     if id == (self.ego_id % 65536):
+            #         ids.remove(id)
+            # all_ids_list
 
-            if len(ids) != 0 :
-                risky_ids = []
-                for id in ids:
-                    if random.random() > 0.5:
-                        risky_ids.append(id)
+            if len(all_ids_list) != 0 :
+                risky_ids = [random.choice(all_ids_list)]
+                # for id in ids:
+                #     if random.random() > 0.5:
+                #         risky_ids.append(id)
+
             else:
                 risky_ids = []
                 
@@ -1300,21 +1328,21 @@ class Inference():
             risky_ids = []
         # Get bbox for lbc Input 
 
-        print("*******************************************88")
+        print("***************************************************")
         
         tmp = []
         for id in risky_ids:
             tmp.append(int(id))
         risky_ids = tmp
-        print(risky_ids)    
-        print(self.gt_obstacle_id_list)
-        print(self.gt_interactor)
+        print("          risky id: ", risky_ids)    
+        print("Ground obstacle id: ", self.gt_obstacle_id_list)
+        print("     Interactor id: ", self.gt_interactor)
 
 
         if self.args.obstacle_region:
             if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):     
                 for id in self.gt_obstacle_id_list:
-                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
                         id = id % 65536
                     if id in risky_ids:
 
@@ -1399,7 +1427,7 @@ class Inference():
                     pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
                     pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
-                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
                         id = id % 65536
                     if id in risky_ids:
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -1470,7 +1498,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random" :
+                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random" :
                     id = id % 65536
 
                 
@@ -1517,7 +1545,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1559,7 +1587,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1575,7 +1603,7 @@ class Inference():
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
                                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                                 ])
-                
+                                 
         for id in vehicle_id_list:
             if int(id) == int(ego_id):
                 continue
@@ -1612,7 +1640,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage":  # or self.mode == "Random":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1650,20 +1678,59 @@ class Inference():
                                     Loc(x=pos_3[0], y=pos_3[1]), 
                                     ]) 
             else:
-                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
-                    id = id % 65536
-                if id in risky_ids:
-                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" : # or self.mode == "Random":
+                    id = gt_id % 65536
+
+                if not self.args.obstacle_region:
+
+                    if id in risky_ids:
+                        risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                                    ])
+                    else:
+                        other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                    Loc(x=pos_1[0], y=pos_1[1]), 
+                                                    Loc(x=pos_2[0], y=pos_2[1]), 
+                                                    Loc(x=pos_3[0], y=pos_3[1]), 
+                                                    ])
+                        
+            if self.args.obstacle_region:
+                in_risky_id_flag = False
+                
+                
+                for gt_id in self.gt_obstacle_id_list:
+                    if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": #  or self.mode == "Random":
+                        id = gt_id % 65536
+                    if id in risky_ids:
+                        in_risky_id_flag = True
+                
+                
+                for gt_id in self.gt_obstacle_id_list:
+
+                    try:
+                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                    except:
+                        continue
+                    if in_risky_id_flag:
+                        risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                                 Loc(x=pos_1[0], y=pos_1[1]), 
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
                                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                                 ])
-                else:
-                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+
+                    else:
+                        other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                                 Loc(x=pos_1[0], y=pos_1[1]), 
                                                 Loc(x=pos_2[0], y=pos_2[1]), 
                                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                                 ])
+
+
                
                 
         if self.mode == "No_mask":
@@ -1771,7 +1838,7 @@ class Inference():
             x = (x + 1) / 2 * 256
             y = (y + 1) / 2 * 256
 
-            _draw.ellipse((x-2, y-2, x+2, y+2), (233, 185, 110))#(255, 0, 0))
+            _draw.ellipse((x-2, y-2, x+2, y+2), (35,80,127))#(255, 0, 0))
 
         _topdown = cv2.cvtColor(np.asarray(_topdown), cv2.COLOR_RGB2BGR)
 
@@ -1995,6 +2062,8 @@ def game_loop(args):
             # set other actor id for checking collision object's identity
             world.collision_sensor.other_actor_id = agents_dict[actor_id].id
 
+            # 
+
         if 'vehicle' in bp:
             controller_dict[actor_id] = VehiclePIDController(agents_dict[actor_id], args_lateral={'K_P': 1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal={'K_P': 1, 'K_D': 0.0, 'K_I': 0.0},
                                                              max_throttle=1.0, max_brake=1.0, max_steering=1.0)
@@ -2080,6 +2149,9 @@ def game_loop(args):
                 inference.set_gt_obstacle_ids(obstacle_GT_location, world, nearest_obstacle_id)
 
                 world.collision_sensor.other_actor_id = nearest_obstacle_id
+                world.collision_sensor.other_actor_ids = (obstacle_static_id_list+ ill_parking_id_list)
+
+                
 
 
     if args.scenario_type:
@@ -2180,17 +2252,17 @@ def game_loop(args):
 
 # 
             if world.collision_sensor.true_collision and args.scenario_type != 'collision':
-                print('true_collision, abandon scenario')
+                print('True_collision, abandon scenario')
                 inference.collision_flag = True
                 abandon_scenario = True
 
 
             if world.collision_sensor.collision and args.scenario_type != 'collision':
-                print('unintentional collision, abandon scenario')
+                print('unintentional collision')
 
             
             elif world.collision_sensor.wrong_collision:
-                print('collided with wrong object, abandon scenario')
+                print('collided with wrong object')
                 
                 # abandon_scenario = True
 

@@ -1,7 +1,7 @@
 # kill al carla server 
 killall -9 -r CarlaUE4-Linux
 # rm ./result.txt
-sleep 5
+
 touch result.txt
 
 SERVICE="CarlaUE4"

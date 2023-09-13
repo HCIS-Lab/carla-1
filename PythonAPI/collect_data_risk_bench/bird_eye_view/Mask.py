@@ -160,13 +160,21 @@ class MapMaskGenerator:
             )
         return np.zeros(shape, np.uint8)
     
-    def draw_bbox_mask(self, bbox_list) -> Mask:
+    def draw_bbox_mask(self, bbox_list, fill_flag = False) -> Mask:
         canvas = self.make_empty_mask()
         # Carla corrin to pixel 
         
         for corners in bbox_list:
             corners = [self.location_to_pixel(loc) for loc in corners]
-            cv2.fillPoly(img=canvas, pts=np.int32([corners]), color=COLOR_ON)
+            # 
+            #
+
+            if fill_flag:
+                cv2.fillPoly(img=canvas, pts=np.int32([corners]), color=COLOR_ON)
+
+            else:
+                cv2.drawContours(canvas, np.int32([corners]), -1, COLOR_ON, 1)
+
         return canvas    
         
         

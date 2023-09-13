@@ -99,7 +99,7 @@ class MapModel(pl.LightningModule):
         
         self.net = SegmentationModel(8, 4, hack=hparams.hack, temperature=hparams.temperature)
         
-        self.controller = RawController(4)
+        self.controller = RawController(4 ) # , k=64)
 
     def forward(self, topdown, target, debug=False):
 
