@@ -1314,7 +1314,7 @@ class Inference():
         if self.args.obstacle_region:
             if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):     
                 for id in self.gt_obstacle_id_list:
-                    if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                         id = id % 65536
                     if id in risky_ids:
 
@@ -1399,7 +1399,7 @@ class Inference():
                     pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
                     pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
-                    if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                         id = id % 65536
                     if id in risky_ids:
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -1470,7 +1470,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random" :
+                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random" :
                     id = id % 65536
 
                 
@@ -1517,7 +1517,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1559,7 +1559,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1612,7 +1612,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1650,7 +1650,7 @@ class Inference():
                                     Loc(x=pos_3[0], y=pos_3[1]), 
                                     ]) 
             else:
-                if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
+                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" or self.mode == "Random":
                     id = id % 65536
                 if id in risky_ids:
                     risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
