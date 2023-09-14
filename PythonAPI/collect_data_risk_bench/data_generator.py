@@ -1662,7 +1662,7 @@ class Inference():
         if self.args.obstacle_region:
 
 
-            if self.mode == "Full_Observation" or self.mode == "Full_Observation":
+            if self.mode == "Full_Observation" or self.mode == "Ground_Truth":
 
                 for gt_id in self.gt_obstacle_id_list:
 

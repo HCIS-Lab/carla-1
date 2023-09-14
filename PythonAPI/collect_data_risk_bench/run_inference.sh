@@ -111,7 +111,7 @@ while read F  ; do
                 echo "$SERVICE is  stopped"
                 ../../CarlaUE4.sh & sleep 10
             fi
-            if [ ${scenario_id} == 2 ]
+            if [ ${scenario_id} == 3 ]
             then
                 python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode --obstacle_region
             else
@@ -122,7 +122,7 @@ while read F  ; do
     done
 done <./${scenario}_name.txt
 
-if [ ${scenario_id} == 2 ]
+if [ ${scenario_id} == 3 ]
 then
     mv ./result.txt ./${scenario}_region_results/$mode.txt
 else
