@@ -11,7 +11,7 @@ obstacle 10_i-1_0_r_sr Town10HD HardRainNoon mid 13331
 obstacle 10_i-1_0_r_sr Town10HD HardRainSunset mid 46148
 obstacle 10_i-1_0_r_sr Town10HD MidRainSunset low 92899
 obstacle 10_i-1_0_r_sr Town10HD WetSunset low 57729
-obstacle 10_i-1_1_f_sr Town10HD ClearSunset mid 11676
+obstacle 10_i-1_1_f_sr Town10HD ClearSunset mid 11679
 obstacle 10_i-1_1_f_sr Town10HD CloudyNoon mid 88898
 obstacle 10_i-1_1_f_sr Town10HD HardRainNoon mid 10745
 obstacle 10_i-1_1_f_sr Town10HD HardRainSunset high 51331

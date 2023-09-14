@@ -1660,37 +1660,57 @@ class Inference():
 
                       
         if self.args.obstacle_region:
-            in_risky_id_flag = False
-            
-            for gt_id in self.gt_obstacle_id_list:
-                if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP": 
-                    id = gt_id % 65536
-                if id in risky_ids:
-                    in_risky_id_flag = True
-            
-            
-            for gt_id in self.gt_obstacle_id_list:
 
-                try:
-                    pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
-                    pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
-                    pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
-                    pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
-                except:
-                    continue
-                if in_risky_id_flag:
+
+            if self.mode == "Full_Observation" or self.mode == "Full_Observation":
+
+                for gt_id in self.gt_obstacle_id_list:
+
+                    try:
+                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                    except:
+                        continue
+                    
                     risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
+            else:
+                in_risky_id_flag = False
+                
+                for gt_id in self.gt_obstacle_id_list:
+                    if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP": 
+                        id = gt_id % 65536
+                    if id in risky_ids:
+                        in_risky_id_flag = True
+                
+                
+                for gt_id in self.gt_obstacle_id_list:
 
-                else:
-                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                            Loc(x=pos_1[0], y=pos_1[1]), 
-                                            Loc(x=pos_2[0], y=pos_2[1]), 
-                                            Loc(x=pos_3[0], y=pos_3[1]), 
-                                            ])
+                    try:
+                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                    except:
+                        continue
+                    if in_risky_id_flag:
+                        risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+
+                    else:
+                        other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
         else:
             for gt_id in self.gt_obstacle_id_list:
                 try:
