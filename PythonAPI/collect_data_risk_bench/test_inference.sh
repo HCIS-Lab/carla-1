@@ -19,18 +19,18 @@ echo ""
 echo "Input the method id you want to process"
 echo "Choose from the following options:"
 echo ""
-echo "  1 - No mask"
+echo "  1 - Full Observation"
 echo "  2 - Ground Truth"
 echo "  3 - Random"
-echo "  4 - Nearest"
+echo "  4 - Range"
 echo "  5 - KalmanFilter"
 echo "  6 - Social-GAN"
 echo "  7 - MANTRA"
 echo "  8 - QCNet"
-echo "  9 - DSA-RNN"
-echo " 10 - DSA-RNN-Supervised"
-echo " 11 - BC single-stage"
-echo " 12 - BC two-stage"
+echo "  9 - DSA"
+echo " 10 - RRL"
+echo " 11 - BP"
+echo " 12 - BCP"
 echo " "
 
 read -p "Enter ID to run Planning-aware Evaluation Benchmark: " ds_id
@@ -49,7 +49,7 @@ fi
 
 if [ ${ds_id} == 1 ]
 then
-    mode="No_mask"
+    mode="Full_Observation"
 elif [ ${ds_id} == 2 ]
 then
     mode="Ground_Truth"
@@ -58,7 +58,7 @@ then
     mode="Random"
 elif [ ${ds_id} == 4 ]
 then
-    mode="Nearest"
+    mode="Range"
 elif [ ${ds_id} == 5 ]
 then
     mode="Kalman_Filter"
@@ -73,16 +73,16 @@ then
     mode="QCNet"
 elif [ ${ds_id} == 9 ]
 then
-    mode="DSA-RNN"
+    mode="DSA"
 elif [ ${ds_id} == 10 ]
 then
-    mode="DSA-RNN-Supervised"
+    mode="RRL"
 elif [ ${ds_id} == 11 ]
 then
-    mode="BC_single-stage"
+    mode="BP"
 elif [ ${ds_id} == 12 ]
 then
-    mode="BC_two-stage"
+    mode="BCP"
 fi
 
 while read F  ; do

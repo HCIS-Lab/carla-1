@@ -527,6 +527,9 @@ class Inference():
         self.ego_speed_controller = PIDController(K_P=1, K_I=0, K_D=0.0)
         self.counter = 0 # use counter to deal with agent stuck porblem
         self.min_distance = 1000 # caculate the min distance with gt interactor  
+        self.avg_distance = 0
+        self.counter_avg_distance = 0
+
         self.obestacle_id_list = []
         self.ill_parking_id_list = []
 
@@ -595,7 +598,7 @@ class Inference():
 
             from models.QCNet.QCNet import QCNet_inference
             self.QCNet_inference = QCNet_inference
-        elif self.mode == "BC_two-stage" or self.mode ==  "BC_single-stage":
+        elif self.mode == "BP" or self.mode ==  "BCP":
             from models.two_stage.inference import testing
             from models.two_stage.models import GCN as Model
             
@@ -610,7 +613,7 @@ class Inference():
             self.BC_model.train(False)
 
             self.BC_testing = testing
-        elif self.mode == "DSA-RNN": # "DSA-RNN-Supervised":
+        elif self.mode == "DSA": 
             # ckpt = {'DSA_no_intention':'8_27_3_46','DSA_intention':'9_1_2_2','RRL_no_intention':'8_29_21_34','RRL_intention':'8_29_18_21'}
             # model_names = [['DSA_no_intention','DSA_intention'],['RRL_no_intention','RRL_intention']]
 
@@ -632,7 +635,7 @@ class Inference():
             self.dsa_model.load_state_dict(torch.load(model_path,map_location=device))
             self.dsa_model.cuda()
             self.dsa_model.eval()
-        elif self.mode == "DSA-RNN-Supervised":
+        elif self.mode == "RRL":
             from models.dsa.DSA_RRL import Baseline_SA
             from models.dsa.backbone import Riskbench_backbone
 
@@ -942,7 +945,6 @@ class Inference():
             data["obstacle"][_id]["type"] = "obstacle"
             data["obstacle"][_id]["cord_bounding_box"] = cord_bounding_box
 
-            # if self.mode == "KalmanFilter" or self.mode == "mantra" or self.mode == "sgan" or self.mode == "QCNet":
             if self.mode == "Kalman_Filter" or self.mode == "MANTRA" or self.mode == "Social-GAN" or self.mode == "QCNet":
                 self.df_list.append([frame, _id, type_id, str(actor_loc.x), str(actor_loc.y), 0 , 0, transform.yaw])
 
@@ -1084,7 +1086,7 @@ class Inference():
             counter += 1
 
 
-        if self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_two-stage" or self.mode == "BC_single-stage":
+        if self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
 
             # print(len(self.rgb_list_bc_method))
             if len(self.rgb_list_bc_method) < 6:
@@ -1172,9 +1174,9 @@ class Inference():
                 risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict)
                 risky_ids = risky_ids[:1]
         # vision based methods
-        elif self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised":
+        elif self.mode == "DSA" or self.mode == "RRL":
 
-            if self.mode == "DSA-RNN":
+            if self.mode == "DSA":
                 threshold = 0.2
             else:
                 threshold = 0.8
@@ -1208,7 +1210,7 @@ class Inference():
                     # if round(float(score),2) > threshold: # 0.8
                         # risky_ids.append(int(id))
 
-        elif self.mode == "BC_two-stage" or self.mode == "BC_single-stage":
+        elif self.mode == "BP" or self.mode == "BCP":
             tracking_results = []
             for i in range(5):
                 for actor_id in self.bbox_list_bc_method[i]:
@@ -1259,7 +1261,7 @@ class Inference():
                     """
                     single_result, two_result = self.BC_testing(self.BC_model, self.rgb_list_bc_method, trackers, tracking_id)
 
-            if self.mode == "BC_two-stage":
+            if self.mode == "BCP":
                 risky_ids = two_result
             else:
                 risky_ids = single_result
@@ -1282,7 +1284,7 @@ class Inference():
             else:
                 risky_ids = []
                 
-        elif self.mode == "Nearest":
+        elif self.mode == "Range":
             ids = list(obstacle_ids) + list(obj_ids)
             if len(ids) == 0 :
                 risky_ids = []
@@ -1323,7 +1325,6 @@ class Inference():
                 else:
                     risky_ids = [min_id]
 
-
         else:
             risky_ids = []
         # Get bbox for lbc Input 
@@ -1340,9 +1341,9 @@ class Inference():
 
 
         if self.args.obstacle_region:
-            if not (self.mode == "Ground_Truth" or self.mode == "No_mask"):     
+            if not (self.mode == "Ground_Truth" or self.mode == "Full_Observation"):     
                 for id in self.gt_obstacle_id_list:
-                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
+                    if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
                         id = id % 65536
                     if id in risky_ids:
 
@@ -1395,7 +1396,7 @@ class Inference():
                     continue
 
 
-                if self.mode == "Ground_Truth" or self.mode == "No_mask":
+                if self.mode == "Ground_Truth" or self.mode == "Full_Observation":
                     if id in self.gt_obstacle_id_list :
                         pos_0 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_0"]
                         pos_1 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_4"]
@@ -1427,7 +1428,7 @@ class Inference():
                     pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
                     pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
-                    if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
+                    if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
                         id = id % 65536
                     if id in risky_ids:
                         obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -1454,7 +1455,7 @@ class Inference():
                 
 
             
-            if self.mode == "Ground_Truth" or self.mode == "No_mask":   
+            if self.mode == "Ground_Truth" or self.mode == "Full_Observation":   
                 pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
@@ -1498,7 +1499,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random" :
+                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
                     id = id % 65536
 
                 
@@ -1518,7 +1519,7 @@ class Inference():
 
     
         for id in pedestrian_id_list:
-            if self.mode == "Ground_Truth" or self.mode == "No_mask":
+            if self.mode == "Ground_Truth" or self.mode == "Full_Observation":
                 pos_0 = actor_dict[id]["cord_bounding_box"]["cord_0"]
                 pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
@@ -1545,7 +1546,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
+                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1566,7 +1567,7 @@ class Inference():
             pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
             pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
             pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-            if self.mode == "No_mask":
+            if self.mode == "Full_Observation":
                 risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1587,7 +1588,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "Nearest" or  self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": # or self.mode == "Random":
+                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1612,7 +1613,7 @@ class Inference():
             pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
             pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-            if self.mode == "No_mask":
+            if self.mode == "Full_Observation":
                 risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1640,7 +1641,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage":  # or self.mode == "Random":
+                if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1657,83 +1658,82 @@ class Inference():
                                                 Loc(x=pos_3[0], y=pos_3[1]), 
                                                 ])
 
-        for gt_id in self.gt_obstacle_id_list:
-            try:
-                pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
-                pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
-                pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
-                pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
-            except:
-               continue
-            if self.mode == "No_mask":
-                risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                      
+        if self.args.obstacle_region:
+            in_risky_id_flag = False
+            
+            for gt_id in self.gt_obstacle_id_list:
+                if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP": 
+                    id = gt_id % 65536
+                if id in risky_ids:
+                    in_risky_id_flag = True
+            
+            
+            for gt_id in self.gt_obstacle_id_list:
+
+                try:
+                    pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                except:
+                    continue
+                if in_risky_id_flag:
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
                                             Loc(x=pos_3[0], y=pos_3[1]), 
                                             ])
-            elif self.mode == "Ground_Truth":
-                risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                    Loc(x=pos_1[0], y=pos_1[1]), 
-                                    Loc(x=pos_2[0], y=pos_2[1]), 
-                                    Loc(x=pos_3[0], y=pos_3[1]), 
-                                    ]) 
-            else:
-                if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage" : # or self.mode == "Random":
-                    id = gt_id % 65536
 
-                if not self.args.obstacle_region:
-
-                    if id in risky_ids:
-                        risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                    Loc(x=pos_1[0], y=pos_1[1]), 
-                                                    Loc(x=pos_2[0], y=pos_2[1]), 
-                                                    Loc(x=pos_3[0], y=pos_3[1]), 
-                                                    ])
-                    else:
-                        other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                    Loc(x=pos_1[0], y=pos_1[1]), 
-                                                    Loc(x=pos_2[0], y=pos_2[1]), 
-                                                    Loc(x=pos_3[0], y=pos_3[1]), 
-                                                    ])
-                        
-            if self.args.obstacle_region:
-                in_risky_id_flag = False
-                
-                
-                for gt_id in self.gt_obstacle_id_list:
-                    if self.mode == "Nearest" or self.mode == "DSA-RNN" or self.mode == "DSA-RNN-Supervised" or self.mode == "BC_single-stage" or self.mode == "BC_two-stage": #  or self.mode == "Random":
+                else:
+                    other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                            Loc(x=pos_1[0], y=pos_1[1]), 
+                                            Loc(x=pos_2[0], y=pos_2[1]), 
+                                            Loc(x=pos_3[0], y=pos_3[1]), 
+                                            ])
+        else:
+            for gt_id in self.gt_obstacle_id_list:
+                try:
+                    pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
+                    pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
+                    pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
+                    pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
+                except:
+                    continue
+                if self.mode == "Full_Observation":
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                Loc(x=pos_1[0], y=pos_1[1]), 
+                                                Loc(x=pos_2[0], y=pos_2[1]), 
+                                                Loc(x=pos_3[0], y=pos_3[1]), 
+                                                ])
+                elif self.mode == "Ground_Truth":
+                    risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                        ]) 
+                else:
+                    if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" : 
                         id = gt_id % 65536
-                    if id in risky_ids:
-                        in_risky_id_flag = True
-                
-                
-                for gt_id in self.gt_obstacle_id_list:
 
-                    try:
-                        pos_0 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_0"]
-                        pos_1 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_4"]
-                        pos_2 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_6"]
-                        pos_3 = actor_dict["obstacle"][gt_id]["cord_bounding_box"]["cord_2"]
-                    except:
-                        continue
-                    if in_risky_id_flag:
-                        risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                Loc(x=pos_1[0], y=pos_1[1]), 
-                                                Loc(x=pos_2[0], y=pos_2[1]), 
-                                                Loc(x=pos_3[0], y=pos_3[1]), 
-                                                ])
+                    if not self.args.obstacle_region:
 
-                    else:
-                        other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
-                                                Loc(x=pos_1[0], y=pos_1[1]), 
-                                                Loc(x=pos_2[0], y=pos_2[1]), 
-                                                Loc(x=pos_3[0], y=pos_3[1]), 
-                                                ])
+                        if id in risky_ids:
+                            risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                                        ])
+                        else:
+                            other_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
+                                                        Loc(x=pos_1[0], y=pos_1[1]), 
+                                                        Loc(x=pos_2[0], y=pos_2[1]), 
+                                                        Loc(x=pos_3[0], y=pos_3[1]), 
+                                                        ])
+          
 
 
-               
-                
-        if self.mode == "No_mask":
+        if self.mode == "Full_Observation":
             risk_bbox_list += self.static_vehicle_bbox_list
         else:
             other_bbox_list += self.static_vehicle_bbox_list 
@@ -1741,7 +1741,7 @@ class Inference():
 
         # static vehicle bbox 
         # self.static_vehicle_bbox_list
-        if self.mode == "No_mask" :
+        if self.mode == "Full_Observation" :
             vehicle_bbox_list = vehicle_bbox_list + self.static_vehicle_bbox_list
 
         birdview: BirdView = self.birdview_producer.produce(ego_pos, yaw=ego_yaw,
@@ -1815,8 +1815,6 @@ class Inference():
         # vis the result 
         # draw target point on BEV map 
 
-
-
         birdview: BirdView = self.birdview_producer.produce(ego_pos, yaw=ego_yaw,
                                                 agent_bbox_list=agent_bbox_list, 
                                                 vehicle_bbox_list=[],
@@ -1851,6 +1849,9 @@ class Inference():
 
             distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
 
+            self.avg_distance += distance
+            self.counter_avg_distance +=1
+
             if distance < self.min_distance:
                 self.min_distance = distance
 
@@ -1860,6 +1861,10 @@ class Inference():
             id = self.gt_obstacle_id_nearest
             interactor_location = world.world.get_actor(id).get_location()
             distance = math.sqrt((ego_pos.x - interactor_location.x)**2 + (ego_pos.y - interactor_location.y)**2)
+            
+            self.avg_distance += distance
+            self.counter_avg_distance +=1
+            
             if distance < self.min_distance:
                 self.min_distance = distance
 
@@ -1899,9 +1904,12 @@ class Inference():
                 out.write(img)
             out.release()
 
+        self.avg_distance  = float(self.avg_distance/self.counter_avg_distance)
+        
+
         with open("./result.txt", "a") as f:
             f.write(
-                f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}#{self.min_distance}#{self.collision_flag}\n")
+                f"{self.scenario_type}#{self.scenario_id}#{self.map}#{self.weather}#{self.actor}#{self.seed}#{self.min_distance}#{self.avg_distance}#{self.collision_flag}\n")
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -2230,7 +2238,7 @@ def game_loop(args):
 
             if detect_start:
                 
-                if args.mode == "BC_two-stage" or  args.mode == "BC_single-stage" or  args.mode ==  "DSA-RNN" or  args.mode ==  "DSA-RNN-Supervised":
+                if args.mode == "BP" or  args.mode == "BCP" or  args.mode ==  "DSA" or  args.mode ==  "RRL":
                     inference.run_inference(frame, world, True)
                 else:
                     inference.collect_actor_data(world, frame)
@@ -2263,10 +2271,6 @@ def game_loop(args):
             
             elif world.collision_sensor.wrong_collision:
                 print('collided with wrong object')
-                
-                # abandon_scenario = True
-
-
 
             if abandon_scenario:
                 if args.inference:
@@ -2481,10 +2485,10 @@ def main():
     argparser.add_argument(
         '--mode',
         type=str,
-        choices=['No_mask', 'Ground_Truth', 'Random', 'Nearest', 
+        choices=['Full_Observation', 'Ground_Truth', 'Random', 'Range', 
                 'Kalman_Filter', 'Social-GAN', 'MANTRA', 'QCNet',
-                'DSA-RNN', 'DSA-RNN-Supervised', 'BC_single-stage',
-                'BC_two-stage' ],
+                'DSA', 'RRL', 'BP',
+                'BCP', 'AUTO' ],
         help='enable roaming actors')
     
 
