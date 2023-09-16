@@ -31,6 +31,7 @@ echo "  9 - DSA"
 echo " 10 - RRL"
 echo " 11 - BP"
 echo " 12 - BCP"
+echo " 13 - AUTO"
 echo " "
 
 read -p "Enter ID to run Planning-aware Evaluation Benchmark: " ds_id
@@ -83,6 +84,9 @@ then
 elif [ ${ds_id} == 12 ]
 then
     mode="BCP"
+elif [ ${ds_id} == 13 ]
+then
+    mode="AUTO"
 fi
 
 while read F  ; do

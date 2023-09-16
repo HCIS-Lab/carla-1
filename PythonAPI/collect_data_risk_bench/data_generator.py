@@ -1010,6 +1010,15 @@ class Inference():
 
         return boxes, obj_ids, obstacle_boxes, obstacle_ids
     
+    
+    def set_autopilot(self, world):
+        ## automomatic 
+        from agents.navigation.behavior_agent import BehaviorAgent  # pylint: disable=import-error
+        from agents.navigation.basic_agent import BasicAgent  # pylint: disable=import-error
+        self.agent = BehaviorAgent(world.player, behavior="cautious")
+        destination = carla.Location( float(self.v[0]), float(self.v[1]), 0.6)
+        self.agent.set_destination(destination)
+
     def run_inference(self, frame, world, pre_get_data = False):
         
         
@@ -1567,7 +1576,7 @@ class Inference():
             pos_1 = actor_dict[id]["cord_bounding_box"]["cord_4"]
             pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
             pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
-            if self.mode == "Full_Observation":
+            if self.mode == "Full_Observation" or self.mode =="AUTO":
                 risk_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
                                             Loc(x=pos_1[0], y=pos_1[1]), 
                                             Loc(x=pos_2[0], y=pos_2[1]), 
@@ -1662,7 +1671,7 @@ class Inference():
         if self.args.obstacle_region:
 
 
-            if self.mode == "Full_Observation" or self.mode == "Ground_Truth":
+            if self.mode == "Full_Observation" or self.mode == "Full_Observation":
 
                 for gt_id in self.gt_obstacle_id_list:
 
@@ -1753,7 +1762,7 @@ class Inference():
           
 
 
-        if self.mode == "Full_Observation":
+        if self.mode == "Full_Observation" or self.mode == "AUTO":
             risk_bbox_list += self.static_vehicle_bbox_list
         else:
             other_bbox_list += self.static_vehicle_bbox_list 
@@ -1761,7 +1770,7 @@ class Inference():
 
         # static vehicle bbox 
         # self.static_vehicle_bbox_list
-        if self.mode == "Full_Observation" :
+        if self.mode == "Full_Observation" or self.mode == "AUTO":
             vehicle_bbox_list = vehicle_bbox_list + self.static_vehicle_bbox_list
 
         birdview: BirdView = self.birdview_producer.produce(ego_pos, yaw=ego_yaw,
@@ -1807,29 +1816,41 @@ class Inference():
         target_xy = torch.FloatTensor(target)
         target_xy = target_xy.reshape((1, 2))
         target_xy = target_xy.to(device)
-
-        with torch.no_grad():
-            points_pred = self.net.forward(topdown, target_xy)
-            control = self.net.controller(points_pred).cpu().data.numpy()[0]
-
-        steer = control[0] 
-        desired_speed = control[1] 
         
-        speed = world.player.get_velocity()
-        speed = ((speed.x)**2 + (speed.y)**2+(speed.z)**2)**(0.5)
+        
+        if self.mode == "AUTO":
+            
+            control = self.agent.run_step()
+            control.manual_gear_shift = False
+            # world.player.apply_control(control)
+            
+        else:
 
-        brake = desired_speed < 0.4 or (speed / desired_speed) > 1.1
+            with torch.no_grad():
+                points_pred = self.net.forward(topdown, target_xy)
+                control = self.net.controller(points_pred).cpu().data.numpy()[0]
+
+            steer = control[0] 
+            desired_speed = control[1] 
+            
+            speed = world.player.get_velocity()
+            speed = ((speed.x)**2 + (speed.y)**2+(speed.z)**2)**(0.5)
+
+            brake = desired_speed < 0.4 or (speed / desired_speed) > 1.1
 
 
-        delta = np.clip(desired_speed - speed, 0.0, 0.5)
-        throttle = self.ego_speed_controller.step(delta)
-        throttle = np.clip(throttle, 0.0, 0.75) 
-        throttle = throttle if not brake else 0.0
+            delta = np.clip(desired_speed - speed, 0.0, 0.5)
+            throttle = self.ego_speed_controller.step(delta)
+            throttle = np.clip(throttle, 0.0, 0.75) 
+            throttle = throttle if not brake else 0.0
 
-        control = carla.VehicleControl()
-        control.steer = float(steer)
-        control.throttle = float(throttle) 
-        control.brake = float(brake)
+            control = carla.VehicleControl()
+            control.steer = float(steer)
+            control.throttle = float(throttle) 
+            control.brake = float(brake)
+        
+        
+    
 
 
         # vis the result 
@@ -1852,11 +1873,12 @@ class Inference():
         _draw.ellipse((target[0]-2, target[1]-2, target[0]+2, target[1]+2), (0, 0, 255))
 
 
-        for x, y in points_pred.cpu().data.numpy()[0]:
-            x = (x + 1) / 2 * 256
-            y = (y + 1) / 2 * 256
+        if self.mode != "AUTO":
+            for x, y in points_pred.cpu().data.numpy()[0]:
+                x = (x + 1) / 2 * 256
+                y = (y + 1) / 2 * 256
 
-            _draw.ellipse((x-2, y-2, x+2, y+2), (35,80,127))#(255, 0, 0))
+                _draw.ellipse((x-2, y-2, x+2, y+2), (35,80,127))#(255, 0, 0))
 
         _topdown = cv2.cvtColor(np.asarray(_topdown), cv2.COLOR_RGB2BGR)
 
@@ -2168,6 +2190,9 @@ def game_loop(args):
 
         inference.set_scenario_type(args.scenario_type)
         inference.set_ego_id(world)
+        
+        if args.mode == "AUTO":
+            inference.set_autopilot(world)
 
         # only testing set has GT obstacle location
         if args.scenario_type == "obstacle":
@@ -2263,6 +2288,7 @@ def game_loop(args):
                 else:
                     inference.collect_actor_data(world, frame)
             
+            
             if not detect_start:
                 if args.inference:
                     control, isReach = inference.run_inference(frame, world)
@@ -2270,6 +2296,13 @@ def game_loop(args):
 
                     if isReach:
                         break
+                else:
+                    if args.mode =="AUTO":    
+                        inference.agent.run_step()
+                    
+            else:
+                if args.mode =="AUTO":    
+                    inference.agent.run_step()
 
             if not False in finish.values():
                 break
