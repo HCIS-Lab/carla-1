@@ -1266,10 +1266,11 @@ class Inference():
                         # two_result = max_id
                         max_score = 0
                         for key in  self.Mean_filter_list[-1].keys():
-                            value = result_dict[key]
-                            if value > max_score:
-                                value = max_score
-                                risky_ids = [key]
+                            if key in result_dict.keys():
+                                value = result_dict[key]
+                                if value > max_score:
+                                    value = max_score
+                                    risky_ids = [key]
 
 
                     else:
@@ -1362,11 +1363,13 @@ class Inference():
                             # two_result = max_id
 
                             max_score = 0
+                            
                             for key in  self.Mean_filter_list[-1].keys():
-                                value = result_dict[key]
-                                if value > max_score:
-                                    value = max_score
-                                    two_result = [key]
+                                if key in result_dict.keys():
+                                    value = result_dict[key]
+                                    if value > max_score:
+                                        value = max_score
+                                        risky_ids = [key]
                         else:
                             two_result = []
                             
