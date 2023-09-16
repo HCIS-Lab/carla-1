@@ -32,6 +32,8 @@ echo " 10 - RRL"
 echo " 11 - BP"
 echo " 12 - BCP"
 echo " 13 - AUTO"
+echo " 14 - BCP Mean Filter"
+echo " 15 - RRL Mean Filter"
 echo " "
 
 read -p "Enter ID to run Planning-aware Evaluation Benchmark: " ds_id
@@ -87,6 +89,12 @@ then
 elif [ ${ds_id} == 13 ]
 then
     mode="AUTO"
+elif [ ${ds_id} == 14 ]
+then
+    mode="BCP_mean_filter"
+elif [ ${ds_id} == 15 ]
+then
+    mode="RRL_mean_filter"
 fi
 
 while read F  ; do
@@ -115,7 +123,7 @@ while read F  ; do
                 echo "$SERVICE is  stopped"
                 ../../CarlaUE4.sh & sleep 10
             fi
-            if [ ${scenario_id} == 2 ]
+            if [ ${scenario_id} == 3 ]
             then
                 python data_generator.py --scenario_type ${array[0]} --scenario_id ${array[1]} --map ${array[2]} --weather ${array[3]} --random_actors ${array[4]} --random_seed ${array[5]} --inference --mode $mode --obstacle_region
             else
@@ -126,7 +134,7 @@ while read F  ; do
     done
 done <./${scenario}_name.txt
 
-if [ ${scenario_id} == 2 ]
+if [ ${scenario_id} == 3 ]
 then
     mv ./result.txt ./${scenario}_region_results/$mode.txt
 else

@@ -32,6 +32,8 @@ echo " 10 - RRL"
 echo " 11 - BP"
 echo " 12 - BCP"
 echo " 13 - AUTO"
+echo " 14 - BCP Mean Filter"
+echo " 15 - RRL Mean Filter"
 echo " "
 
 read -p "Enter ID to run Planning-aware Evaluation Benchmark: " ds_id
@@ -87,6 +89,12 @@ then
 elif [ ${ds_id} == 13 ]
 then
     mode="AUTO"
+elif [ ${ds_id} == 14 ]
+then
+    mode="BCP_mean_filter"
+elif [ ${ds_id} == 15 ]
+then
+    mode="RRL_mean_filter"
 fi
 
 while read F  ; do
