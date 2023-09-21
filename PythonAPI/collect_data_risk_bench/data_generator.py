@@ -544,6 +544,8 @@ class Inference():
         self.collision_flag = False
 
         self.Mean_filter_list = []
+        self.front_rgb_out = cv2.VideoWriter(f'./{args.scenario_id}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20,  (640, 256)) 
+
 
         if self.mode == "Kalman_Filter":
             from models.KalmanFilter import kf_inference
@@ -600,7 +602,7 @@ class Inference():
 
             from models.QCNet.QCNet import QCNet_inference
             self.QCNet_inference = QCNet_inference
-        elif self.mode == "BP" or self.mode ==  "BCP" or self.mode == "BCP_mean_filter":
+        elif self.mode == "BP" or self.mode ==  "BCP" or self.mode == "BCP_smoothing" or self.mode == "BP_smoothing":
             from models.two_stage.inference import testing
             from models.two_stage.models import GCN as Model
             
@@ -615,7 +617,7 @@ class Inference():
             self.BC_model.train(False)
 
             self.BC_testing = testing
-        elif self.mode == "DSA": 
+        elif self.mode == "DSA" or self.mode =="DSA_smoothing": 
             # ckpt = {'DSA_no_intention':'8_27_3_46','DSA_intention':'9_1_2_2','RRL_no_intention':'8_29_21_34','RRL_intention':'8_29_18_21'}
             # model_names = [['DSA_no_intention','DSA_intention'],['RRL_no_intention','RRL_intention']]
 
@@ -637,7 +639,7 @@ class Inference():
             self.dsa_model.load_state_dict(torch.load(model_path,map_location=device))
             self.dsa_model.cuda()
             self.dsa_model.eval()
-        elif self.mode == "RRL"  or self.mode == "RRL_mean_filter" :
+        elif self.mode == "RRL"  or self.mode == "RRL_smoothing" :
             from models.dsa.DSA_RRL import Baseline_SA
             from models.dsa.backbone import Riskbench_backbone
 
@@ -1053,7 +1055,8 @@ class Inference():
         rgb = np.reshape(rgb, (self.rgb_front.height, self.rgb_front.width, 4))
         rgb = rgb[:, :, :3]
 
-
+        
+        self.front_rgb_out.write(rgb)
 
         camera_transforms = transforms.Compose([
         # transforms.Resize(image_resize),
@@ -1097,7 +1100,7 @@ class Inference():
             counter += 1
 
 
-        if self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter"  :
+        if self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing"  :
 
             # print(len(self.rgb_list_bc_method))
             if len(self.rgb_list_bc_method) < 6:
@@ -1185,10 +1188,10 @@ class Inference():
                 risky_ids = self.QCNet_inference(vehicle_list, frame, ego_id, pedestrian_id_list, vehicle_id_list, obstacle_dict)
                 risky_ids = risky_ids[:1]
         # vision based methods
-        elif self.mode == "DSA" or self.mode == "RRL" or self.mode == "RRL_mean_filter" :
+        elif self.mode == "DSA" or self.mode == "RRL" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing" :
 
             if self.mode == "DSA":
-                threshold = 0.2
+                threshold = 0.9
             else:
                 threshold = 0.8
             #  input 
@@ -1231,7 +1234,7 @@ class Inference():
 
             # mean filter 
 
-            if self.mode ==  "RRL_mean_filter" :
+            if self.mode ==  "RRL_smoothing" or self.mode == "DSA_smoothing":
                 if len(self.Mean_filter_list) < 5:
                     self.Mean_filter_list.append(tmp_dict)
                 else:
@@ -1257,7 +1260,7 @@ class Inference():
                         # threshold 
                         if avg_score > 0.25:
                             result_dict[mean_filter_id] = avg_score
-                    print(result_dict)
+                    
 
                     if len(result_dict) != 0:
                         # final find the max
@@ -1278,7 +1281,7 @@ class Inference():
                         risky_ids = []
                         
 
-        elif self.mode == "BP" or self.mode == "BCP" or self.mode == "BCP_mean_filter":
+        elif self.mode == "BP" or self.mode == "BCP" or self.mode == "BCP_smoothing" or self.mode == "BP_smoothing":
             tracking_results = []
             for i in range(5):
                 for actor_id in self.bbox_list_bc_method[i]:
@@ -1327,10 +1330,52 @@ class Inference():
                             ...
                         }
                     """
-                    single_result, two_result, two_score_dict = self.BC_testing(self.BC_model, self.rgb_list_bc_method, trackers, tracking_id)
+                    single_result, two_result, two_score_dict, single_score_dict = self.BC_testing(self.BC_model, self.rgb_list_bc_method, trackers, tracking_id)
 
+                    if self.mode ==  "BP_smoothing" : #or  :
+                        if len(self.Mean_filter_list) < 5:
+                            self.Mean_filter_list.append(single_score_dict)
+                        else:
+                            self.Mean_filter_list.pop(0) # pop first one 
+                            self.Mean_filter_list.append(single_score_dict)
+                            # take the avg 
+                            # get all ids
+                            mean_filter_id_list = []
+                            for i in range(5):
+                                mean_filter_id_list += list(self.Mean_filter_list[i].keys())
+                            
+                            # take the avg 
+                            result_dict = {}
+                            for mean_filter_id in mean_filter_id_list:
+                                counter = 0
+                                score = 0
+                                for i in range(5):
+                                    if mean_filter_id in self.Mean_filter_list[i].keys():
+                                        counter+=1
+                                        score+=self.Mean_filter_list[i][mean_filter_id]
+                                avg_score = float(score/counter)
 
-                if self.mode ==  "BCP_mean_filter" :
+                                # threshold 
+                                if avg_score > 0.18:
+                                    result_dict[mean_filter_id] = avg_score
+
+                            if len(result_dict) != 0:
+                                # final find the max
+                                # max_id = [key for key, value in result_dict.items() if value == max(result_dict.values())]
+                                # two_result = max_id
+
+                                max_score = 0
+                                
+                                for key in  self.Mean_filter_list[-1].keys():
+                                    if key in result_dict.keys():
+                                        value = result_dict[key]
+                                        if value > max_score:
+                                            value = max_score
+                                            single_result = [key]
+                            else:
+                                single_result = []
+
+                if self.mode ==  "BCP_smoothing" : #or  :
                     if len(self.Mean_filter_list) < 5:
                         self.Mean_filter_list.append(two_score_dict)
                     else:
@@ -1369,12 +1414,12 @@ class Inference():
                                     value = result_dict[key]
                                     if value > max_score:
                                         value = max_score
-                                        risky_ids = [key]
+                                        two_result = [key]
                         else:
                             two_result = []
                             
 
-            if self.mode == "BCP" or  self.mode == "BCP_mean_filter":
+            if self.mode == "BCP" or  self.mode == "BCP_smoothing":
                 risky_ids = two_result
             else:
                 risky_ids = single_result
@@ -1456,7 +1501,7 @@ class Inference():
         if self.args.obstacle_region:
             if not (self.mode == "Ground_Truth" or self.mode == "Full_Observation"):     
                 for id in self.gt_obstacle_id_list:
-                    if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" :
+                    if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing":
                         id = id % 65536
                     if id in risky_ids:
 
@@ -1548,7 +1593,7 @@ class Inference():
                         pos_2 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_6"]
                         pos_3 = actor_dict["obstacle"][id]["cord_bounding_box"]["cord_2"]
 
-                        if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" :
+                        if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing" :
                             id = id % 65536
                         if id in risky_ids:
                             obstacle_bbox_list.append([Loc(x=pos_0[0], y=pos_0[1]), 
@@ -1620,7 +1665,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" :
+                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing" :
                     id = id % 65536
 
                 
@@ -1667,7 +1712,7 @@ class Inference():
                 pos_2 = actor_dict[id]["cord_bounding_box"]["cord_6"]
                 pos_3 = actor_dict[id]["cord_bounding_box"]["cord_2"]
 
-                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" :
+                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing":
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1709,7 +1754,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" :
+                if self.mode == "Range" or  self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing" :
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1762,7 +1807,7 @@ class Inference():
                                             ])
             else:
                 # other method 
-                if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" :
+                if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing" :
                     id = id % 65536
 
                 if id in risky_ids:
@@ -1804,7 +1849,7 @@ class Inference():
                 in_risky_id_flag = False
                 
                 for gt_id in self.gt_obstacle_id_list:
-                    if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" : 
+                    if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing" : 
                         id = gt_id % 65536
                     if id in risky_ids:
                         in_risky_id_flag = True
@@ -1854,7 +1899,7 @@ class Inference():
                                         Loc(x=pos_3[0], y=pos_3[1]), 
                                         ]) 
                 else:
-                    if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_mean_filter" or self.mode == "RRL_mean_filter" : 
+                    if self.mode == "Range" or self.mode == "DSA" or self.mode == "RRL" or self.mode == "BP" or self.mode == "BCP" or  self.mode == "BCP_smoothing" or self.mode == "BP_smoothing" or self.mode == "RRL_smoothing" or self.mode == "DSA_smoothing": 
                         id = gt_id % 65536
 
                     if not self.args.obstacle_region:
@@ -2040,6 +2085,9 @@ class Inference():
         return control, isReach
     
     def save_video(self):
+
+        self.front_rgb_out.release()
+        
         path = self.variant_path.split("data_collection/")[1].replace("/", "#")
 
         if self.args.obstacle_region:
@@ -2123,14 +2171,18 @@ def game_loop(args):
     detect_start = True
     detect_end = False
     # read start position and end position
+    if (args.inference and not args.generate_random_seed) or not args.no_save:
+        with open(f"{path}/start_end_point.json") as f:
+            data = json.load(f)
+            start_position_x = float(data["start_x"])
+            start_position_y = float(data["start_y"])
+            end_position_x = float(data["end_x"])
+            end_position_y = float(data["end_y"])
 
-    with open(f"{path}/start_end_point.json") as f:
-        data = json.load(f)
 
-        start_position_x = float(data["start_x"])
-        start_position_y = float(data["start_y"])
-        end_position_x = float(data["end_x"])
-        end_position_y = float(data["end_y"])
+
+
+
 
     client = carla.Client(args.host, args.port)
     client.reload_world()
@@ -2272,7 +2324,7 @@ def game_loop(args):
     iter_start = 25
     iter_toggle = 50
 
-    if not args.no_save and not args.inference:
+    if not args.no_save :
         data_collection = Data_Collection()
         data_collection.set_scenario_type(args.scenario_type)
         data_collection.set_ego_id(world)
@@ -2393,28 +2445,29 @@ def game_loop(args):
                 else:
                     finish[actor_id] = True
 
-            if detect_start:
+            if args.inference:
+                if detect_start:
+                    
+                    if args.mode == "BP" or  args.mode == "BCP" or  args.mode ==  "DSA" or  args.mode ==  "RRL" or args.mode =="BCP_smoothing" or args.mode == "BP_smoothing" or args.mode == "RRL_smoothing" or args.mode == "DSA_smoothing":
+                        inference.run_inference(frame, world, True)
+                    else:
+                        inference.collect_actor_data(world, frame)
                 
-                if args.mode == "BP" or  args.mode == "BCP" or  args.mode ==  "DSA" or  args.mode ==  "RRL" or args.mode =="BCP_mean_filter" or args.mode == "RRL_mean_filter":
-                    inference.run_inference(frame, world, True)
-                else:
-                    inference.collect_actor_data(world, frame)
-            
-            
-            if not detect_start:
-                if args.inference:
-                    control, isReach = inference.run_inference(frame, world)
-                    world.player.apply_control(control)
+                
+                if not detect_start:
+                    if args.inference:
+                        control, isReach = inference.run_inference(frame, world)
+                        world.player.apply_control(control)
 
-                    if isReach:
-                        break
+                        if isReach:
+                            break
+                    else:
+                        if args.mode =="AUTO":    
+                            inference.agent.run_step()
+                        
                 else:
                     if args.mode =="AUTO":    
                         inference.agent.run_step()
-                    
-            else:
-                if args.mode =="AUTO":    
-                    inference.agent.run_step()
 
             if not False in finish.values():
                 break
@@ -2433,10 +2486,15 @@ def game_loop(args):
             if world.collision_sensor.collision and args.scenario_type != 'collision':
                 print('unintentional collision')
 
+                if not args.inference:
+                    abandon_scenario = True
+
+
             
             elif world.collision_sensor.wrong_collision:
                 print('collided with wrong object')
-
+                if not args.inference:  
+                    abandon_scenario = True
             if abandon_scenario:
                 if args.inference:
                     inference.save_video()
@@ -2461,7 +2519,7 @@ def game_loop(args):
                 x = ego_loc.x
                 y = ego_loc.y
 
-                if not args.test:
+                if not args.test and not args.generate_random_seed:
                     if detect_start:
                         distacne = math.sqrt(
                             (x - start_position_x)**2 + (y - start_position_y)**2)
@@ -2472,7 +2530,7 @@ def game_loop(args):
                             if not args.no_save and not args.inference:
                                 data_collection.set_start_frame(frame)
 
-                    if not args.inference:
+                    if not args.inference or not args.no_save:
                         # check end point
                         if detect_end:
                             if args.scenario_type != "collision":
@@ -2654,7 +2712,7 @@ def main():
                 'Kalman_Filter', 'Social-GAN', 'MANTRA', 'QCNet',
                 'DSA', 'RRL', 'BP',
                 'BCP', 'AUTO',
-                 'BCP_mean_filter', 'RRL_mean_filter' ],
+                 'BCP_smoothing', 'RRL_smoothing', 'DSA_smoothing', 'BP_smoothing' ],
         help='enable roaming actors')
     
 

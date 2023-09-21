@@ -126,11 +126,16 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
     two_result = []
     two_score = []
 
+    two_stage_dict = {}
+    single_dict = {}
+
     for actor_id, score, attn in zip(tracking_id, action_logits[1:len(tracking_id)+1], attn_weights[1:len(tracking_id)+1]):
 
         # print(str(actor_id), f"{attn.item():.4f}, {score[0].item():.4f}, {confidence_go.item():.4f}")        
         # single_result[str(actor_id)] = bool(attn>0.19)
         # two_result[str(actor_id)] = bool(score[0]-confidence_go>0.03 and confidence_go<0.5)
+        two_stage_dict[int(actor_id)] = score[0]
+        single_dict[int(actor_id)] = attn
 
         if attn>0.35 and confidence_go < 0.4:
             single_result.append(int(actor_id))
@@ -152,6 +157,6 @@ def testing(model, test_imgs, trackers, tracking_id, time_steps=5, num_box=25, d
         
 
 
-    return single_score, two_score
+    return single_score, two_score, two_stage_dict, single_dict
                 
 
