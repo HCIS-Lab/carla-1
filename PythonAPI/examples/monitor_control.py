@@ -2465,18 +2465,36 @@ def generate_parking(world, n, map, scenario_tag):
 
 def scenario_tag_to_location(town):
 
-    if town == "A1":
+    if town == "A0":
+        intersection_coordinators = {
+            'r-1':
+            (30.0, 0.0, 0.0),
+        }
+    elif town == "A1":
         intersection_coordinators = {
             'r-1':
             (-15.9, -24.7, 0.0),
         }
-
     elif town == "A6":
         intersection_coordinators = {
             'r-1':
             (20.1, 1.3, 0.0),
         }
-
+    elif town == "B3":
+        intersection_coordinators = {
+            'r-1':
+            (-30.0, 0.0, 0.0),
+        }
+    elif town == "B7":
+        intersection_coordinators = {
+            'r-1':
+            (12.3, 1.7, 0.0),
+        }
+    elif town == "B8":
+        intersection_coordinators = {
+            'r-1':
+            (25.3, -3.5, 0.0),
+        }
     else:
         region_tags = np.load(f"Region_tags/{town}.pkl", allow_pickle=True)
         region_tags = dict(region_tags.items())
