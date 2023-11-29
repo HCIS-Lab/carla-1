@@ -302,7 +302,8 @@ class CameraManager(object):
         self.depth_left = None
         self.depth_right = None
         self.lidar = None
-
+        
+        # bound_x:2.8958897590637207, bound_y:1.581725001335144, bound_z:1.2438300251960754  (after +0.5)
         bound_x = 0.5 + self._parent.bounding_box.extent.x
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         bound_z = 0.5 + self._parent.bounding_box.extent.z
